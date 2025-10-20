@@ -9,25 +9,35 @@ contract ProtocolLib {
         string paramName;
     }
     
+    struct FunctionInputs {
+        uint8 inputType;
+        string inputName;
+    }
+
     // origins se refiere a 0 = Funds o 1 = Bundles
     struct PositionType {
         string name;
         uint8 origin;
-        PositionParam[] positionParams; 
+        PositionParam[] positionParams;
+        FunctionInputs[] openPositionInputs;
+        FunctionInputs[] closePositionInputs;
     }
+    // _________________________________________________
 
     // positionType is the ID of the position type
     // positionType must be the same as positionsTypes mapping at UpgradeableLib
     struct Position {
         uint128 positionType;
+        uint256 id;
         int256 pnl;
+        bool isActive;
         bytes[] positionData;
     }
 
     struct GlobalPosition {
-        uint256 totalPositions; // closed and active
+        uint256 totalPositions; // closed and active // used to get the positionId
         uint256 activePositions; 
-        Position[] positions; // Only active positions
+        Position[] positions; // Only active positions ??
     }
 
     struct UserDataField {
@@ -39,7 +49,8 @@ contract ProtocolLib {
         uint256 id;
         int256 globalPnl;
         GlobalPosition globalPosition;
-        uint256 transactionCount;
+        // i think transactionCount it is the same as totalPositions 
+        uint256 transactionCount; // will be used as positionId for each user also
         bytes[] userData;
     }
 
@@ -68,6 +79,12 @@ contract ProtocolLib {
         uint256 x;
         int256 y;
         bool z;
+    }
+
+    struct PendingOrder {
+        address receiver;
+        uint256 positionId;
+        bool isPending;
     }
 
 }

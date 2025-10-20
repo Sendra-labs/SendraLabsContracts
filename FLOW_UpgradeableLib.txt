@@ -1,0 +1,449 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    UPGRADEABLELIB.SOL - FLUJO COMPLETO
+═══════════════════════════════════════════════════════════════════════════════
+
+DESCRIPCIÓN:
+  - Sistema de configuración dinámica del protocolo
+  - Permite añadir nuevos tipos de posiciones sin redeploy
+  - Gestiona campos de datos de usuario personalizables
+  - Registry de estructuras upgradeable
+
+DEPENDENCIAS:
+  - Roles (autenticación de admins)
+  - ProtocolLib (definiciones de estructuras)
+
+PROPÓSITO:
+  - Extensibilidad: Añadir nuevos productos/estrategias
+  - Flexibilidad: Customizar datos de usuario
+  - Versionabilidad: Evolucionar sin romper compatibilidad
+
+═══════════════════════════════════════════════════════════════════════════════
+                     INICIALIZACIÓN (CONSTRUCTOR)
+═══════════════════════════════════════════════════════════════════════════════
+
+Deploy → new UpgradeableLib(rolesAddress)
+  │
+  ├─ VALIDACIÓN:
+  │   └─ roles = Roles(rolesAddress)
+  │
+  └─ CREAR TIPO DE POSICIÓN DEFAULT:
+      │
+      └─ Tipo "Fund" (ID: 0)
+          │
+          ├─ name: "Fund"
+          ├─ origin: 0 (Funds origin)
+          │
+          └─ positionParams[2]:
+              ├─ [0] PositionParam(type: 0, name: "amount")      // uint256
+              └─ [1] PositionParam(type: 1, name: "tokenAddress") // address
+          │
+          └─ addPositionType(PositionType{...})
+              │
+              ├─ positionsTypes[0] = PositionType{...}
+              └─ positionsTypesCount = 1
+
+
+RESULTADO:
+  ✓ Sistema inicializado con 1 tipo de posición
+  ✓ "Fund" (ID: 0) listo para usar
+  ✓ Base para añadir más tipos
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     AÑADIR TIPO DE POSICIÓN (ADMIN)
+═══════════════════════════════════════════════════════════════════════════════
+
+Admin → addPositionType(newPositionType)
+  │
+  ├─ VALIDACIÓN: onlyAdmin
+  │   └─ roles.checkAdmin(msg.sender)
+  │
+  ├─ INPUT: PositionType struct
+  │   │
+  │   └─ {
+  │           name: "MarketNeutral",
+  │           origin: 1,  // Bundles
+  │           positionParams: [
+  │               PositionParam(0, "totalEthAmount"),
+  │               PositionParam(2, "isNativeToken"),     // bool
+  │               PositionParam(1, "marketLong"),        // address
+  │               PositionParam(1, "marketShort"),       // address
+  │               PositionParam(0, "sizeDeltaUsdLong"),
+  │               PositionParam(0, "sizeDeltaUsdShort"),
+  │               PositionParam(0, "initialPriceLong"),
+  │               PositionParam(0, "initialPriceShort"),
+  │               PositionParam(0, "initialUsdValue"),
+  │               PositionParam(0, "openDate")
+  │           ]
+  │       }
+  │
+  ├─ PASO 1: Guardar en mapping
+  │   │
+  │   └─ positionsTypes[positionsTypesCount] = newPositionType
+  │       │
+  │       └─ ID = positionsTypesCount (auto-incremental)
+  │
+  ├─ PASO 2: Incrementar contador
+  │   │
+  │   └─ positionsTypesCount++
+  │
+  └─ RESULTADO:
+      ✓ Nuevo tipo disponible con ID único
+      ✓ Main.sol puede crear posiciones de este tipo
+
+
+EJEMPLO COMPLETO (Añadir Market Neutral):
+
+  Step 1: Admin crea estructura
+    └─ PositionParam[] memory params = new PositionParam[](10);
+        params[0] = PositionParam(0, "totalEthAmount");
+        params[1] = PositionParam(2, "isNativeToken");
+        ...
+
+  Step 2: Admin crea PositionType
+    └─ PositionType memory marketNeutral = PositionType(
+            "MarketNeutral",
+            1,  // origin: Bundles
+            params
+        );
+
+  Step 3: Admin añade al sistema
+    └─ upgradeableLib.addPositionType(marketNeutral);
+        │
+        ├─ positionsTypes[1] = marketNeutral
+        └─ positionsTypesCount = 2
+
+  Step 4: Usar en Main.sol
+    └─ updatePositions(newPositionData, 1)  // type = 1 (MarketNeutral)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     AÑADIR CAMPO DE USUARIO (ADMIN)
+═══════════════════════════════════════════════════════════════════════════════
+
+Admin → addUserDataField(newField)
+  │
+  ├─ VALIDACIÓN: onlyAdmin
+  │
+  ├─ INPUT: UserDataField struct
+  │   │
+  │   └─ {
+  │           fieldName: "referralCode",
+  │           fieldType: 0  // uint256
+  │       }
+  │
+  ├─ PASO 1: Guardar en mapping
+  │   │
+  │   └─ userDataFields[userDataFieldsCount] = newField
+  │
+  ├─ PASO 2: Incrementar contador
+  │   │
+  │   └─ userDataFieldsCount++
+  │
+  └─ RESULTADO:
+      ✓ Nuevo campo disponible
+      ✓ ProtocolStorage puede usar este campo
+
+
+CASOS DE USO:
+
+  Campo: "referralCode"
+    └─ Para tracking de referidos
+        usuarios.userData[0] = encode(referralCode)
+
+  Campo: "tier"
+    └─ Para sistema de niveles VIP
+        usuarios.userData[1] = encode(tierLevel)
+
+  Campo: "joinDate"
+    └─ Para tracking de antigüedad
+        usuarios.userData[2] = encode(timestamp)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     CONSULTAR TIPOS DE POSICIÓN
+═══════════════════════════════════════════════════════════════════════════════
+
+getPositionType(id) → PositionType
+  │
+  └─ positionsTypes[id]
+      │
+      └─ Retorna:
+          {
+              name: "MarketNeutral",
+              origin: 1,
+              positionParams: [...]
+          }
+
+
+getPositionsTypes() → PositionType[]
+  │
+  ├─ Crear array[positionsTypesCount]
+  │
+  ├─ Loop i = 0 to positionsTypesCount:
+  │   └─ array[i] = positionsTypes[i]
+  │
+  └─ Retorna array completo
+
+
+getPositionsTypesCount() → uint256
+  │
+  └─ positionsTypesCount
+
+
+EJEMPLO:
+
+  Frontend quiere mostrar tipos disponibles:
+    │
+    └─ upgradeableLib.getPositionsTypes()
+        │
+        └─ Retorna:
+            [
+                PositionType("Fund", ...),
+                PositionType("MarketNeutral", ...),
+                PositionType("OptionsStraddle", ...),
+                ...
+            ]
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     CONSULTAR CAMPOS DE USUARIO
+═══════════════════════════════════════════════════════════════════════════════
+
+getUserDataField(id) → UserDataField
+  │
+  └─ userDataFields[id]
+
+
+getUserDataFields() → UserDataField[]
+  │
+  └─ Retorna array completo de campos
+
+
+getUserDataFieldsCount() → uint256
+  │
+  └─ userDataFieldsCount
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     TIPOS DE PARÁMETROS
+═══════════════════════════════════════════════════════════════════════════════
+
+paramType enum (uint8):
+
+  0  = uint256
+  1  = address
+  2  = bool
+  3  = bytes
+  4  = uint256[]
+  5  = address[]
+  6  = bool[]
+  7  = bytes[]
+  8  = uint256[][]
+  9  = address[][]
+  10 = bool[][]
+  ... más tipos si es necesario
+
+
+EJEMPLO MARKET NEUTRAL:
+
+  positionParams:
+    [0] type: 0, name: "totalEthAmount"        → uint256
+    [1] type: 2, name: "isNativeToken"         → bool
+    [2] type: 1, name: "marketLong"            → address
+    [3] type: 1, name: "marketShort"           → address
+    [4] type: 0, name: "sizeDeltaUsdLong"      → uint256
+    [5] type: 0, name: "sizeDeltaUsdShort"     → uint256
+    [6] type: 0, name: "initialPriceLong"      → uint256
+    [7] type: 0, name: "initialPriceShort"     → uint256
+    [8] type: 0, name: "initialUsdValue"       → uint256
+    [9] type: 0, name: "openDate"              → uint256
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     ORIGEN DE POSICIÓN (origin)
+═══════════════════════════════════════════════════════════════════════════════
+
+origin enum (uint8):
+
+  0 = Funds
+    └─ Posiciones de fondos/capital simple
+        Ejemplo: Depositar USDC, Staking ETH
+
+  1 = Bundles
+    └─ Estrategias complejas con múltiples posiciones
+        Ejemplo: Market Neutral, Options, Leveraged
+
+
+USO:
+  
+  Frontend puede filtrar por origin:
+    └─ "Mostrar solo estrategias de Bundles"
+        filter(positionTypes, pt => pt.origin == 1)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     FLUJO: EVOLUCIÓN DEL PROTOCOLO
+═══════════════════════════════════════════════════════════════════════════════
+
+DÍA 1: Deploy Inicial
+  │
+  └─ UpgradeableLib tiene:
+      ├─ [0] Fund (simple deposits)
+      └─ positionsTypesCount = 1
+
+DÍA 30: Añadir Market Neutral
+  │
+  └─ Admin.addPositionType(MarketNeutral)
+      │
+      ├─ [0] Fund
+      ├─ [1] MarketNeutral ← NUEVO
+      └─ positionsTypesCount = 2
+
+DÍA 60: Añadir Options Strategy
+  │
+  └─ Admin.addPositionType(OptionsStraddle)
+      │
+      ├─ [0] Fund
+      ├─ [1] MarketNeutral
+      ├─ [2] OptionsStraddle ← NUEVO
+      └─ positionsTypesCount = 3
+
+DÍA 90: Añadir campo de usuario "tier"
+  │
+  └─ Admin.addUserDataField("tier", 0)
+      │
+      └─ userDataFields[0] = ("tier", uint256)
+
+DÍA 100: Usar nuevo campo
+  │
+  └─ ProtocolStorage.updateUser()
+      │
+      └─ user.userData[0] = encode(tierLevel)
+          "Este usuario es tier 3 VIP"
+
+
+VENTAJA: TODO SIN REDEPLOYAR CONTRATOS PRINCIPALES ✓
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     DIAGRAMA: SISTEMA EXTENSIBLE
+═══════════════════════════════════════════════════════════════════════════════
+
+                    UpgradeableLib
+                    (Registry Central)
+                          │
+          ┌───────────────┼───────────────┐
+          │               │               │
+          ▼               ▼               ▼
+   PositionType[0]  PositionType[1]  PositionType[2]
+       "Fund"      "MarketNeutral"  "OptionsStraddle"
+          │               │               │
+          ├─ params[2]    ├─ params[10]   ├─ params[8]
+          └─ origin: 0    └─ origin: 1    └─ origin: 1
+
+
+Cuando Main.sol crea posición:
+  │
+  └─ Position(
+          positionType: 1,  ← Referencia a UpgradeableLib[1]
+          id: 5,
+          pnl: 0,
+          positionData: [...]  ← Debe coincidir con params[10]
+      )
+
+
+Frontend puede:
+  │
+  ├─ upgradeableLib.getPositionType(1)
+  │   └─ Saber que tipo 1 es "MarketNeutral"
+  │
+  └─ upgradeableLib.getPositionType(1).positionParams
+      └─ Saber qué datos contiene cada posición:
+          [0] = "totalEthAmount" (uint256)
+          [1] = "isNativeToken" (bool)
+          ...
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     VENTAJAS DEL DISEÑO
+═══════════════════════════════════════════════════════════════════════════════
+
+✓ EXTENSIBLE: Añadir tipos sin redeploy
+✓ VERSIONABLE: Mantener compatibilidad con posiciones antiguas
+✓ DESCRIPTIVO: Metadata legible para humanos
+✓ FLEXIBLE: Custom user data sin cambiar struct User
+✓ CENTRALIZADO: Source of truth único para tipos
+✓ TYPE-SAFE: Tipos conocidos en compile-time
+✓ AUDITABLE: Historial de tipos añadidos
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     CASOS DE USO AVANZADOS
+═══════════════════════════════════════════════════════════════════════════════
+
+CASO 1: Frontend Dinámico
+  └─ Frontend lee UpgradeableLib al cargar
+      │
+      ├─ getPositionsTypes() → [Fund, MarketNeutral, ...]
+      │
+      └─ Genera UI dinámicamente:
+          ├─ "Create Fund Position" button
+          ├─ "Create Market Neutral Position" button
+          └─ Form fields basados en positionParams
+
+CASO 2: Migración de Versiones
+  └─ Versión antigua de Market Neutral tenía 8 params
+      Nueva versión tiene 10 params
+      │
+      ├─ Admin añade MarketNeutralV2 como tipo nuevo
+      │
+      ├─ Posiciones viejas usan tipo 1 (MarketNeutral)
+      └─ Posiciones nuevas usan tipo 3 (MarketNeutralV2)
+      
+      ✓ Ambas versiones coexisten
+      ✓ No se rompen posiciones antiguas
+
+CASO 3: Sistema de Rewards Custom
+  └─ Admin añade userDataFields:
+      ├─ [0] "totalVolume" (uint256)
+      ├─ [1] "rewardsTier" (uint256)
+      └─ [2] "lastClaimDate" (uint256)
+      
+      Protocol tracking de rewards sin cambiar User struct ✓
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     ESTRUCTURA DE DATOS
+═══════════════════════════════════════════════════════════════════════════════
+
+mapping(uint256 => PositionType) public positionsTypes
+  │
+  └─ Key: ID auto-incremental
+      Value: PositionType struct completo
+
+mapping(uint256 => UserDataField) public userDataFields
+  │
+  └─ Key: ID auto-incremental
+      Value: UserDataField struct
+
+
+ACCESO:
+  O(1) lookup por ID
+  Eficiente y predecible
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     MEJORAS FUTURAS
+═══════════════════════════════════════════════════════════════════════════════
+
+TODO: Eventos para tracking de nuevos tipos
+TODO: Versioning explícito de position types
+TODO: Deprecation system para tipos antiguos
+TODO: Validation de positionData vs positionParams
+TODO: Migration tools para upgrading posiciones
+TODO: Default values para params opcionales
+
+
+═══════════════════════════════════════════════════════════════════════════════
+

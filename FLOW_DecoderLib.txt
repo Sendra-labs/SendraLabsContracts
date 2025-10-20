@@ -1,0 +1,412 @@
+═══════════════════════════════════════════════════════════════════════════════
+                      DECODERLIB.SOL - FLUJO COMPLETO
+═══════════════════════════════════════════════════════════════════════════════
+
+DESCRIPCIÓN:
+  - Librería de decodificación de parámetros dinámicos
+  - Convierte bytes[] a estructuras DeFiParam tipadas
+  - Permite pasar datos flexibles entre contratos
+
+PROPÓSITO:
+  - Flexibilidad: Soportar múltiples tipos de datos
+  - Type Safety: Validación de tipos en runtime
+  - Eficiencia: Encoding compacto para ahorrar gas
+
+═══════════════════════════════════════════════════════════════════════════════
+                     FUNCIÓN PRINCIPAL: DECODER
+═══════════════════════════════════════════════════════════════════════════════
+
+BundlesRouter/MarketNeutral → decoder(_data) → DeFiParam[]
+  │
+  ├─ INPUT: _data[2]
+  │   │
+  │   ├─ _data[0] = abi.encode(types[])      // Array de tipos
+  │   └─ _data[1] = abi.encode(values[])     // Array de valores
+  │
+  ├─ PASO 1: Decodificar arrays
+  │   │
+  │   ├─ uint256[] types = abi.decode(_data[0], (uint256[]))
+  │   │   └─ Ejemplo: [0, 0, 0, 1, 1, 2]
+  │   │
+  │   └─ bytes[] values = abi.decode(_data[1], (bytes[]))
+  │       └─ Ejemplo: [val1, val2, val3, val4, val5, val6]
+  │
+  ├─ PASO 2: Validar longitud
+  │   │
+  │   └─ require(types.length > 0 && types.length <= 20)
+  │       │
+  │       ├─ Mínimo: 1 parámetro
+  │       ├─ Máximo: 20 parámetros
+  │       └─ SI fuera de rango: REVERT "ParamsOutOfRange"
+  │
+  ├─ PASO 3: Crear array de DeFiParam
+  │   │
+  │   └─ DeFiParam[] memory params = new DeFiParam[](types.length)
+  │
+  ├─ PASO 4: Loop por cada parámetro
+  │   │
+  │   └─ for(i = 0; i < types.length; i++):
+  │       │
+  │       ├─ DeFiParam memory param
+  │       │
+  │       ├─ SI types[i] == 0 (uint256):
+  │       │   │
+  │       │   ├─ param._type = 0
+  │       │   ├─ param.x = decode(values[i], uint256)
+  │       │   └─ otros campos = default
+  │       │
+  │       ├─ SI types[i] == 1 (address):
+  │       │   │
+  │       │   ├─ param._type = 1
+  │       │   ├─ param.w = decode(values[i], address)
+  │       │   └─ otros campos = default
+  │       │
+  │       ├─ SI types[i] == 2 (bool):
+  │       │   │
+  │       │   ├─ param._type = 2
+  │       │   ├─ param.z = decode(values[i], bool)
+  │       │   └─ otros campos = default
+  │       │
+  │       ├─ SI types[i] == 3 (int256):
+  │       │   │
+  │       │   ├─ param._type = 3
+  │       │   ├─ param.y = decode(values[i], int256)
+  │       │   └─ otros campos = default
+  │       │
+  │       ├─ SI types[i] == 4 (bytes):
+  │       │   │
+  │       │   ├─ param._type = 4
+  │       │   ├─ param.v = values[i]
+  │       │   └─ otros campos = default
+  │       │
+  │       └─ SINO:
+  │           └─ REVERT "InvalidParams"
+  │
+  └─ RETORNO: DeFiParam[] params
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     EJEMPLO COMPLETO: OPEN POSITION
+═══════════════════════════════════════════════════════════════════════════════
+
+Main.sol prepara datos:
+  │
+  ├─ types[7]:
+  │   [0] = 0  // uint256 - ethAmount
+  │   [1] = 0  // uint256 - sizeDeltaUsd
+  │   [2] = 0  // uint256 - acceptablePrice
+  │   [3] = 0  // uint256 - executionFee
+  │   [4] = 1  // address - market
+  │   [5] = 1  // address - receiver
+  │   [6] = 2  // bool    - isLong
+  │
+  ├─ values[7]:
+  │   [0] = encode(1000000000000000000)        // 1 ETH
+  │   [1] = encode(1800000000000000000000...)  // 1800 USD en 30 decimals
+  │   [2] = encode(1809000000000000000000...)  // 1809 USD (con slippage)
+  │   [3] = encode(100000000000000000)         // 0.1 ETH fee
+  │   [4] = encode(0x70d95...6336)             // ETH market
+  │   [5] = encode(0xUser...Address)           // Usuario
+  │   [6] = encode(true)                       // Long position
+  │
+  └─ _data = createParams(types, values)
+      │
+      └─ [encode(types[]), encode(values[])]
+
+
+BundlesRouter envía a MarketNeutral:
+  │
+  └─ execute(0, _data)
+
+
+MarketNeutral decodifica:
+  │
+  └─ DeFiParam[] memory params = DecoderLib.decoder(_data)
+      │
+      └─ Procesa cada elemento:
+          │
+          ├─ i=0: type=0 → decode como uint256
+          │   └─ params[0] = DeFiParam(_type:0, x:1000000000000000000, ...)
+          │
+          ├─ i=1: type=0 → decode como uint256
+          │   └─ params[1] = DeFiParam(_type:0, x:1800000..., ...)
+          │
+          ├─ i=2: type=0 → decode como uint256
+          │   └─ params[2] = DeFiParam(_type:0, x:1809000..., ...)
+          │
+          ├─ i=3: type=0 → decode como uint256
+          │   └─ params[3] = DeFiParam(_type:0, x:100000000000000000, ...)
+          │
+          ├─ i=4: type=1 → decode como address
+          │   └─ params[4] = DeFiParam(_type:1, w:0x70d95...6336, ...)
+          │
+          ├─ i=5: type=1 → decode como address
+          │   └─ params[5] = DeFiParam(_type:1, w:0xUser...Address, ...)
+          │
+          └─ i=6: type=2 → decode como bool
+              └─ params[6] = DeFiParam(_type:2, z:true, ...)
+
+
+MarketNeutral usa params:
+  │
+  └─ openPositionWithEther(params)
+      │
+      ├─ uint256 ethAmount = params[0].x         ✓
+      ├─ uint256 sizeDeltaUsd = params[1].x      ✓
+      ├─ uint256 acceptablePrice = params[2].x   ✓
+      ├─ uint256 executionFee = params[3].x      ✓
+      ├─ address market = params[4].w            ✓
+      ├─ address receiver = params[5].w          ✓
+      └─ bool isLong = params[6].z               ✓
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     TIPOS SOPORTADOS
+═══════════════════════════════════════════════════════════════════════════════
+
+Type ID │ Solidity Type │ DeFiParam Field │ Descripción
+────────┼───────────────┼─────────────────┼────────────────────────────
+   0    │ uint256       │ x               │ Números positivos, amounts
+   1    │ address       │ w               │ Direcciones de contratos/EOA
+   2    │ bool          │ z               │ true/false flags
+   3    │ int256        │ y               │ Números con signo (PnL)
+   4    │ bytes         │ v               │ Datos arbitrarios
+
+
+MNEMÓNICO PARA CAMPOS:
+  x = eXtended number (uint256)
+  w = Wallet address (address)
+  z = Zero or one (bool)
+  y = ±number (int256 - Y axis positivo/negativo)
+  v = Variable bytes (bytes)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     ESTRUCTURA DeFiParam
+═══════════════════════════════════════════════════════════════════════════════
+
+struct DeFiParam {
+    uint8 _type;     // Tipo de dato (0-4)
+    bytes v;         // Para bytes
+    address w;       // Para address
+    uint256 x;       // Para uint256
+    int256 y;        // Para int256
+    bool z;          // Para bool
+}
+
+
+CARACTERÍSTICAS:
+
+✓ UNION-LIKE: Todos los campos en un struct, solo uno usado
+✓ TYPE-TAGGED: _type indica qué campo leer
+✓ MEMORY EFFICIENT: ABI packing optimizado
+✓ EXTENSIBLE: Fácil añadir más tipos
+
+
+USO:
+
+  if(params[i]._type == 0) {
+      uint256 amount = params[i].x;
+  }
+  else if(params[i]._type == 1) {
+      address addr = params[i].w;
+  }
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     VALIDACIONES
+═══════════════════════════════════════════════════════════════════════════════
+
+1. ParamsOutOfRange(paramsLength)
+   │
+   └─ SI paramsLength > 20 || paramsLength < 1
+       └─ REVERT con longitud inválida
+       
+   RAZÓN: Prevenir arrays gigantes (DOS attack)
+
+2. InvalidParams("decoderV2")
+   │
+   └─ SI type no está en [0, 1, 2, 3, 4]
+       └─ REVERT con tipo desconocido
+       
+   RAZÓN: Type safety en runtime
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     VERSIÓN LEGACY (COMENTADA)
+═══════════════════════════════════════════════════════════════════════════════
+
+V1 decoder (NO se usa):
+  │
+  └─ Usaba offset manual en bytes
+      │
+      ├─ _data[1][offset:offset+32]
+      └─ offset += 32 cada iteración
+      
+  PROBLEMA:
+    ✗ Propenso a errores con datos de longitud variable
+    ✗ Difícil de mantener
+    ✗ No soportaba bytes de longitud variable
+
+V2 decoder (ACTUAL):
+  │
+  └─ Usa array de bytes[] ya decodificado
+      │
+      ├─ Cada valor ya separado
+      └─ decode(values[i], tipo)
+      
+  VENTAJAS:
+    ✓ Más seguro
+    ✓ Soporta datos de longitud variable
+    ✓ Más fácil de entender y mantener
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     FLUJO DE DATOS: END-TO-END
+═══════════════════════════════════════════════════════════════════════════════
+
+[1] Frontend/Usuario
+      │
+      │ Quiere abrir posición ETH Long
+      ▼
+[2] Main.sol
+      │
+      │ Prepara datos:
+      │   types = [uint, uint, uint, address, address, bool]
+      │   values = [ethAmt, size, price, market, user, true]
+      │
+      └─ createParams(types, values)
+          │
+          └─ Returns: [encode(types), encode(values)]
+      │
+      ▼
+[3] BundlesRouter
+      │
+      └─ route(marketNeutral, 0, _data)
+          │
+          └─ Calls: marketNeutral.execute(0, _data)
+      │
+      ▼
+[4] MarketNeutral
+      │
+      └─ execute(0, _data)
+          │
+          └─ DecoderLib.decoder(_data)
+              │
+              ├─ Decodifica tipos y valores
+              ├─ Crea DeFiParam[] con los datos
+              └─ Retorna params[]
+      │
+      ▼
+[5] MarketNeutral.openPositionWithEther(params)
+      │
+      ├─ ethAmount = params[0].x
+      ├─ market = params[4].w
+      └─ isLong = params[6].z
+      │
+      └─ Usa datos para llamar GMX ✓
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     VENTAJAS DEL DISEÑO
+═══════════════════════════════════════════════════════════════════════════════
+
+✓ FLEXIBLE: Soporta múltiples tipos sin cambiar interfaz
+✓ TYPE-SAFE: Validación de tipos en runtime
+✓ EXTENSIBLE: Fácil añadir nuevos tipos
+✓ EFFICIENT: Solo decodifica cuando necesario
+✓ CLEAN: Separa encoding (Main) de decoding (Executors)
+✓ REUSABLE: Misma librería para todos los bundles
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     COMPARACIÓN: DECODER VS ALTERNATIVAS
+═══════════════════════════════════════════════════════════════════════════════
+
+ALTERNATIVA 1: Function overloading
+  function execute(uint, address, bool) external;
+  function execute(uint, uint, address) external;
+  ...
+  
+  PROBLEMAS:
+    ✗ Explosión de funciones (N! combinaciones)
+    ✗ No escalable
+    ✗ Difícil mantener
+
+ALTERNATIVA 2: Structs específicos
+  struct OpenPositionParams { ... }
+  function execute(OpenPositionParams memory) external;
+  
+  PROBLEMAS:
+    ✗ Necesitas struct por cada operación
+    ✗ No flexible para nuevas operaciones
+    ✗ Mucho código repetitivo
+
+DECODER (Solución actual):
+  function execute(uint8 id, bytes[] calldata) external;
+  
+  VENTAJAS:
+    ✓ Una función para todo
+    ✓ Flexible y extensible
+    ✓ Type-safe con validación
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     EJEMPLO: DIFERENTES OPERACIONES
+═══════════════════════════════════════════════════════════════════════════════
+
+OPEN POSITION (7 params):
+  types:  [0, 0, 0, 0, 1, 1, 2]
+  values: [eth, size, price, fee, market, user, isLong]
+  
+  decoder() → DeFiParam[7]
+
+CLOSE POSITION (6 params):
+  types:  [0, 0, 0, 1, 1, 2]
+  values: [size, price, fee, market, user, isLong]
+  
+  decoder() → DeFiParam[6]
+
+SWAP (4 params):
+  types:  [1, 1, 0, 0]
+  values: [tokenIn, tokenOut, amountIn, minOut]
+  
+  decoder() → DeFiParam[4]
+
+
+MISMO DECODER PARA TODAS ✓
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     TESTING Y DEBUGGING
+═══════════════════════════════════════════════════════════════════════════════
+
+Para debuggear datos:
+  │
+  ├─ Log types array:
+  │   └─ Verificar que tipos son correctos
+  │
+  ├─ Log values array length:
+  │   └─ Debe igualar types.length
+  │
+  ├─ Decode manual cada value:
+  │   └─ Verificar que formato es correcto
+  │
+  └─ Verificar params resultantes:
+      └─ Cada param._type debe coincidir con types[i]
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     MEJORAS FUTURAS
+═══════════════════════════════════════════════════════════════════════════════
+
+TODO: Soportar arrays (uint256[], address[], etc)
+TODO: Soportar structs anidados
+TODO: Validación más estricta de types
+TODO: Gas optimization en loops
+TODO: Eventos para debugging
+TODO: Helper functions para encoding común
+
+
+═══════════════════════════════════════════════════════════════════════════════
+

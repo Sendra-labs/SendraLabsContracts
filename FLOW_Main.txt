@@ -1,0 +1,272 @@
+═══════════════════════════════════════════════════════════════════════════════
+                          MAIN.SOL - FLUJO COMPLETO
+═══════════════════════════════════════════════════════════════════════════════
+
+DESCRIPCIÓN:
+  - Punto de entrada principal del protocolo para el frontend
+  - Gestiona posiciones Market Neutral (Long + Short simultáneas)
+  - Coordina interacciones entre todos los componentes del sistema
+
+DEPENDENCIAS:
+  - BundlesRouter (routing de operaciones)
+  - MarketNeutral (executor de GMX)
+  - ProtocolStorage (capa de datos)
+  - GMXMarketsRegistry (registry de mercados)
+  - GMXPrices (oracle de precios)
+
+═══════════════════════════════════════════════════════════════════════════════
+                     1. ABRIR POSICIÓN MARKET NEUTRAL
+═══════════════════════════════════════════════════════════════════════════════
+
+Usuario → openMarketNeutral(
+            marketLong,      // ej: "ETHUSDC"
+            marketShort,     // ej: "BTCUSDC"
+            totalEthAmount,  // ETH para colateral
+            sizeDeltaUsdLong,  // Tamaño posición long
+            sizeDeltaUsdShort, // Tamaño posición short
+            executionFee,    // Fee por orden GMX
+            slippageBps      // Tolerancia de slippage
+          )
+          [msg.value = totalEthAmount + (executionFee * 2)]
+  │
+  ├─ PASO 1: Calcular precios aceptables con slippage
+  │   ├─ GMXMarkets.getMarket(marketLong) → address marketLongAddr
+  │   ├─ GMXMarkets.getMarket(marketShort) → address marketShortAddr
+  │   ├─ GMXPrices.getAcceptablePrice(marketLongAddr, true, true, slippageBps)
+  │   │    └─ Retorna: (acceptablePriceLong, currentPrice)
+  │   └─ GMXPrices.getAcceptablePrice(marketShortAddr, false, true, slippageBps)
+  │        └─ Retorna: (acceptablePriceShort, currentPrice)
+  │
+  ├─ PASO 2: Crear estructura de datos de la posición
+  │   │
+  │   └─ newPositionData[10]:
+  │       [0] totalEthAmount
+  │       [1] isNativeToken (true)
+  │       [2] market Long (address)
+  │       [3] market Short (address)
+  │       [4] sizeDeltaUsdLong
+  │       [5] sizeDeltaUsdShort
+  │       [6] initialPriceTokenLong
+  │       [7] initialPriceTokenShort
+  │       [8] initialUsdValue
+  │       [9] openDate (block.timestamp)
+  │
+  ├─ PASO 3: Registrar posición en storage
+  │   │
+  │   └─ updatePositions(newPositionData, 0)  // 0 = Market Neutral type
+  │       │
+  │       ├─ ProtocolStorage.updateUserTransactionCount(user, 1)
+  │       │
+  │       ├─ ProtocolStorage.getUser(user) → userData
+  │       │
+  │       ├─ positionId = userData.totalPositions + 1
+  │       │
+  │       ├─ createPosition() → Crea nuevo Position struct
+  │       │
+  │       └─ ProtocolStorage.updateUserGlobalPosition(
+  │               user,
+  │               GlobalPosition(
+  │                   totalPositions + 1,
+  │                   activePositions + 1,
+  │                   positions[]
+  │               )
+  │           )
+  │
+  ├─ PASO 4: Dividir ETH para las dos órdenes
+  │   │
+  │   └─ _value = msg.value / 2
+  │
+  ├─ PASO 5: Abrir posición LONG
+  │   │
+  │   └─ openPositionSimpleParams(
+  │           totalEthAmount/2,
+  │           sizeDeltaUsdLong,
+  │           acceptablePriceLong,
+  │           executionFee,
+  │           _value,              // msg.value/2
+  │           marketLong,
+  │           true                 // isLong
+  │       ) [internal]
+  │       │
+  │       ├─ Crear arrays de tipos y valores
+  │       │   types[7]: [uint, uint, uint, uint, address, address, bool]
+  │       │   values[7]: [ethAmount, sizeDelta, price, fee, market, user, isLong]
+  │       │
+  │       ├─ GMXMarkets.getMarket(marketLong) → marketAddress
+  │       │
+  │       ├─ createParams(types, values) → bytes[] params
+  │       │
+  │       └─ BundlesRouter.route{value: _value}(
+  │               marketNeutralAddress,
+  │               0,              // functionId = openPosition
+  │               params
+  │           )
+  │           │
+  │           └─ [Ver FLOW_BundlesRouter.txt]
+  │               └─ [Ver FLOW_MarketNeutral.txt]
+  │
+  └─ PASO 6: Abrir posición SHORT
+      │
+      └─ openPositionSimpleParams(
+              totalEthAmount/2,
+              sizeDeltaUsdShort,
+              acceptablePriceShort,
+              executionFee,
+              _value,              // msg.value/2
+              marketShort,
+              false                // isLong
+          ) [internal]
+          │
+          └─ [Mismo flujo que LONG]
+
+
+RESULTADO:
+  ✓ 2 órdenes enviadas a GMX (1 Long + 1 Short)
+  ✓ Posición registrada en ProtocolStorage
+  ✓ TransactionCount incrementado
+  ✓ Usuario puede consultar su posición por ID
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     2. CERRAR POSICIÓN MARKET NEUTRAL
+═══════════════════════════════════════════════════════════════════════════════
+
+Usuario → closeMarketNeutral(
+            positionId,      // ID de la posición a cerrar
+            executionFee,    // Fee por orden GMX
+            slippageBps      // Tolerancia de slippage
+          )
+          [msg.value = executionFee * 2]
+  │
+  ├─ PASO 1: Dividir ETH para las dos órdenes
+  │   │
+  │   └─ _value = msg.value / 2
+  │
+  ├─ PASO 2: Cerrar lado LONG
+  │   │
+  │   └─ closeSideMarketNeutral(
+  │           positionId,
+  │           executionFee,
+  │           slippageBps,
+  │           _value,          // msg.value/2
+  │           true             // isLongSide
+  │       ) [internal]
+  │       │
+  │       ├─ ProtocolStorage.getUser(user) → userData
+  │       │
+  │       ├─ getUserPosition(positions, positionId) → position
+  │       │   │
+  │       │   └─ Loop por positions[] hasta encontrar ID
+  │       │
+  │       ├─ Decodificar positionData
+  │       │   │
+  │       │   └─ positionData structure:
+  │       │       [0] totalEthAmount
+  │       │       [1] isNativeToken
+  │       │       [2] market Long ← USAMOS ESTE
+  │       │       [3] market Short
+  │       │       [4] sizeDeltaUsdLong ← USAMOS ESTE
+  │       │       [5] sizeDeltaUsdShort
+  │       │       [6] initialPriceTokenLong
+  │       │       [7] initialPriceTokenShort
+  │       │       [8] initialUsdValue
+  │       │       [9] openDate
+  │       │
+  │       ├─ Seleccionar mercado y size según lado
+  │       │   │
+  │       │   └─ _market = decode(positionData[2], address)  // Long market
+  │       │       sizeDelta = positionData[4]                // Long size
+  │       │
+  │       ├─ GMXPrices.getAcceptablePrice(
+  │       │       _market,
+  │       │       true,        // isLong
+  │       │       false,       // isIncrease = false (cerrando)
+  │       │       slippageBps
+  │       │   )
+  │       │   └─ Retorna: (acceptablePrice, currentPrice)
+  │       │
+  │       ├─ Crear arrays de tipos y valores
+  │       │   types[6]: [uint, uint, uint, address, address, bool]
+  │       │   values[6]: [sizeDelta, price, fee, market, user, isLong]
+  │       │
+  │       ├─ createParams(types, values) → bytes[] params
+  │       │
+  │       └─ BundlesRouter.route{value: _value}(
+  │               marketNeutralAddress,
+  │               1,           // functionId = closePosition
+  │               params
+  │           )
+  │           │
+  │           └─ [Ver FLOW_BundlesRouter.txt]
+  │               └─ [Ver FLOW_MarketNeutral.txt]
+  │
+  └─ PASO 3: Cerrar lado SHORT
+      │
+      └─ closeSideMarketNeutral(
+              positionId,
+              executionFee,
+              slippageBps,
+              _value,          // msg.value/2
+              false            // isLongSide
+          ) [internal]
+          │
+          ├─ [Mismo flujo que LONG]
+          │
+          └─ Pero usa:
+              _market = decode(positionData[3], address)  // Short market
+              sizeDelta = positionData[5]                // Short size
+
+
+RESULTADO:
+  ✓ 2 órdenes de cierre enviadas a GMX
+  ✓ Fondos + PnL serán devueltos al usuario (vía GMX callback)
+  ✓ TODO: Actualizar PnL en ProtocolStorage después del callback
+  ✓ TODO: Marcar posición como cerrada
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                         3. FUNCIONES AUXILIARES
+═══════════════════════════════════════════════════════════════════════════════
+
+createPosition():
+  ─ Crea nuevo Position struct y lo añade al array de posiciones
+  ─ Input: positions[], newPositionData[], positionType, positionId
+  ─ Output: positions[] actualizado con nueva posición
+
+createParams():
+  ─ Formatea tipos y valores en estructura para BundlesRouter
+  ─ Input: types[], values[]
+  ─ Output: bytes[] params = [encode(types), encode(values)]
+
+getUserPosition():
+  ─ Busca una posición específica por ID en el array de posiciones
+  ─ Input: positions[], positionId
+  ─ Output: Position struct
+  ─ Revert: "Position not found" si no existe
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                         PROTECCIONES DE SEGURIDAD
+═══════════════════════════════════════════════════════════════════════════════
+
+✓ ReentrancyGuard en funciones públicas payable
+✓ Funciones internas no requieren nonReentrant (heredan protección)
+✓ División correcta de msg.value entre dos operaciones
+✓ Validación de permisos vía Roles contract
+✓ Precios con slippage protection
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                              MEJORAS FUTURAS
+═══════════════════════════════════════════════════════════════════════════════
+
+TODO: Implementar callback afterOrderExecution() de GMX
+TODO: Calcular y registrar PnL al cerrar posiciones
+TODO: Añadir validaciones de input (amounts > 0, msg.value correcto)
+TODO: Sistema de rescue para órdenes fallidas
+TODO: Eventos para tracking off-chain
+TODO: Función para cerrar solo un lado (ya existe closeSideMarketNeutral)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+

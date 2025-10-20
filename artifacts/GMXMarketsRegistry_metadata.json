@@ -1,0 +1,265 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_roles",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "marketAddress",
+						"type": "address"
+					}
+				],
+				"name": "MarketAdded",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "oldAddress",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "address",
+						"name": "newAddress",
+						"type": "address"
+					}
+				],
+				"name": "MarketUpdated",
+				"type": "event"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "marketAddress",
+						"type": "address"
+					}
+				],
+				"name": "addMarket",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					}
+				],
+				"name": "getMarket",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					}
+				],
+				"name": "hasMarket",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"name": "marketExists",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"name": "markets",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "string",
+						"name": "symbol",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "newAddress",
+						"type": "address"
+					}
+				],
+				"name": "updateMarket",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"author": "@Diego-AVZ",
+			"details": "Allows admins to update market addresses if GMX changes themReference: https://arbiscan.io/tokens/label/gmx",
+			"kind": "dev",
+			"methods": {
+				"addMarket(string,address)": {
+					"params": {
+						"marketAddress": "Address of the new market",
+						"symbol": "Market symbol (e.g., \"NEWUSDC\")"
+					}
+				},
+				"getMarket(string)": {
+					"params": {
+						"symbol": "Market symbol (e.g., \"BTCUSDC\")"
+					},
+					"returns": {
+						"_0": "Address of the market"
+					}
+				},
+				"hasMarket(string)": {
+					"params": {
+						"symbol": "Market symbol"
+					},
+					"returns": {
+						"_0": "True if market exists"
+					}
+				},
+				"updateMarket(string,address)": {
+					"params": {
+						"newAddress": "New address of the market",
+						"symbol": "Market symbol (e.g., \"BTCUSDC\")"
+					}
+				}
+			},
+			"title": "GMX Markets Registry",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"addMarket(string,address)": {
+					"notice": "Add a new market (admin only)"
+				},
+				"getMarket(string)": {
+					"notice": "Get market address by symbol"
+				},
+				"hasMarket(string)": {
+					"notice": "Check if a market exists"
+				},
+				"marketExists(bytes32)": {
+					"notice": "Mapping to check if symbol exists"
+				},
+				"markets(bytes32)": {
+					"notice": "Mapping from market symbol hash to market address"
+				},
+				"updateMarket(string,address)": {
+					"notice": "Update a market address (admin only)"
+				}
+			},
+			"notice": "Upgradeable registry for GMX market addresses",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/core/config/markets.sol": "GMXMarketsRegistry"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"src/core/config/markets.sol": {
+			"keccak256": "0x5e6646e111c12cf0bb6660e600cebbc1ac2454905869f9f998378e889161957c",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://3793e49e88ac5eb5d19d02a815a55e21c904a73bd1d538c26c216ecd9e93c88c",
+				"dweb:/ipfs/QmRKETtLQejQsuhiFDfn928tecSAmAtpEz5odJDveUiRkQ"
+			]
+		}
+	},
+	"version": 1
+}

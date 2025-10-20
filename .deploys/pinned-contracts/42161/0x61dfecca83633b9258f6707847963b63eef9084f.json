@@ -1,0 +1,201 @@
+{
+  "name": "GMXPrices",
+  "address": "0x61dfecca83633b9258f6707847963b63eef9084f",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_dataStore",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "dataStore",
+      "outputs": [
+        {
+          "internalType": "contract IDataStore",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "token",
+          "type": "address"
+        }
+      ],
+      "name": "getChainlinkPriceFeed",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "priceFeedAddress",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "marketAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getMarketPriceFeeds",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "indexTokenPriceFeed",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "longTokenPriceFeed",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "shortTokenPriceFeed",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "marketAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getMarketPrices",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "indexTokenPrice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "longTokenPrice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "shortTokenPrice",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "marketAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getMarketPricesWithDecimals",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "indexPrice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "longPrice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "shortPrice",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint8",
+          "name": "indexDecimals",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint8",
+          "name": "longDecimals",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint8",
+          "name": "shortDecimals",
+          "type": "uint8"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "marketAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getMarketTokens",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "indexToken",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "longToken",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "shortToken",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "marketAddress",
+          "type": "address"
+        }
+      ],
+      "name": "getPrice",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "price",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "filePath": " - connect to localhost - /src/lib/GMX lib/GMXPrices.sol",
+  "pinnedAt": 1760173601266
+}

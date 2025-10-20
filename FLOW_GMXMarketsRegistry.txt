@@ -1,0 +1,371 @@
+═══════════════════════════════════════════════════════════════════════════════
+                  GMXMARKETSREGISTRY.SOL - FLUJO COMPLETO
+═══════════════════════════════════════════════════════════════════════════════
+
+DESCRIPCIÓN:
+  - Registry centralizado de direcciones de mercados GMX V2
+  - Mapea símbolos legibles a addresses de contratos
+  - Upgradeable por admins si GMX cambia addresses
+
+DEPENDENCIAS:
+  - Roles (autenticación de admins)
+
+PROPÓSITO:
+  - Abstracción: Frontend usa "ETHUSDC" en vez de 0x70d95...
+  - Mantenibilidad: Si GMX cambia address, solo se actualiza aquí
+  - Seguridad: Solo admins pueden modificar addresses
+
+═══════════════════════════════════════════════════════════════════════════════
+                     INICIALIZACIÓN (CONSTRUCTOR)
+═══════════════════════════════════════════════════════════════════════════════
+
+Deploy → new GMXMarketsRegistry(rolesAddress)
+  │
+  ├─ VALIDACIÓN:
+  │   └─ rolesAddress != address(0)
+  │
+  ├─ SETUP:
+  │   └─ roles = Roles(rolesAddress)
+  │
+  └─ INICIALIZAR MERCADOS:
+      │
+      └─ _initializeMarkets()
+          │
+          ├─ _addMarket("BTCUSDC", 0x47c031236e19d024b42f8AE6780E44A573170703)
+          ├─ _addMarket("ETHUSDC", 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336)
+          ├─ _addMarket("LINKUSDC", 0x7f1fa204bb700853D36994DA19F830b6Ad18455C)
+          ├─ _addMarket("SOLUSDC", 0x09400D9DB990D5ed3f35D7be61DfAEB900Af03C9)
+          ├─ _addMarket("DOTUSDC", 0x7B2D09fca2395713dcc2F67323e4876F27b9ecB2)
+          ├─ _addMarket("AVAXUSDC", 0x7BbBf946883a5701350007320F525c5379B8178A)
+          ├─ _addMarket("BNBUSDC", 0x2d340912Aa47e33c90Efb078e69E70EFe2B34b9B)
+          ├─ _addMarket("SUIUSDC", 0x6Ecf2133E2C9751cAAdCb6958b9654baE198a797)
+          ├─ _addMarket("APTUSDC", 0x66A69c8eb98A7efE22A22611d1967dfec786a708)
+          ├─ _addMarket("XRPUSDC", 0x0CCB4fAa6f1F1B30911619f1184082aB4E25813c)
+          ├─ _addMarket("OPUSDC", 0x3017fb57b8a03de357AE4a1b2f2b2Be27C5968E5)
+          ├─ _addMarket("ARBUSDC", 0xC25cEf6061Cf5dE5eb761b50E4743c1F5D7E5407)
+          ├─ _addMarket("UNIUSDC", 0xD6278F32c00F2fc9cdc395b00A144706Ffa4E60E)
+          ├─ _addMarket("AAVEUSDC", 0x36E7aF39b921235c4b01508BE38F27A535851a5c)
+          └─ ... (más mercados)
+
+
+RESULTADO:
+  ✓ 15-20 mercados GMX pre-cargados
+  ✓ Listos para usar desde el deploy
+  ✓ Addresses actualizables por admin si necesario
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     OBTENER MERCADO (Principal)
+═══════════════════════════════════════════════════════════════════════════════
+
+Frontend/Main → getMarket("ETHUSDC") → address
+  │
+  ├─ PASO 1: Crear hash del símbolo
+  │   │
+  │   └─ symbolHash = keccak256(abi.encode("ETHUSDC"))
+  │       │
+  │       └─ Hash único por símbolo
+  │
+  ├─ PASO 2: Buscar en mapping
+  │   │
+  │   └─ marketAddress = markets[symbolHash]
+  │       │
+  │       └─ Retorna: 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336
+  │
+  ├─ PASO 3: Validar existe
+  │   │
+  │   └─ require(marketAddress != address(0), "Market not found")
+  │
+  └─ RETORNO:
+      └─ address del mercado GMX
+
+
+EJEMPLO USO:
+
+  Main.openMarketNeutral("ETHUSDC", "BTCUSDC", ...)
+    │
+    ├─ address ethMarket = gmxMarkets.getMarket("ETHUSDC")
+    │   └─ 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336
+    │
+    └─ address btcMarket = gmxMarkets.getMarket("BTCUSDC")
+        └─ 0x47c031236e19d024b42f8AE6780E44A573170703
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     AÑADIR MERCADO (ADMIN)
+═══════════════════════════════════════════════════════════════════════════════
+
+Admin → addMarket("NEWUSDC", 0xNew...Address)
+  │
+  ├─ VALIDACIÓN 1: onlyAdmin
+  │   │
+  │   └─ roles.checkAdmin(msg.sender)
+  │       ├─ SI TRUE: ✓ Continúa
+  │       └─ SI FALSE: ✗ REVERT "Not admin"
+  │
+  ├─ VALIDACIÓN 2: Address válida
+  │   └─ require(marketAddress != address(0), "Invalid address")
+  │
+  ├─ PASO 1: Crear hash del símbolo
+  │   │
+  │   └─ symbolHash = keccak256(abi.encode("NEWUSDC"))
+  │
+  ├─ PASO 2: Guardar en mappings
+  │   │
+  │   ├─ markets[symbolHash] = 0xNew...Address
+  │   └─ marketExists[symbolHash] = true
+  │
+  └─ PASO 3: Emitir evento (opcional)
+      │
+      └─ emit MarketAdded("NEWUSDC", 0xNew...Address)
+
+
+RESULTADO:
+  ✓ Nuevo mercado disponible inmediatamente
+  ✓ getMarket("NEWUSDC") funciona
+  ✓ Frontend puede usar el nuevo símbolo
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     ACTUALIZAR MERCADO (ADMIN)
+═══════════════════════════════════════════════════════════════════════════════
+
+Admin → updateMarket("ETHUSDC", 0xNewETH...Address)
+  │
+  ├─ VALIDACIÓN 1: onlyAdmin
+  │
+  ├─ VALIDACIÓN 2: Mercado existe
+  │   │
+  │   └─ symbolHash = keccak256(abi.encode("ETHUSDC"))
+  │       require(marketExists[symbolHash], "Market not found")
+  │
+  ├─ PASO 1: Actualizar address
+  │   │
+  │   └─ markets[symbolHash] = 0xNewETH...Address
+  │
+  └─ PASO 2: Emitir evento
+      │
+      └─ emit MarketUpdated("ETHUSDC", oldAddress, newAddress)
+
+
+CASO DE USO:
+  
+  GMX actualiza el contrato de mercado ETH/USDC
+  │
+  └─ Admin detecta el cambio
+      │
+      └─ updateMarket("ETHUSDC", nuevoAddress)
+          │
+          └─ Protocolo usa automáticamente el nuevo address
+              ✓ Sin necesidad de redeployar Main.sol
+              ✓ Sin downtime del protocolo
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     ELIMINAR MERCADO (ADMIN)
+═══════════════════════════════════════════════════════════════════════════════
+
+Admin → removeMarket("OLDUSDC")
+  │
+  ├─ VALIDACIÓN 1: onlyAdmin
+  │
+  ├─ VALIDACIÓN 2: Mercado existe
+  │   └─ require(marketExists[symbolHash], "Market not found")
+  │
+  ├─ PASO 1: Eliminar de mappings
+  │   │
+  │   ├─ markets[symbolHash] = address(0)
+  │   └─ marketExists[symbolHash] = false
+  │
+  └─ PASO 2: Emitir evento
+      │
+      └─ emit MarketRemoved("OLDUSDC")
+
+
+RESULTADO:
+  ✗ getMarket("OLDUSDC") revierte con "Market not found"
+  ✗ No se pueden abrir nuevas posiciones en ese mercado
+  ✓ Posiciones existentes NO se afectan
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     CONSULTAR INFORMACIÓN
+═══════════════════════════════════════════════════════════════════════════════
+
+isMarketAvailable(symbol) → bool
+  │
+  └─ symbolHash = keccak256(abi.encode(symbol))
+      return marketExists[symbolHash]
+
+
+getAllMarkets() → string[] symbols, address[] addresses
+  │
+  └─ Loop por todos los mercados guardados
+      └─ Retorna arrays paralelos
+
+
+getMarketInfo(symbol) → (address, bool)
+  │
+  └─ (markets[hash], marketExists[hash])
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     DIAGRAMA: FLUJO DE USO
+═══════════════════════════════════════════════════════════════════════════════
+
+                         Frontend/Usuario
+                               │
+                               │ "Quiero abrir ETH/USDC"
+                               ▼
+                         Main.sol
+                               │
+                               │ getMarket("ETHUSDC")
+                               ▼
+                    ┌────────────────────────┐
+                    │ GMXMarketsRegistry     │
+                    │                        │
+                    │  "ETHUSDC" → Hash      │
+                    │  Hash → Address lookup │
+                    │  Return: 0x70d9...6336 │
+                    └────────┬───────────────┘
+                             │
+                             │ 0x70d9...6336
+                             ▼
+                         Main.sol
+                             │
+                             │ Usa address para GMXPrices
+                             │ Usa address para crear orden
+                             ▼
+                         GMX V2
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     ESTRUCTURA DE DATOS
+═══════════════════════════════════════════════════════════════════════════════
+
+mapping(bytes32 => address) public markets
+  │
+  └─ Key: keccak256(abi.encode("ETHUSDC"))
+      Value: 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336
+
+mapping(bytes32 => bool) public marketExists
+  │
+  └─ Key: keccak256(abi.encode("ETHUSDC"))
+      Value: true
+
+
+VENTAJAS DEL HASH:
+  ✓ Gas efficient (bytes32 vs string storage)
+  ✓ Collision resistant (keccak256)
+  ✓ Consistent (mismo string → mismo hash siempre)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     MERCADOS SOPORTADOS (ARBITRUM)
+═══════════════════════════════════════════════════════════════════════════════
+
+Cripto Major:
+  ├─ BTCUSDC:  Bitcoin
+  ├─ ETHUSDC:  Ethereum
+  ├─ LINKUSDC: Chainlink
+  └─ UNIUSDC:  Uniswap
+
+Layer 1/2:
+  ├─ SOLUSDC:  Solana
+  ├─ DOTUSDC:  Polkadot
+  ├─ AVAXUSDC: Avalanche
+  ├─ OPUSDC:   Optimism
+  └─ ARBUSDC:  Arbitrum
+
+Exchange Tokens:
+  ├─ BNBUSDC:  Binance Coin
+  └─ ... más
+
+DeFi:
+  ├─ AAVEUSDC: Aave
+  └─ ... más
+
+Nuevos:
+  ├─ SUIUSDC:  Sui
+  ├─ APTUSDC:  Aptos
+  └─ XRPUSDC:  Ripple
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     FUNCIÓN INTERNA: _addMarket
+═══════════════════════════════════════════════════════════════════════════════
+
+_addMarket(symbol, marketAddress) [internal]
+  │
+  ├─ symbolHash = keccak256(abi.encode(symbol))
+  │
+  ├─ markets[symbolHash] = marketAddress
+  │
+  └─ marketExists[symbolHash] = true
+
+
+USADO EN:
+  - Constructor (_initializeMarkets)
+  - addMarket (wrapper público con onlyAdmin)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     VENTAJAS DEL DISEÑO
+═══════════════════════════════════════════════════════════════════════════════
+
+✓ USER-FRIENDLY: Símbolos legibles ("ETHUSDC" vs 0x70d9...)
+✓ MAINTAINABLE: Actualizar addresses sin redeployar Main
+✓ GAS EFFICIENT: Hash lookup es O(1) y barato
+✓ SECURE: Solo admins pueden modificar
+✓ FLEXIBLE: Fácil añadir/remover mercados
+✓ CONSISTENT: Source of truth único para addresses
+✓ UPGRADEABLE: Adaptable a cambios de GMX
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     CASOS DE USO
+═══════════════════════════════════════════════════════════════════════════════
+
+CASO 1: Usuario Abre Posición
+  └─ Frontend muestra lista de mercados legibles
+      Usuario selecciona "ETH/USDC" y "BTC/USDC"
+      │
+      └─ Main.openMarketNeutral("ETHUSDC", "BTCUSDC", ...)
+          │
+          └─ GMXMarketsRegistry.getMarket("ETHUSDC")
+              └─ Retorna address del mercado ✓
+
+CASO 2: GMX Actualiza Contrato
+  └─ GMX V2 migra mercado ETH a nuevo address
+      │
+      └─ Admin detecta cambio
+          │
+          └─ updateMarket("ETHUSDC", nuevoAddress)
+              │
+              └─ Frontend continúa funcionando sin cambios ✓
+                  Backend usa nuevo address automáticamente ✓
+
+CASO 3: Nuevo Mercado en GMX
+  └─ GMX añade mercado "PEPEUSDC"
+      │
+      └─ Admin añade al registry
+          │
+          └─ addMarket("PEPEUSDC", 0xNew...Address)
+              │
+              └─ Frontend puede ofrecer PEPE inmediatamente ✓
+
+
+═══════════════════════════════════════════════════════════════════════════════
+                     MEJORAS FUTURAS
+═══════════════════════════════════════════════════════════════════════════════
+
+TODO: Eventos para tracking de cambios
+TODO: Función para obtener lista de todos los símbolos
+TODO: Metadata adicional por mercado (nombre completo, decimals, etc)
+TODO: Sistema de verificación automática de addresses
+TODO: Integración con Chainlink para validar addresses
+TODO: Rate limiting en updates (prevenir spam)
+
+
+═══════════════════════════════════════════════════════════════════════════════
+

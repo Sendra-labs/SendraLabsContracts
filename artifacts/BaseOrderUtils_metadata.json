@@ -1,0 +1,45 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/lib/GMX lib/BaseOrdersUtils.sol": "BaseOrderUtils"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"src/lib/GMX lib/BaseOrdersUtils.sol": {
+			"keccak256": "0xf7e0544f892d35be55701c1d3ad8f8dcad6fa6eb5669c2ffe21dc38a8e13d45d",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://5c4a6885e23fa2900730545a535e4b5454fbeb073ec4cb38ccde4f7a964e2644",
+				"dweb:/ipfs/QmPQRRpUgrKhBeBsypVGWNuwMdwGjQfGVVy5dUatymRBj3"
+			]
+		}
+	},
+	"version": 1
+}

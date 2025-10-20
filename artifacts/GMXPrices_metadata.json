@@ -1,0 +1,341 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_dataStore",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "dataStore",
+				"outputs": [
+					{
+						"internalType": "contract IDataStore",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "token",
+						"type": "address"
+					}
+				],
+				"name": "getChainlinkPriceFeed",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "priceFeedAddress",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "marketAddress",
+						"type": "address"
+					}
+				],
+				"name": "getMarketPriceFeeds",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "indexTokenPriceFeed",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "longTokenPriceFeed",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "shortTokenPriceFeed",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "marketAddress",
+						"type": "address"
+					}
+				],
+				"name": "getMarketPrices",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "indexTokenPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "longTokenPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "shortTokenPrice",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "marketAddress",
+						"type": "address"
+					}
+				],
+				"name": "getMarketPricesWithDecimals",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "indexPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "longPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "shortPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint8",
+						"name": "indexDecimals",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint8",
+						"name": "longDecimals",
+						"type": "uint8"
+					},
+					{
+						"internalType": "uint8",
+						"name": "shortDecimals",
+						"type": "uint8"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "marketAddress",
+						"type": "address"
+					}
+				],
+				"name": "getMarketTokens",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "indexToken",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "longToken",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "shortToken",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "marketAddress",
+						"type": "address"
+					}
+				],
+				"name": "getPrice",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "price",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"author": "@Diego-AVZ",
+			"details": "Integrates with GMX V2 DataStore to fetch Chainlink price feed addresses",
+			"kind": "dev",
+			"methods": {
+				"constructor": {
+					"params": {
+						"_dataStore": "Address of GMX DataStore contract (0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8 on Arbitrum)"
+					}
+				},
+				"getChainlinkPriceFeed(address)": {
+					"params": {
+						"token": "Address of the token"
+					},
+					"returns": {
+						"priceFeedAddress": "Address of the Chainlink price feed"
+					}
+				},
+				"getMarketPriceFeeds(address)": {
+					"params": {
+						"marketAddress": "Address of the GMX market"
+					},
+					"returns": {
+						"indexTokenPriceFeed": "Price feed for index token",
+						"longTokenPriceFeed": "Price feed for long collateral token",
+						"shortTokenPriceFeed": "Price feed for short collateral token"
+					}
+				},
+				"getMarketPrices(address)": {
+					"params": {
+						"marketAddress": "Address of the GMX market"
+					},
+					"returns": {
+						"indexTokenPrice": "Price of index token",
+						"longTokenPrice": "Price of long collateral token",
+						"shortTokenPrice": "Price of short collateral token"
+					}
+				},
+				"getMarketPricesWithDecimals(address)": {
+					"params": {
+						"marketAddress": "Address of the GMX market"
+					},
+					"returns": {
+						"indexDecimals": "Decimals for index token price",
+						"indexPrice": "Price of index token",
+						"longDecimals": "Decimals for long token price",
+						"longPrice": "Price of long token",
+						"shortDecimals": "Decimals for short token price",
+						"shortPrice": "Price of short token"
+					}
+				},
+				"getMarketTokens(address)": {
+					"params": {
+						"marketAddress": "Address of the GMX market"
+					},
+					"returns": {
+						"indexToken": "Address of the index token (e.g., WETH for ETH/USD market)",
+						"longToken": "Address of the long collateral token",
+						"shortToken": "Address of the short collateral token"
+					}
+				},
+				"getPrice(address)": {
+					"params": {
+						"marketAddress": "Address of the GMX market"
+					},
+					"returns": {
+						"price": "Current price from Chainlink (8 decimals typically)"
+					}
+				}
+			},
+			"title": "GMX Prices",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"constructor": {
+					"notice": "Initialize with GMX DataStore"
+				},
+				"dataStore()": {
+					"notice": "GMX DataStore contract address"
+				},
+				"getChainlinkPriceFeed(address)": {
+					"notice": "Get the Chainlink price feed address for a token"
+				},
+				"getMarketPriceFeeds(address)": {
+					"notice": "Get all Chainlink price feed addresses for a market"
+				},
+				"getMarketPrices(address)": {
+					"notice": "Get all prices for a market from Chainlink"
+				},
+				"getMarketPricesWithDecimals(address)": {
+					"notice": "Get market prices with decimals information"
+				},
+				"getMarketTokens(address)": {
+					"notice": "Get the token addresses from a GMX market"
+				},
+				"getPrice(address)": {
+					"notice": "Get the price of the index token for a market"
+				}
+			},
+			"notice": "Contract for getting market prices from GMX DataStore via Chainlink",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/lib/GMX lib/GMXPrices.sol": "GMXPrices"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"src/lib/GMX lib/GMXPrices.sol": {
+			"keccak256": "0x7fe0ec196b8050f970dffde1d5e104b7f9838b2a03575029307f2663a63eb7c2",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://6bbe4dee556a3615d2de18830609e332c2ff7de608341680f7dc07258c7dffe8",
+				"dweb:/ipfs/QmcFSLWYARjFU5P789iDKBo94wnrDwqkPzKmC9MvdRAYb9"
+			]
+		},
+		"src/lib/Prices.lib.sol": {
+			"keccak256": "0xa71f584fc0f0ae19a7344d3ffa3cfe1c1dd1b475d51ed8ce2662284f51ae3f9b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://171ec130651593abdd2bf2c612a64f71a1b8e70bbb056ac1a22f236bf0bd0ecd",
+				"dweb:/ipfs/QmZAdX5zcQJLZPxWsp39ARKFjtZt1voJ3E7nexnqTGzcJN"
+			]
+		}
+	},
+	"version": 1
+}

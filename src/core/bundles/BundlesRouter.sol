@@ -15,15 +15,14 @@ contract BundlesRouter is ReentrancyGuard {
         _;
     }
 
-    function route(address _bundle, uint8 functionId, bytes[] calldata _data, uint256[] calldata _types) public onlyProtocol nonReentrant {
-        (bool success,) = _bundle.call(
+    function route(address _bundle, uint8 functionId, bytes[] calldata _data) public payable onlyProtocol nonReentrant {
+        (bool success,) = _bundle.call{value: msg.value}(
             abi.encodeWithSelector(
                 bytes4(
-                    keccak256("execute(uint8,bytes[],uint256[])")
+                    keccak256("execute(uint8,bytes[])")
                 ), 
                 functionId,
-                _data, 
-                _types
+                _data
             )
         );
         if(!success) revert ExecutionFailed();
