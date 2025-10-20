@@ -1,0 +1,17 @@
+Tenemos una arquitectura compleja pensada para facilitar al frontend pero es cara en terminos 
+ de gas y compleja para computación onchain.
+
+Vamos a crear una V2 pensada en optimización de gas aunque se dificulte la interacción con desde el frontend.
+
+V2:
+    -Eliminar funcionalidades de MAIN y bundlesRouter.
+    -Eliminar funcion execute de MarketNeutral.
+    -Crear librerias para los inputs/outputs de las funciones de MarketNeutral.
+    -Crear storages para cada bundle que necesite algo aparte del strage general del protocolo.
+    -Las posiciones siguen teniendo la data en bytes ya que necesitamos todas las posiciones 
+       en un solo storage y poder añadir tipos de posiciones en un futuro.
+    -La lógica de main pasa al executor (para almacenar data en storage desde ahi).
+    -Roles solo protegera los stroages del protocolo.
+    -Para añadir nuevas features al protocolo solo se necesita crear un nuevo executor (+ subStorage) y 
+       añadirlo a la lista de executors del protocolo para que Roles permita sus llamadas al storage.
+
