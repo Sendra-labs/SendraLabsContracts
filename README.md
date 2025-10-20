@@ -1,3 +1,6 @@
+## 🏗️ Arquitectura V2
+
+```mermaid
 graph TD
     A[Frontend] -->|direct call| B[MarketNeutral]
     A -->|direct call| C[UniswapExecutor]
@@ -20,3 +23,4 @@ graph TD
     style C fill:#e8f5e8
     style D fill:#fff3e0
     style H fill:#f3e5f5
+```
