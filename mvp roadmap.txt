@@ -1,0 +1,62 @@
+# MVP ROADMAP - PROTOCOLO
+
+## ESTADO ACTUAL
+- Proyecto en desarrollo con arquitectura modular
+- Contratos principales implementados
+- Estructura de carpetas organizada
+
+## TAREAS CRÍTICAS PENDIENTES
+
+
+### 2. SEPARACIÓN DE CALLBACKS POR TIPO DE OPERACIÓN
+**Problema**: `afterOrderExecution` debe comportarse diferente para apertura vs cierre
+**Solución**: Contratos separados para cada tipo de callback
+- Contrato para callbacks de apertura de posición
+- Contrato para callbacks de cierre de posición
+- Lógica específica en cada callback según el tipo de operación
+- Integración con el sistema de routing existente
+
+
+
+
+
+
+### 3. SIMULADORES DE GMX PARA TESTNET
+**Problema**: GMX no está disponible en testnets, necesitamos simular su comportamiento
+**Solución**: Contratos mock que simulen la funcionalidad de GMX
+- `MockExchangeRouter.sol` - simula el router de GMX
+- `MockOrderVault.sol` - simula el vault de órdenes
+- `MockReader.sol` - simula las funciones de lectura de GMX
+- `MockPrices.sol` - simula el sistema de precios
+- Adaptación de interfaces para que funcionen con los mocks
+- Configuración para modo testnet vs mainnet
+
+### 4. TESTING DEL FLUJO PRINCIPAL
+**Crítico para MVP**: Validar que todo funciona end-to-end
+- Test completo: usuario abre posición → GMX ejecuta → callback actualiza estado
+- Test de cierre de posición
+- Test de manejo de errores y edge cases
+- Test de gas y optimización
+- **Test con simuladores en testnet**
+
+## PRIORIDADES
+1. **CRÍTICO** - Funcionalidad core del protocolo
+2. **ALTO** - Seguridad y testing
+3. **MEDIO** - Optimización y gas
+4. **BAJO** - Documentación y frontend
+
+## 🎯 RESUMEN DE TAREAS PARA MVP SÓLIDO
+Con estas 5 tareas tendremos un MVP robusto y funcional:
+
+1. **GESTIÓN DE PROXIES DINÁMICOS** - Separar posiciones del mismo usuario
+2. **SEPARACIÓN DE CALLBACKS** - Diferentes callbacks para apertura/cierre
+3. **REFACTORIZACIÓN DE VARIABLES HARDCODEADAS** - Hacer `receiver` un parámetro
+4. **SIMULADORES DE GMX PARA TESTNET** - Mocks para desarrollo y testing
+5. **TESTING DEL FLUJO PRINCIPAL** - Validación end-to-end completa
+
+**Estado**: ✅ Plan completo definido - Listo para implementación
+
+## NOTAS
+- Revisar contratos principales antes del despliegue
+- Verificar integración con GMX
+- Validar flujos de usuario principales

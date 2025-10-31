@@ -31,8 +31,8 @@ contract GMXPrices {
     uint256 private constant DEFAULT_SLIPPAGE_BPS = 50;
     
     /**
-     * @notice Initialize with GMX DataStore
-     * @param _dataStore Address of GMX DataStore contract (0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8 on Arbitrum)
+     * @notice Initialize with AddressProvider
+     * @param _addressProvider Address of the AddressProvider contract
      */
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
