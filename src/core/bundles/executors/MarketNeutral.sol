@@ -13,14 +13,14 @@ import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.s
 import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
 import { IOrderCallbackReceiver } from "../../../interfaces/GMX/IOrderCallbackReceiver.sol";
 import { EventUtils } from "../../../lib/GMX lib/EventUtils.sol";
+import { GMXPrices } from "../../../periphery/utilsGMX/GMXPrices.sol"; 
+import { GMXMarketsRegistry } from "../../../core/config/gmxMarkets.sol";
+import { MarketNeutralLib } from "../../../lib/MarketNeutral/MarketNeutralLib.sol";
+import { MarketNeutralStorage } from "../storage/MarketNeutralStorage.sol";
+import { IWETH } from "../../../interfaces/IWETH.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 
-interface IWETH {
-    function withdraw(uint256 amount) external;
-    function deposit() external payable;
-}
-
-contract MarketNeutral is ReentrancyGuard, IOrderCallbackReceiver {
+contract MarketNeutral is ReentrancyGuard {
     using SafeERC20 for IERC20;
     using EventUtils for EventUtils.AddressItems;
     using EventUtils for EventUtils.UintItems;
@@ -28,23 +28,6 @@ contract MarketNeutral is ReentrancyGuard, IOrderCallbackReceiver {
     using EventUtils for EventUtils.BoolItems;
 
     AddressProvider public immutable addressProvider;
-    
-    // Struct para guardar datos crudos de ejecución (SIEMPRE se guarda, incluso si falla el procesamiento)
-    struct RawExecutionData {
-        uint256 positionId;
-        address receiver;
-        address outputToken;
-        uint256 outputAmount;
-        int256 pnl;
-        uint256 executionPrice;
-        uint256 collateralTokenPrice;
-        bool isLongSide;
-        bool processed;  // true si ya se procesó exitosamente
-        uint256 timestamp;
-    }
-    
-    // Mapping de order key → datos de ejecución
-    mapping(bytes32 => RawExecutionData) public rawExecutionData;
     
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
@@ -54,28 +37,236 @@ contract MarketNeutral is ReentrancyGuard, IOrderCallbackReceiver {
         if(!Roles(addressProvider.getAddress("Roles")).isProtocolContract(msg.sender)) revert SenderNotAllowed();
         _;
     }
-
+/*
     function execute(uint8 functionId, bytes[] calldata _data) external payable onlyProtocol {
         ProtocolLib.DeFiParam[] memory params = DecoderLib.decoder(_data);
         if     (functionId == 0) openPositionWithEther(params);
-        else if(functionId == 1) closePositionV2(params);
+        else if(functionId == 1) closeSideMarketNeutral(params);
         else if(functionId == 2) openPositionWithUSDC(params);
-        else if(functionId == 3) openMarketNeutral(params);
+        else if(functionId == 3) openEtherMarketNeutral(params);
+        else if(functionId == 4) openUSDCMarketNeutral(params);
+    }
+    */
+
+    function openEtherMarketNeutral(MarketNeutralLib.EtherMarketNeutralInput calldata _input) public payable nonReentrant {
+        GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
+        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
+
+        (uint256 aceptablePriceLong, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketLong), true, true, _input.slippageBps);
+        (uint256 aceptablePriceShort, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketShort), false, true, _input.slippageBps);
+        
+        bytes[] memory newPositionData = new bytes[](18);
+        newPositionData[0] = abi.encode(_input.totalEthAmount);
+        newPositionData[1] = abi.encode(true); // isNativeToken
+        newPositionData[2] = abi.encode(gmxMarkets.getMarket(_input.marketLong));
+        newPositionData[3] = abi.encode(gmxMarkets.getMarket(_input.marketShort));
+        newPositionData[4] = abi.encode(_input.sizeDeltaUsdLong); 
+        newPositionData[5] = abi.encode(_input.sizeDeltaUsdShort); 
+        newPositionData[6] = abi.encode(gmxPrices.getPrice(gmxMarkets.getMarket(_input.marketLong)));
+        newPositionData[7] = abi.encode(gmxPrices.getPrice(gmxMarkets.getMarket(_input.marketShort)));
+        newPositionData[8] = abi.encode(_input.totalEthAmount * gmxPrices.getPrice(0x70d95587d40A2caf56bd97485aB3Eec10Bee6336)); //checkThisLine Decimals
+        newPositionData[9] = abi.encode(block.timestamp);
+        newPositionData[10] = abi.encode(uint256(0));  // closeDate
+        newPositionData[11] = abi.encode(uint256(0));  // finalUsdValue
+        newPositionData[12] = abi.encode(uint256(0));  // finalPriceTokenLong
+        newPositionData[13] = abi.encode(uint256(0));  // finalPriceTokenShort
+        newPositionData[14] = abi.encode(int256(0));  // PNL
+        // Calcular las claves ANTES de initializePosition
+        address weth = addressProvider.getAddress("WETH");
+        bytes32 longKey = calculatePositionKey(address(this), gmxMarkets.getMarket(_input.marketLong), weth, true);
+        bytes32 shortKey = calculatePositionKey(address(this), gmxMarkets.getMarket(_input.marketShort), weth, false);
+        
+        newPositionData[15] = abi.encode(longKey);   // longKey
+        newPositionData[16] = abi.encode(shortKey);  // shortKey
+        newPositionData[17] = abi.encode(address(this));  // proxy address
+
+        /*__  market neutral positionParams  __*/
+        //0  {0, totalEthAmount}
+        //1  {2, isNativeToken}
+        //2  {1, market Long}
+        //3  {1, market Short}
+        //4  {0, sizeDeltaUsdLong}
+        //5  {0, sizeDeltaUsdShort}
+        //6  {0, initialPriceTokenLong}
+        //7  {0, initialPriceTokenShort}
+        //8  {0, initialUsdValue}
+        //9  {0, openDate}
+        //10 {0, closeDate}
+        //11 {0, finalUsdValue}
+        //12 {0, finalPriceTokenLong}
+        //13 {0, finalPriceTokenShort}
+        //14 {0, PNL}
+        //15 {2, longKey}
+        //16 {2, shortKey}
+        //17 {1, proxy address}
+
+        uint256 _value = msg.value / 2;
+        initializePosition(newPositionData, 0);
+        
+        // Preparar parámetros para posición Long
+        MarketNeutralLib.EtherOneSideTradeInput memory longInput = MarketNeutralLib.EtherOneSideTradeInput({
+            ethAmount: _input.totalEthAmount / 2,
+            sizeDeltaUsd: _input.sizeDeltaUsdLong,
+            acceptablePrice: aceptablePriceLong,
+            executionFee: _input.executionFee,
+            value: _value,
+            market: _input.marketLong,
+            isLong: true,
+            receiver: msg.sender
+        });
+        
+        // Preparar parámetros para posición Short
+        MarketNeutralLib.EtherOneSideTradeInput memory shortInput = MarketNeutralLib.EtherOneSideTradeInput({
+            ethAmount: _input.totalEthAmount / 2,
+            sizeDeltaUsd: _input.sizeDeltaUsdShort,
+            acceptablePrice: aceptablePriceShort,
+            executionFee: _input.executionFee,
+            value: _value,
+            market: _input.marketShort,
+            isLong: false,
+            receiver: msg.sender
+        });
+        
+        openPositionWithEther(longInput);
+        openPositionWithEther(shortInput);
     }
 
-    function openPositionWithEther(ProtocolLib.DeFiParam[] memory _params) public payable nonReentrant {
+    function openUSDCMarketNeutral(MarketNeutralLib.UsdcMarketNeutralInput calldata _input) public payable nonReentrant {
+        GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
+        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
 
-        uint256 ethAmount = _params[0].x;            
-        uint256 sizeDeltaUsd = _params[1].x;         
-        uint256 acceptablePrice = _params[2].x;      
-        uint256 executionFee = _params[3].x;
-        address market = _params[4].w;
-        address receiver = _params[5].w;
-        bool isLong = _params[6].z;
+        (uint256 aceptablePriceLong, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketLong), true, true, _input.slippageBps);
+        (uint256 aceptablePriceShort, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketShort), false, true, _input.slippageBps);
+        
+        bytes[] memory newPositionData = new bytes[](18);
+        newPositionData[0] = abi.encode(_input.totalUsdcAmount);
+        newPositionData[1] = abi.encode(false); // isNativeToken = false para USDC
+        newPositionData[2] = abi.encode(gmxMarkets.getMarket(_input.marketLong));
+        newPositionData[3] = abi.encode(gmxMarkets.getMarket(_input.marketShort));
+        newPositionData[4] = abi.encode(_input.sizeDeltaUsdLong); 
+        newPositionData[5] = abi.encode(_input.sizeDeltaUsdShort); 
+        newPositionData[6] = abi.encode(gmxPrices.getPrice(gmxMarkets.getMarket(_input.marketLong)));
+        newPositionData[7] = abi.encode(gmxPrices.getPrice(gmxMarkets.getMarket(_input.marketShort)));
+        newPositionData[8] = abi.encode(_input.totalUsdcAmount); //checkThisLine Decimals
+        newPositionData[9] = abi.encode(block.timestamp);
+        newPositionData[10] = abi.encode(uint256(0));  // closeDate
+        newPositionData[11] = abi.encode(uint256(0));  // finalUsdValue
+        newPositionData[12] = abi.encode(uint256(0));  // finalPriceTokenLong
+        newPositionData[13] = abi.encode(uint256(0));  // finalPriceTokenShort
+        newPositionData[14] = abi.encode(int256(0));  // PNL
+
+        address usdc = addressProvider.getAddress("USDC");
+        bytes32 longKey = calculatePositionKey(address(this), gmxMarkets.getMarket(_input.marketLong), usdc, true);
+        bytes32 shortKey = calculatePositionKey(address(this), gmxMarkets.getMarket(_input.marketShort), usdc, false);
+        
+        newPositionData[15] = abi.encode(longKey);   // longKey
+        newPositionData[16] = abi.encode(shortKey);  // shortKey
+        newPositionData[17] = abi.encode(address(this));  // proxy address
+    
+        /*__  market neutral positionParams  __*/
+        //0  {0, totalUsdcAmount}
+        //1  {2, isNativeToken = false}
+        //2  {1, market Long}
+        //3  {1, market Short}
+        //4  {0, sizeDeltaUsdLong}
+        //5  {0, sizeDeltaUsdShort}
+        //6  {0, initialPriceTokenLong}
+        //7  {0, initialPriceTokenShort}
+        //8  {0, initialUsdValue}
+        //9  {0, openDate}
+        //10 {0, closeDate}
+        //11 {0, finalUsdValue}
+        //12 {0, finalPriceTokenLong}
+        //13 {0, finalPriceTokenShort}
+        //14 {0, PNL}
+        //15 {2, longKey}
+        //16 {2, shortKey}
+        //17 {1, proxy address}
+
+        uint256 _value = msg.value / 2;
+        initializePosition(newPositionData, 0);
+        
+        // Preparar parámetros para posición Long
+        MarketNeutralLib.UsdcOneSideTradeInput memory longInput = MarketNeutralLib.UsdcOneSideTradeInput({
+            usdcAmount: _input.totalUsdcAmount / 2,
+            sizeDeltaUsd: _input.sizeDeltaUsdLong,
+            acceptablePrice: aceptablePriceLong,
+            executionFee: _input.executionFee,
+            value: _value,
+            market: _input.marketLong,
+            isLong: true,
+            receiver: msg.sender
+        });
+        
+        // Preparar parámetros para posición Short
+        MarketNeutralLib.UsdcOneSideTradeInput memory shortInput = MarketNeutralLib.UsdcOneSideTradeInput({
+            usdcAmount: _input.totalUsdcAmount / 2,
+            sizeDeltaUsd: _input.sizeDeltaUsdShort,
+            acceptablePrice: aceptablePriceShort,
+            executionFee: _input.executionFee,
+            value: _value,
+            market: _input.marketShort,
+            isLong: false,
+            receiver: msg.sender
+        });
+        
+        openPositionWithUSDC(longInput);
+        openPositionWithUSDC(shortInput);
+    }
+
+    function initializePosition(bytes[] memory _newPositionData, uint128 _positionType) internal {
+        ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        
+        protocolStorage.updateUserTransactionCount(msg.sender, 1);
+        ProtocolLib.GlobalPosition memory userGlobalPosition = protocolStorage.getUser(msg.sender).globalPosition;
+        
+        uint256 positionId = userGlobalPosition.totalPositions + 1;
+
+        protocolStorage.updateUserGlobalPosition(
+            msg.sender, 
+            ProtocolLib.GlobalPosition(
+                positionId, // == totalPositions + 1
+                userGlobalPosition.activePositions + 1,
+                createPositions(userGlobalPosition.positions, _newPositionData, _positionType, positionId)
+            )
+        );
+    }
+
+    function createPositions(
+        ProtocolLib.Position[] memory _positions, 
+        bytes[] memory _newPositionData, 
+        uint128 _positionType,
+        uint256 _positionId
+    ) internal pure returns (
+        ProtocolLib.Position[] memory
+    ) {
+
+        ProtocolLib.Position[] memory newPositions = new ProtocolLib.Position[](_positions.length + 1);
+        
+        ProtocolLib.Position memory newPosition = ProtocolLib.Position(_positionType, _positionId, 0, true, _newPositionData);
+        
+        for(uint256 i = 0; i < _positions.length; i++) {
+            newPositions[i] = _positions[i];
+        }
+        
+        newPositions[newPositions.length - 1] = newPosition;
+
+        return newPositions;
+    }
+
+    function openPositionWithEther(MarketNeutralLib.EtherOneSideTradeInput memory _input) public payable nonReentrant {
+
+        uint256 ethAmount = _input.ethAmount;            
+        uint256 sizeDeltaUsd = _input.sizeDeltaUsd;         
+        uint256 acceptablePrice = _input.acceptablePrice;      
+        uint256 executionFee = _input.executionFee;
+        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
+        address market = gmxMarkets.getMarket(_input.market);
+        bool isLong = _input.isLong;
+        address receiver = _input.receiver;
 
         uint256 totalEthNeeded = ethAmount + executionFee;
         
-        // Cache addresses to avoid multiple getAddress calls
         address weth = addressProvider.getAddress("WETH");
         address orderVault = addressProvider.getAddress("OrderVaultGMX");        
         
@@ -125,15 +316,16 @@ contract MarketNeutral is ReentrancyGuard, IOrderCallbackReceiver {
         emit PositionOpened(receiver, market, weth, ethAmount, sizeDeltaUsd, isLong);
     }
 
-    function openPositionWithUSDC(ProtocolLib.DeFiParam[] memory _params) public payable nonReentrant {
+    function openPositionWithUSDC(MarketNeutralLib.UsdcOneSideTradeInput memory _input) public payable nonReentrant {
 
-        uint256 usdcAmount = _params[0].x;           // Cantidad de USDC como colateral
-        uint256 sizeDeltaUsd = _params[1].x;         // Tamaño de la posición en USD
-        uint256 acceptablePrice = _params[2].x;      // Precio aceptable
-        uint256 executionFee = _params[3].x;         // Fee de ejecución en ETH
-        address market = _params[4].w;               // Dirección del market
-        address receiver = _params[5].w;             // Receptor de la posición
-        bool isLong = _params[6].z;                  // Long o Short
+        uint256 usdcAmount = _input.usdcAmount;
+        uint256 sizeDeltaUsd = _input.sizeDeltaUsd;
+        uint256 acceptablePrice = _input.acceptablePrice;
+        uint256 executionFee = _input.executionFee;
+        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
+        address market = gmxMarkets.getMarket(_input.market);
+        bool isLong = _input.isLong;
+        address receiver = msg.sender;
         
         address _exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
         address usdc = addressProvider.getAddress("USDC");
@@ -193,6 +385,124 @@ contract MarketNeutral is ReentrancyGuard, IOrderCallbackReceiver {
         emit PositionOpened(receiver, market, usdc, usdcAmount, sizeDeltaUsd, isLong);
     }
 
+    function closeMarketNeutral(MarketNeutralLib.CloseMarketNeutralInput calldata _input) public payable {
+        uint256 _value = msg.value / 2;
+        MarketNeutralLib.CloseSideMarketNeutralInput memory longSideInput = MarketNeutralLib.CloseSideMarketNeutralInput({
+            positionId: _input.positionId,
+            executionFee: _input.executionFee,
+            slippageBps: _input.slippageBps,
+            value: _value,
+            isLongSide: true
+        });
+        MarketNeutralLib.CloseSideMarketNeutralInput memory shortSideInput = MarketNeutralLib.CloseSideMarketNeutralInput({
+            positionId: _input.positionId,
+            executionFee: _input.executionFee,
+            slippageBps: _input.slippageBps,
+            value: _value,
+            isLongSide: false
+        });
+        closeSideMarketNeutral(longSideInput);
+        closeSideMarketNeutral(shortSideInput);
+    }
+
+
+    function closeSideMarketNeutral( MarketNeutralLib.CloseSideMarketNeutralInput memory _input ) public payable {
+
+        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        address weth = addressProvider.getAddress("WETH");
+        address usdc = addressProvider.getAddress("USDC");
+        address orderVault = addressProvider.getAddress("OrderVaultGMX");
+        address exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
+        
+        ProtocolLib.User memory userData = _protocolStorage.getUser(msg.sender);
+        (ProtocolLib.Position memory position, ) = _protocolStorage.getUserPosition(userData.globalPosition.positions, _input.positionId);
+        bytes[] memory positionData = position.positionData;
+
+        address market = abi.decode(_input.isLongSide ? positionData[2] : positionData[3], (address));
+        GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
+        (uint256 _acceptablePrice, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(
+            market,
+            _input.isLongSide, 
+            false, 
+            _input.slippageBps
+        );
+
+        uint256 sizeDeltaUsd = abi.decode(_input.isLongSide ? positionData[4] : positionData[5], (uint256));
+        uint256 acceptablePrice = _acceptablePrice;      
+        uint256 executionFee = _input.executionFee;  
+        address receiver = msg.sender;
+        bool isLong = _input.isLongSide;
+        uint256 positionId = _input.positionId;
+        
+        // isNativeToken from positionData[1]
+        // if true → WETH, if false → USDC
+        bool isNativeToken = abi.decode(position.positionData[1], (bool));
+        address collateralToken = isNativeToken ? weth : usdc;
+        
+        uint256 callbackGasLimit = 200000;
+
+        address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
+        
+        BaseOrderUtils.CreateOrderParams memory orderParams = BaseOrderUtils.CreateOrderParams({
+            addresses: BaseOrderUtils.CreateOrderParamsAddresses({
+                receiver:  callbackContract, // Funds come to the contract first (for security in callbacks)
+                cancellationReceiver: receiver,
+                callbackContract: callbackContract, // afterOrderExecution() para actualizar storage y transferir fondos
+                uiFeeReceiver: address(0),
+                market: market,
+                initialCollateralToken: collateralToken, 
+                swapPath: new address[](0)
+            }),
+            numbers: BaseOrderUtils.CreateOrderParamsNumbers({
+                sizeDeltaUsd: sizeDeltaUsd, //-
+                initialCollateralDeltaAmount: 0,
+                triggerPrice: 0,
+                acceptablePrice: acceptablePrice,
+                executionFee: executionFee,
+                callbackGasLimit: callbackGasLimit, 
+                minOutputAmount: 0,
+                validFromTime: 0
+            }),
+            orderType: BaseOrderUtils.OrderType.MarketDecrease,
+            decreasePositionSwapType: BaseOrderUtils.DecreasePositionSwapType.NoSwap,
+            isLong: isLong,
+            shouldUnwrapNativeToken: false,
+            autoCancel: false,
+            referralCode: bytes32(0),
+            dataList: new bytes32[](0)
+        });
+
+        IExchangeRouter exchangeRouterInstance = IExchangeRouter(exchangeRouter);
+
+        exchangeRouterInstance.sendWnt{value: executionFee}(orderVault, executionFee);
+        
+        bytes32 key = exchangeRouterInstance.createOrder(orderParams);
+
+        MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).updatePendingOrder(key, MarketNeutralLib.PendingOrder(receiver, address(this), positionId, true));
+        
+        MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).addUserPendingOrderKey(receiver, key);
+
+        emit PositionClosed(receiver, market, sizeDeltaUsd, isLong); 
+    }
+    
+    // read Functions
+
+    /**
+     * @notice Calcula la clave de posición usando keccak256(abi.encode(account, market, collateralToken, isLong))
+     * @param account Dirección del contrato (msg.sender)
+     * @param market Dirección del mercado
+     * @param collateralToken Token de colateral (WETH o USDC)
+     * @param isLong Si es posición long o short
+     * @return positionKey La clave calculada
+     */
+    function calculatePositionKey(
+        address account,
+        address market,
+        address collateralToken,
+        bool isLong
+    ) public pure returns (bytes32 positionKey) {
+        positionKey = keccak256(abi.encode(account, market, collateralToken, isLong));
+    }
 
     function calculateLeverage(uint256 collateralAmount, uint256 sizeDeltaUsd) public pure returns (uint256) {
         if (collateralAmount == 0) return 0;
@@ -211,380 +521,8 @@ contract MarketNeutral is ReentrancyGuard, IOrderCallbackReceiver {
         return (adjustedSizeDelta * 1e18) / leverage;
     }
 
+    // events
 
-    function closePositionV2(
-        ProtocolLib.DeFiParam[] memory _params
-    ) internal {
-        // Cache addresses to avoid multiple getAddress calls
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        address weth = addressProvider.getAddress("WETH");
-        address usdc = addressProvider.getAddress("USDC");
-        address orderVault = addressProvider.getAddress("OrderVaultGMX");
-        address exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
-        
-        uint256 sizeDeltaUsd = _params[0].x;  // ref0001
-        uint256 acceptablePrice = _params[1].x;      
-        uint256 executionFee = _params[2].x;
-        address market = _params[3].w;
-        address receiver = _params[4].w;
-        bool isLong = _params[5].z; 
-        uint256 positionId = _params[6].x;
-        
-        // Obtener la posición para leer isNativeToken
-        ProtocolLib.User memory user = _protocolStorage.getUser(receiver);
-        (ProtocolLib.Position memory position, ) = _protocolStorage.getUserPosition(
-            user.globalPosition.positions, 
-            positionId
-        );
-        
-        // Leer isNativeToken de positionData[1]
-        // Si es true → WETH, si es false → USDC
-        bool isNativeToken = abi.decode(position.positionData[1], (bool));
-        address collateralToken = isNativeToken ? weth : usdc;
-        
-        // Gas suficiente para el callback (almacenamiento + transferencias)
-        // Estimado: ~200k gas para las operaciones en afterOrderExecution
-        uint256 callbackGasLimit = 200000;
-        
-        BaseOrderUtils.CreateOrderParams memory orderParams = BaseOrderUtils.CreateOrderParams({
-            addresses: BaseOrderUtils.CreateOrderParamsAddresses({
-                receiver: address(this), // ✅ Fondos vienen al contrato primero (para seguridad en callbacks)
-                cancellationReceiver: receiver, // Si se cancela, van al usuario
-                callbackContract: address(this), // thisAddress.afterOrderExecution() para actualizar storage y transferir fondos
-                uiFeeReceiver: address(0),
-                market: market,
-                initialCollateralToken: collateralToken, // ✅ Dinámico: WETH o USDC según isNativeToken
-                swapPath: new address[](0)
-            }),
-            numbers: BaseOrderUtils.CreateOrderParamsNumbers({
-                sizeDeltaUsd: sizeDeltaUsd, //-
-                initialCollateralDeltaAmount: 0,
-                triggerPrice: 0,
-                acceptablePrice: acceptablePrice,
-                executionFee: executionFee,
-                callbackGasLimit: callbackGasLimit, // Gas adicional para el callback
-                minOutputAmount: 0,
-                validFromTime: 0
-            }),
-            orderType: BaseOrderUtils.OrderType.MarketDecrease,
-            decreasePositionSwapType: BaseOrderUtils.DecreasePositionSwapType.NoSwap,
-            isLong: isLong,
-            shouldUnwrapNativeToken: false,
-            autoCancel: false,
-            referralCode: bytes32(0),
-            dataList: new bytes32[](0)
-        });
-
-        IExchangeRouter exchangeRouterInstance = IExchangeRouter(exchangeRouter);
-
-        // Enviar WNT para el execution fee
-        exchangeRouterInstance.sendWnt{value: executionFee}(orderVault, executionFee);
-        
-        // Crear la orden - createOrder retorna el key directamente
-        bytes32 key = exchangeRouterInstance.createOrder(orderParams);
-
-        _protocolStorage.updatePendingOrder(key, ProtocolLib.PendingOrder(receiver, positionId, true));
-        
-        // Agregar key al array de pending orders del usuario (para rescue en frontend)
-        _protocolStorage.addUserPendingOrderKey(receiver, key);
-
-        emit PositionClosed(receiver, market, sizeDeltaUsd, isLong); 
-    }
-
-    function afterOrderExecution(
-        bytes32 key,
-        EventUtils.EventLogData memory orderData,
-        EventUtils.EventLogData memory eventData
-    ) external override {
-        require(msg.sender == addressProvider.getAddress("OrderHandlerGMX"), "Only order handler");
-        
-        // ===== FASE 1: EXTRAER Y GUARDAR DATOS CRUDOS PRIMERO (MÁXIMA PRIORIDAD) =====
-        // ⚠️ CRÍTICO: Guardar datos ANTES de cualquier operación compleja
-        // Si falla después, al menos tenemos los datos para rescue manual
-        
-        // Extraer datos directamente de GMX (estas operaciones son muy simples)
-        (, address orderMarket) = orderData.addressItems.getWithoutRevert("market");
-        (, address outputToken) = eventData.addressItems.getWithoutRevert("outputToken");
-        (, uint256 outputAmount) = eventData.uintItems.getWithoutRevert("outputAmount");
-        (, int256 basePnlUsd) = eventData.intItems.getWithoutRevert("basePnlUsd");
-        (, uint256 executionPrice) = eventData.uintItems.getWithoutRevert("executionPrice");
-        (, uint256 collateralTokenPriceMin) = eventData.uintItems.getWithoutRevert("collateralTokenPrice.min");
-        (, uint256 collateralTokenPriceMax) = eventData.uintItems.getWithoutRevert("collateralTokenPrice.max");
-        uint256 collateralTokenPrice = (collateralTokenPriceMin + collateralTokenPriceMax) / 2;
-        // Cache ProtocolStorage to avoid multiple getAddress calls
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        // Obtener la orden pendiente (mínima operación de storage)
-        ProtocolLib.PendingOrder memory pendingOrder = _protocolStorage.getPendingOrder(key);
-        
-        // ⚠️ GUARDAR DATOS INMEDIATAMENTE - ANTES de cualquier otra operación
-        // Esto minimiza el riesgo de fallo antes de guardar
-        rawExecutionData[key] = RawExecutionData({
-            positionId: pendingOrder.positionId,  // Viene de la orden
-            receiver: pendingOrder.receiver,       // Viene de la orden
-            outputToken: outputToken,              // De GMX
-            outputAmount: outputAmount,            // De GMX
-            pnl: basePnlUsd,                      // De GMX
-            executionPrice: executionPrice,        // De GMX
-            collateralTokenPrice: collateralTokenPrice, // De GMX
-            isLongSide: false,  // ⚠️ TEMPORAL - Se actualiza después si es necesario
-            processed: false,
-            timestamp: block.timestamp
-        });
-        
-        // ===== FASE 1.5: Determinar qué pata es (puede fallar, pero datos ya guardados) =====
-        // Si esto falla, al menos tenemos los datos básicos para emergency withdraw
-        bool isLongSideCalculated = false;
-        
-        try this.calculateIsLongSide(pendingOrder.receiver, pendingOrder.positionId, orderMarket) returns (bool isLong) {
-            // Actualizar el campo isLongSide con el valor correcto
-            rawExecutionData[key].isLongSide = isLong;
-            isLongSideCalculated = true;
-        } catch {
-            // Si falla calcular isLongSide, dejamos false
-            // El emergency withdraw manual puede corregirlo
-            emit IsLongSideCalculationFailed(key, pendingOrder.positionId);
-        }
-        
-        // ===== FASE 2: PROCESAR Y TRANSFERIR (puede fallar, pero datos ya guardados) =====
-        
-        try this.processAndTransfer(key) {
-            // Éxito → marcar como procesado
-            rawExecutionData[key].processed = true;
-            
-            // Eliminar key del array de pending orders del usuario
-            _protocolStorage.removeUserPendingOrderKey(pendingOrder.receiver, key);
-            
-            emit PositionSideClosedSuccess(
-                pendingOrder.receiver,
-                pendingOrder.positionId,
-                isLongSideCalculated,
-                outputToken,
-                outputAmount,
-                basePnlUsd
-            );
-        } catch Error(string memory reason) {
-            // Falló el procesamiento, pero datos guardados para rescue
-            emit ExecutionProcessingFailed(key, pendingOrder.positionId, pendingOrder.receiver, reason);
-        } catch {
-            // Falló sin mensaje
-            emit ExecutionProcessingFailed(key, pendingOrder.positionId, pendingOrder.receiver, "Unknown error");
-        }
-    }
-
-    /**
-     * @notice Calcula si la orden que se cerró es Long o Short
-     * @dev Función separada para poder usar try-catch
-     */
-    function calculateIsLongSide(
-        address receiver,
-        uint256 positionId,
-        address orderMarket
-    ) external view returns (bool) {
-        require(msg.sender == address(this), "Internal only");
-        
-        // Cache ProtocolStorage to avoid multiple getAddress calls
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        ProtocolLib.User memory user = _protocolStorage.getUser(receiver);
-        (ProtocolLib.Position memory position, ) = _protocolStorage.getUserPosition(
-            user.globalPosition.positions, 
-            positionId
-        );
-        
-        address marketLong = abi.decode(position.positionData[2], (address));
-        return (orderMarket == marketLong);
-    }
-    
-    /**
-     * @notice Procesa los datos y transfiere fondos (función interna pesada)
-     * @dev Solo puede ser llamada por afterOrderExecution o rescuePosition
-     */
-    function processAndTransfer(bytes32 key) external {
-        require(msg.sender == address(this) || msg.sender == addressProvider.getAddress("OrderHandlerGMX"), "Internal only");
-        
-        RawExecutionData memory data = rawExecutionData[key];
-        require(data.positionId != 0, "No data for this key");
-        require(!data.processed, "Already processed");
-        
-        // Cache addresses to avoid multiple getAddress calls
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        address usdc = addressProvider.getAddress("USDC");
-        address weth = addressProvider.getAddress("WETH");
-        // Obtener el usuario y su posición
-        ProtocolLib.User memory user = _protocolStorage.getUser(data.receiver);
-        (ProtocolLib.Position memory position, uint256 positionIndex) = _protocolStorage.getUserPosition(
-            user.globalPosition.positions, 
-            data.positionId
-        );
-        
-        // Calcular valor en USD
-        uint256 tokenDecimals = data.outputToken == usdc ? 6 : 18;
-        uint256 outputUsdValue = (data.outputAmount * data.collateralTokenPrice) / (10 ** tokenDecimals);
-        
-        // Actualizar el precio final correspondiente
-        if (data.isLongSide) {
-            position.positionData[12] = abi.encode(data.executionPrice);
-        } else {
-            position.positionData[13] = abi.encode(data.executionPrice);
-        }
-        
-        // Acumular PNL
-        int256 currentPnl = abi.decode(position.positionData[14], (int256));
-        int256 totalPnl = currentPnl + data.pnl;
-        position.positionData[14] = abi.encode(totalPnl);
-        position.pnl = totalPnl;
-        
-        // Acumular valor final USD
-        uint256 currentFinalUsdValue = abi.decode(position.positionData[11], (uint256));
-        uint256 totalFinalUsdValue = currentFinalUsdValue + outputUsdValue;
-        position.positionData[11] = abi.encode(totalFinalUsdValue);
-        
-        // Verificar si ambas patas están cerradas
-        uint256 finalPriceTokenLong = abi.decode(position.positionData[12], (uint256));
-        uint256 finalPriceTokenShort = abi.decode(position.positionData[13], (uint256));
-        bool bothSidesClosed = (finalPriceTokenLong != 0 && finalPriceTokenShort != 0);
-        
-        if (bothSidesClosed) {
-            position.positionData[10] = abi.encode(block.timestamp);
-            position.isActive = false;
-            user.globalPosition.activePositions -= 1;
-        }
-        
-        // Actualizar storage
-        user.globalPosition.positions[positionIndex] = position;
-        _protocolStorage.updateUserGlobalPosition(data.receiver, user.globalPosition);
-        
-        _protocolStorage.updatePendingOrder(
-            key, 
-            ProtocolLib.PendingOrder(data.receiver, data.positionId, false)
-        );
-        
-        // Transferir fondos al usuario
-        if (data.outputAmount > 0) {
-            if (data.outputToken == weth) {
-                IWETH(weth).withdraw(data.outputAmount);
-                (bool success, ) = data.receiver.call{value: data.outputAmount}("");
-                require(success, "ETH transfer failed");
-            } else {
-                IERC20(data.outputToken).safeTransfer(data.receiver, data.outputAmount);
-            }
-        }
-    }
-
-    // AÑADIR FUNCIONES PARA POST CANCELLATION O FRONZEN
-    function afterOrderCancellation(bytes32 key, EventUtils.EventLogData memory order, EventUtils.EventLogData memory eventData) external {}
-    function afterOrderFrozen(bytes32 key, EventUtils.EventLogData memory order, EventUtils.EventLogData memory eventData) external {}
-    
-    // ===== FUNCIONES DE EMERGENCIA/RESCUE =====
-    
-    /**
-     * @notice Permite recibir ETH (necesario para unwrap WETH)
-     */
-    receive() external payable {}
-    
-    /**
-     * @notice Función de rescue SIMPLE para cuando el callback falla
-     * @dev Solo necesita el orderKey - Los datos ya están guardados on-chain
-     * @param key El key de la orden que falló (del evento ExecutionProcessingFailed)
-     */
-    function rescuePosition(bytes32 key) external nonReentrant {
-        RawExecutionData memory data = rawExecutionData[key];
-        
-        require(data.positionId != 0, "No data for this key");
-        require(data.receiver == msg.sender, "Not your position");
-        require(!data.processed, "Already processed");
-        
-        // Llamar a processAndTransfer para completar el procesamiento
-        try this.processAndTransfer(key) {
-            // Marcar como procesado
-            rawExecutionData[key].processed = true;
-            
-            // Eliminar key del array de pending orders del usuario
-            ProtocolStorage(addressProvider.getAddress("ProtocolStorage")).removeUserPendingOrderKey(msg.sender, key);
-            
-            emit PositionRescued(
-                msg.sender,
-                data.positionId,
-                data.isLongSide,
-                data.outputToken,
-                data.outputAmount,
-                true // rescued = true
-            );
-        } catch Error(string memory reason) {
-            revert(string(abi.encodePacked("Rescue failed: ", reason)));
-        }
-    }
-    
-    // ===== FUNCIONES DE EMERGENCIA PARA EL EQUIPO =====
-    
-    /**
-     * @notice Retiro de emergencia de tokens (solo para casos extremos del 1%)
-     * @dev Solo puede ser llamado por un admin autorizado con rol PROTOCOL_ADMIN
-     * @dev Se usa cuando rescuePosition falla y necesitamos devolver fondos manualmente
-     * @param token Dirección del token a retirar (WETH, USDC, etc)
-     * @param to Dirección destino (normalmente el usuario afectado)
-     * @param amount Cantidad a retirar
-     * @param reason Razón del retiro de emergencia (para auditoría)
-     */
-    function emergencyWithdraw(
-        address token,
-        address to,
-        uint256 amount,
-        string calldata reason
-    ) external nonReentrant {
-        // Solo admins del protocolo pueden llamar esta función
-        require(Roles(addressProvider.getAddress("Roles")).isProtocolContract(msg.sender), "Not authorized");
-        require(to != address(0), "Invalid destination");
-        require(amount > 0, "Amount must be > 0");
-        require(bytes(reason).length > 0, "Reason required");
-        
-        if (token == address(0)) {
-            // Retirar ETH nativo
-            (bool success, ) = to.call{value: amount}("");
-            require(success, "ETH transfer failed");
-        } else {
-            // Retirar token ERC20
-            IERC20(token).safeTransfer(to, amount);
-        }
-        
-        emit EmergencyWithdraw(msg.sender, token, to, amount, reason, block.timestamp);
-    }
-    
-    /**
-     * @notice Retiro de emergencia de ETH (envuelto como WETH)
-     * @dev Wrapper para emergencyWithdraw específico para WETH/ETH
-     * @param to Dirección destino
-     * @param amount Cantidad en wei
-     * @param unwrap Si true, unwrap WETH → ETH antes de enviar
-     * @param reason Razón del retiro
-     */
-    function emergencyWithdrawETH(
-        address to,
-        uint256 amount,
-        bool unwrap,
-        string calldata reason
-    ) external nonReentrant {
-        require(Roles(addressProvider.getAddress("Roles")).isProtocolContract(msg.sender) , "Not authorized");
-        require(to != address(0), "Invalid destination");
-        require(amount > 0, "Amount must be > 0");
-        
-        // Cache WETH address to avoid multiple getAddress calls
-        address weth = addressProvider.getAddress("WETH");
-        
-        if (unwrap) {
-            // Unwrap WETH → ETH y enviar
-            IWETH(weth).withdraw(amount);
-            (bool success, ) = to.call{value: amount}("");
-            require(success, "ETH transfer failed");
-            
-            emit EmergencyWithdraw(msg.sender, address(0), to, amount, reason, block.timestamp);
-        } else {
-            // Enviar WETH directamente
-            IERC20(weth).safeTransfer(to, amount);
-            
-            emit EmergencyWithdraw(msg.sender, weth, to, amount, reason, block.timestamp);
-        }
-    }
-    
     event PositionOpened(
         address indexed receiver,
         address indexed market,
@@ -600,45 +538,7 @@ contract MarketNeutral is ReentrancyGuard, IOrderCallbackReceiver {
         uint256 sizeDeltaUsd,
         bool isLong
     );
-    
-    event PositionSideClosedSuccess(
-        address indexed receiver,
-        uint256 indexed positionId,
-        bool isLongSide,
-        address outputToken,
-        uint256 outputAmount,
-        int256 pnl
-    );
-    
-    event ExecutionProcessingFailed(
-        bytes32 indexed orderKey,
-        uint256 indexed positionId,
-        address indexed receiver,
-        string reason
-    );
-    
-    event IsLongSideCalculationFailed(
-        bytes32 indexed orderKey,
-        uint256 indexed positionId
-    );
-    
-    event PositionRescued(
-        address indexed user,
-        uint256 indexed positionId,
-        bool isLongSide,
-        address outputToken,
-        uint256 outputAmount,
-        bool rescued
-    );
-    
-    event EmergencyWithdraw(
-        address indexed admin,
-        address indexed token,
-        address indexed to,
-        uint256 amount,
-        string reason,
-        uint256 timestamp
-    );
+
 
     error SenderNotAllowed();
     error InsufficientParameters();

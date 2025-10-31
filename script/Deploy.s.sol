@@ -5,15 +5,13 @@ import {Script, console} from "forge-std/Script.sol";
 import { AddressProvider } from "../src/core/config/AddressProvider.sol";
 import { Roles } from "../src/security/Roles.sol";
 import { MarketNeutral } from "../src/core/bundles/executors/MarketNeutral.sol";
-import { BundlesRouter } from "../src/core/bundles/BundlesRouter.sol";
 import { ProtocolStorage } from "../src/core/ProtocolStorage.sol";
-import { Main } from "../src/core/Main.sol";
 import { GMXMarketsRegistry } from "../src/core/config/gmxMarkets.sol";
 import { GMXPrices } from "../src/periphery/utilsGMX/GMXPrices.sol";
 import { UpgradeableLib } from "../src/core/UpgradeableLib.sol";
 
 contract Deploy is Script {
-
+/*
     AddressProvider public addressProvider;
     Roles public roles;
     MarketNeutral public marketNeutral;
@@ -23,9 +21,9 @@ contract Deploy is Script {
     GMXPrices public gmxPrices;
     UpgradeableLib public upgradeableLib;
 
-    address public constant ADMIN1 = ;
-    address public constant ADMIN2 = ;
-    address public constant ADMIN3 = ;
+    address public constant ADMIN1 = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; // CHANGE THIS
+    address public constant ADMIN2 = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; // CHANGE THIS
+    address public constant ADMIN3 = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; // CHANGE THIS
 
     struct Contracts {
         string name;
@@ -95,5 +93,6 @@ contract Deploy is Script {
         addressProvider.setAddress(_name, _address);
         vm.stopBroadcast();
     }
+    */
 
 }

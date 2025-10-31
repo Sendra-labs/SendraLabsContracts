@@ -7,7 +7,7 @@ V2:
     -Eliminar funcionalidades de MAIN y bundlesRouter.
     -Eliminar funcion execute de MarketNeutral.
     -Crear librerias para los inputs/outputs de las funciones de MarketNeutral.
-    -Crear storages para cada bundle que necesite algo aparte del strage general del protocolo.
+    -Crear storages para cada bundle que necesite algo aparte del storage general del protocolo.
     -Las posiciones siguen teniendo la data en bytes ya que necesitamos todas las posiciones 
        en un solo storage y poder añadir tipos de posiciones en un futuro.
     -La lógica de main pasa al executor (para almacenar data en storage desde ahi).

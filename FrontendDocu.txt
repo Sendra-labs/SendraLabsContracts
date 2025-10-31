@@ -1,0 +1,138 @@
+FRONTEND DOCUMENTATION
+
+1. Abrir Posicion market neutral con Ether
+   
+   Inputs: EtherMarketNeutralInput
+
+           struct EtherMarketNeutralInput {
+                string marketLong,
+                string marketShort,
+                uint256 totalEthAmount,
+                uint256 sizeDeltaUsdLong,
+                uint256 sizeDeltaUsdShort,
+                uint256 executionFee,
+                uint256 slippageBps
+            }
+    
+    - marketLong: string --> "tokenLong/USDC" / "ETH/USDC" 
+    - marketShort: string --> "tokenShort/USDC" / "ARB/USDC"
+    - totalEthAmount: uint256 --> Total amount of ETH to deposit
+    - sizeDeltaUsdLong: uint256 --> apalancamiento. Si e valor del ETH enviado es 100 USDC y queremos abrir una posicion con un apalancamiento de 2x, el sizeDeltaUsdLong sera 200 USDC.
+    - sizeDeltaUsdShort: uint256 --> Size delta in USD for the short side
+    - executionFee: uint256 --> Execution fee
+    - slippageBps: uint256 --> Slippage in basis points
+
+-------------------------------------------------------------
+
+Que datos debemos mostrar en el portfolio dashboard?
+        Globales del usuario:
+        - totalPnl User.globalPnl
+        - totalVolume
+        - totalTransactions User.transactionCount
+        - totalPositions User.globalPosition.totalPositions
+        - totalActivePositions User.globalPosition.activePositions
+        - totalValueLocked
+        - averagePositionSize (totalVolume / totalPositions) 
+        - winRate (posiciones con pnl positivo / totalPositions cerradas)
+
+        Posiciones activas: if positionData[10] == 0 (closeDate == 0) then isActive = true
+        - positionId
+        - pnl real time (GMX) → getMarketNeutralRealTimePnL()
+        - size real time (GMX) → getMarketNeutralTotalSize()
+        - invested initial value PositionData[0]
+        - initial token positionData[1]
+        - initialUsdValue PositionData[8]
+        - initialPriceTokenLong PositionData[6]
+        - initialPriceTokenShort PositionData[7]
+        - openDate PositionData[9]
+        - sizeDeltaUsdLong PositionData[4]
+        - sizeDeltaUsdShort PositionData[5]
+        - currentPriceTokenLong (frontend call)
+        - currentPriceTokenShort (frontend call)
+        - priceChangeLong (%) (Front calculate: (currentPrice - initialPrice) / initialPrice * 100)
+        - priceChangeShort (%) (Front calculate: (currentPrice - initialPrice) / initialPrice * 100)
+        - longPnl → getMarketNeutralRealTimePnL().longPnl
+        - shortPnl → getMarketNeutralRealTimePnL().shortPnl
+        - pnlPercentage (Front calculated: pnl / initialUsdValue * 100)
+        - positionAge (Front calculated: block.timestamp - openDate)
+        - marketLong (string) → getMarketNeutralMarkets() 
+        - marketShort (string) → getMarketNeutralMarkets()
+        
+2. FLUJO DE LECTURA DE POSICIONES - MarketNeutralReader
+
+   FLUJO COMPLETO:
+   
+   a) Obtener datos del usuario:
+      ProtocolStorage.getUser(address user) 
+      - Retorna: ProtocolLib.User struct con globalPosition.positions (array de positionIds)
+   
+   b) Para cada positionId, usar las siguientes funciones:
+
+   FUNCIONES PRINCIPALES DEL READER:
+
+   2.1 getMarketNeutralFullInfo(address user, uint256 positionId)
+       - ⭐ FUNCIÓN ESTRELLA - Una sola llamada para obtener todo
+       - Parámetros: user (address), positionId (uint256)
+       - Retorna: longInfo (PositionInfo), shortInfo (PositionInfo), totalPnl (int256), totalFees (uint256)
+       - Uso: Dashboard principal, información completa en tiempo real
+
+   2.2 getMarketNeutralRealTimePnL(address user, uint256 positionId)
+       - 💰 PNL en tiempo real - Optimizada para actualizaciones frecuentes
+       - Parámetros: user (address), positionId (uint256)
+       - Retorna: longPnl (int256), shortPnl (int256), totalPnl (int256)
+       - Uso: Actualizaciones de PNL cada 30-60 segundos
+
+   2.3 bothSidesExist(address user, uint256 positionId)
+       - ✅ Verificación rápida de posiciones activas
+       - Parámetros: user (address), positionId (uint256)
+       - Retorna: bool (true si ambas posiciones están activas)
+       - Uso: Validar antes de operaciones, filtrar posiciones activas
+
+   2.4 getMarketNeutralMarkets(address user, uint256 positionId)
+       - 🏪 Obtener direcciones de mercados
+       - Parámetros: user (address), positionId (uint256)
+       - Retorna: marketLong (address), marketShort (address)
+       - Uso: Mostrar nombres de mercados en UI
+
+   2.5 getMarketNeutralBasicInfo(address user, uint256 positionId)
+       - 📋 Información básica de ambas posiciones
+       - Parámetros: user (address), positionId (uint256)
+       - Retorna: longPosition (Position), shortPosition (Position)
+       - Uso: Verificar estado sin cálculos costosos
+
+   2.6 getMarketNeutralTotalSize(address user, uint256 positionId)
+       - 📏 Tamaño total de la estrategia
+       - Parámetros: user (address), positionId (uint256)
+       - Retorna: totalSize (uint256) - suma de long + short
+       - Uso: Mostrar exposición total del usuario
+
+   FUNCIONES DE UTILIDAD:
+
+   2.7 getPositionPnL(bytes32 positionKey, address market)
+       - 📈 PNL de una posición individual
+       - Parámetros: positionKey (bytes32), market (address)
+       - Retorna: pnl (int256)
+       - Uso: Análisis detallado de cada lado
+
+   2.8 getPositionFees(bytes32 positionKey, address market)
+       - 💸 Fees de una posición individual
+       - Parámetros: positionKey (bytes32), market (address)
+       - Retorna: totalFees (uint256)
+       - Uso: Mostrar costos de la estrategia
+
+   ESTRATEGIA DE LLAMADAS RECOMENDADA:
+
+   CARGA INICIAL (Dashboard):
+   1. ProtocolStorage.getUser(userAddress) → obtener positionIds
+   2. Para cada positionId:
+      - bothSidesExist(userAddress, positionId) → verificar activa
+      - getMarketNeutralFullInfo(userAddress, positionId) → info completa
+      - getMarketNeutralMarkets(userAddress, positionId) → nombres mercados
+
+   ACTUALIZACIONES EN TIEMPO REAL:
+   - getMarketNeutralRealTimePnL(userAddress, positionId) → cada 30-60 segundos
+
+   VALIDACIONES:
+   - bothSidesExist(userAddress, positionId) → antes de operaciones
+
+    

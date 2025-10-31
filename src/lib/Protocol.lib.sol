@@ -81,10 +81,4 @@ contract ProtocolLib {
         bool z;
     }
 
-    struct PendingOrder {
-        address receiver;
-        uint256 positionId;
-        bool isPending;
-    }
-
 }

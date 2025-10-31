@@ -58,38 +58,6 @@ contract ProtocolStorage {
 
     /// @notice Mapping of user addresses to their User data
     mapping(address => ProtocolLib.User) public users;
-    mapping(bytes32 => ProtocolLib.PendingOrder) public pendingOrders;
-    mapping(address => bytes32[]) public userPendingOrderKeys;
-
-    function addUserPendingOrderKey(address _user, bytes32 _key) public onlyProtocol {
-        userPendingOrderKeys[_user].push(_key);
-    }
-
-    function removeFromArray(bytes32[] storage array, bytes32 value) internal {
-        for (uint256 i = 0; i < array.length; i++) {
-            if (array[i] == value) {
-                array[i] = array[array.length - 1];
-                array.pop();
-                return;
-            }
-        }
-    }
-
-    function removeUserPendingOrderKey(address _user, bytes32 _key) public onlyProtocol {
-        removeFromArray(userPendingOrderKeys[_user], _key);
-    }
-
-    function getUserPendingOrderKeys(address _user) public view returns(bytes32[] memory) {
-        return userPendingOrderKeys[_user];
-    }
-    
-    function updatePendingOrder(bytes32 _key, ProtocolLib.PendingOrder memory _pendingOrder) public onlyProtocol {
-        pendingOrders[_key] = _pendingOrder;
-    }
-
-    function getPendingOrder(bytes32 _key) public view returns(ProtocolLib.PendingOrder memory) {
-        return pendingOrders[_key];
-    }
 
     /**
      * @notice Creates a new user in the protocol
@@ -151,6 +119,11 @@ contract ProtocolStorage {
             }
         }
         revert("Position not found");
+    }
+
+    function getUserPositionById(address _user, uint256 _positionId) public view returns (ProtocolLib.Position memory position) {
+        (position, ) = getUserPosition(users[_user].globalPosition.positions, _positionId);
+        return position;
     }
 
     function isUser(address _user) public view returns(bool) {

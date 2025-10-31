@@ -28,13 +28,13 @@ contract UpgradeableLib {
         _params[0] = ProtocolLib.PositionParam(0, "amount");
         _params[1] = ProtocolLib.PositionParam(1, "tokenAddress");
 
-        addPositionType(
+        /*addPositionType(
             ProtocolLib.PositionType(
                 "Fund",
                 0,
                 _params
             )
-        );
+        );*/
     }
 
     /**
@@ -84,7 +84,7 @@ contract UpgradeableLib {
      * @notice Returns a specific position type by ID
      * @param _id The ID of the position type to retrieve
      * @return PositionType struct containing name, origin, and parameters
-     */
+    */
     function getPositionType(uint256 _id) public view returns(ProtocolLib.PositionType memory) {
         return positionsTypes[_id];
     }

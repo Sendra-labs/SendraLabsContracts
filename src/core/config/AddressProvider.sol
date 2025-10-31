@@ -1,6 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import { Roles } from "../../security/Roles.sol";
+
 /**
  * @title AddressProvider
  * @dev Centralized contract to manage addresses of all protocols
@@ -19,7 +21,7 @@ contract AddressProvider {
     }
 
     modifier onlyAdmin {
-        require(roles.isAdmin(msg.sender), "Only admin can call this function");
+        require(roles.checkAdmin(msg.sender), "Only admin can call this function");
         _;
     }
 
@@ -33,7 +35,9 @@ contract AddressProvider {
      * @return Address of the protocol contract
      */
     function getAddress(string calldata contractName) public view returns (address) {
-        return addressMap[contractName];
+        address contractAddress = addressMap[contractName];
+        if (contractAddress == address(0)) revert AddressNotFound(contractName);
+        return contractAddress;
     }
 
     /**
@@ -46,6 +50,8 @@ contract AddressProvider {
         emit ContractAddressUpdated(contractName, _address);
     }
 
-    event ContractAddressUpdated(string indexed contractName, address indexed address);
+    event ContractAddressUpdated(string indexed contractName, address indexed _address);
+
+    error AddressNotFound(string contractName);
 
 }
