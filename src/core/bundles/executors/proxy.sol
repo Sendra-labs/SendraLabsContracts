@@ -96,9 +96,6 @@ contract MarketNeutralProxy is ReentrancyGuard {
                 break;
             }
         }
-        if (markets.length == 0) {
-            ProxyManager(addressProvider.getAddress("ProxyManager")).setAvailable(id); // ESTO DEBE HACERSE EN AFTER ORDER EXECUTION
-        }
     }
 
     function isMarketBeingUsed(string calldata _marketLong, string calldata _marketShort) public view returns (bool) {
@@ -115,6 +112,10 @@ contract MarketNeutralProxy is ReentrancyGuard {
 
     function getId() public view returns (uint256) {
         return id;
+    }
+
+    function isAvailable() public view returns (bool) {
+        return markets.length == 0;
     }
     
     error NotOwner();
