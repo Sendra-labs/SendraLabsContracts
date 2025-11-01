@@ -1,0 +1,49 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [],
+		"devdoc": {
+			"author": "@Diego-AVZ",
+			"details": "Uses GMX V2 DataStore to get Chainlink price feed addresses, then fetches prices",
+			"kind": "dev",
+			"methods": {},
+			"title": "Prices Library",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"notice": "Library for fetching prices from Chainlink through GMX DataStore",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/lib/Prices.lib.sol": "PricesLib"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"src/lib/Prices.lib.sol": {
+			"keccak256": "0xa71f584fc0f0ae19a7344d3ffa3cfe1c1dd1b475d51ed8ce2662284f51ae3f9b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://171ec130651593abdd2bf2c612a64f71a1b8e70bbb056ac1a22f236bf0bd0ecd",
+				"dweb:/ipfs/QmZAdX5zcQJLZPxWsp39ARKFjtZt1voJ3E7nexnqTGzcJN"
+			]
+		}
+	},
+	"version": 1
+}

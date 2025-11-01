@@ -8,6 +8,7 @@ import { GMXMarketsRegistry } from "./config/gmxMarkets.sol";
 import { GMXPrices } from "../periphery/utilsGMX/GMXPrices.sol";
 import { MarketNeutralReader } from "./bundles/readers/marketNeutralReader.sol";
 import { MarketNeutralProxy } from "./bundles/executors/proxy.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MainReader {
 
@@ -162,6 +163,10 @@ contract MainReader {
 
     function getEtherPrice() public view returns (uint256) {
         return gmxPrices.getPrice(gmxMarkets.getMarket("WETH"));
+    }
+
+    function getUserUsdcBalance(address _user) public view returns (uint256) {
+        return IERC20(addressProvider.getAddress("USDC")).balanceOf(_user);
     }
 
     function isProxyNeeded(address _user, string calldata _marketLong, string calldata _marketShort) public view returns (bool, address) {

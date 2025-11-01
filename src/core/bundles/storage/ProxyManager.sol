@@ -5,6 +5,7 @@ import { Roles } from "../../../security/Roles.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 import { MarketNeutralStorage } from "./MarketNeutralStorage.sol";
 import { ProxyFactory } from "../executors/ProxyFactory.sol";
+import { MarketNeutralProxy } from "../executors/proxy.sol";
 
 contract ProxyManager {
 
@@ -86,37 +87,31 @@ contract ProxyManager {
     }
 
     // when proxy is not managing any position in GMX, it is available for another user to use it
-    function setAvailable(uint256 _proxyId) public {
+    function setAvailable(uint256 _proxyId) public onlyProtocol {
         if(msg.sender != proxies[_proxyId].proxy) revert SenderNotAllowed();
         bool isAdded = false;
-        if(checkProxyOwnerPendingOrders(_proxyId)) revert ProxyHasPendingOrders();
-        for(uint256 i = 0; i < batchId + 1; i++) {
-            if(!isbatchFilled(i)) {
-                availableProxiesBatch[i].availableCount++;
-                availableProxiesBatch[i].proxyIds.push(_proxyId);
-                isAdded = true;
-                break;
+        bool isAvailable = MarketNeutralProxy(proxies[_proxyId].proxy).isAvailable();
+        if(isAvailable) {
+            for(uint256 i = 0; i < batchId + 1; i++) {
+                if(!isbatchFilled(i)) {
+                    availableProxiesBatch[i].availableCount++;
+                    availableProxiesBatch[i].proxyIds.push(_proxyId);
+                    isAdded = true;
+                    break;
+                }
             }
+            if(!isAdded) {
+                batchId++;
+                uint256[] memory proxyIds = new uint256[](1);
+                proxyIds[0] = _proxyId;
+                availableProxiesBatch[batchId] = Batch(1, proxyIds);
+            }
+            setOwner(_proxyId, address(0));
         }
-        if(!isAdded) {
-            batchId++;
-            uint256[] memory proxyIds = new uint256[](1);
-            proxyIds[0] = _proxyId;
-            availableProxiesBatch[batchId] = Batch(1, proxyIds);
-        }
-        setOwner(_proxyId, address(0));
     }
 
     function getOwner(uint256 _proxyId) external view returns (address) {
         return proxies[_proxyId].owner;
-    }
-
-    // if true, the proxy is not available for another user to use it yet. Must wait for the pending orders to be executed.
-    function checkProxyOwnerPendingOrders(uint256 _proxyId) public view returns (bool) {
-        MarketNeutralStorage marketNeutralStorage = MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage"));
-        bytes32[] memory pendingOrderKeys = marketNeutralStorage.getUserPendingOrderKeys(proxies[_proxyId].owner);
-        if(pendingOrderKeys.length > 0) return true;
-        return false;
     }
 
     // check if batch is filled, if it is filled a new batch must be created or checked
