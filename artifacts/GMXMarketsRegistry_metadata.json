@@ -155,6 +155,19 @@
 				"type": "function"
 			},
 			{
+				"inputs": [],
+				"name": "roles",
+				"outputs": [
+					{
+						"internalType": "contract Roles",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
 				"inputs": [
 					{
 						"internalType": "string",
@@ -238,7 +251,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"src/core/config/markets.sol": "GMXMarketsRegistry"
+			"src/core/config/gmxMarkets.sol": "GMXMarketsRegistry"
 		},
 		"evmVersion": "cancun",
 		"libraries": {},
@@ -252,12 +265,28 @@
 		"remappings": []
 	},
 	"sources": {
-		"src/core/config/markets.sol": {
-			"keccak256": "0x5e6646e111c12cf0bb6660e600cebbc1ac2454905869f9f998378e889161957c",
+		"src/core/config/gmxMarkets.sol": {
+			"keccak256": "0xf81605a88bb5ed986fe3b2d7516552dfa241ea1f8fcb80460129f4a0f024fd7f",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://3793e49e88ac5eb5d19d02a815a55e21c904a73bd1d538c26c216ecd9e93c88c",
-				"dweb:/ipfs/QmRKETtLQejQsuhiFDfn928tecSAmAtpEz5odJDveUiRkQ"
+				"bzz-raw://820c8ed078f329710b09ab5fffcb7b404922b366180bf7e438437d6e2b4264f7",
+				"dweb:/ipfs/QmTc35XA1ZekBzhh7gLM3JwBnFrpXQ684AckDTY2LR8SDM"
+			]
+		},
+		"src/lib/security/Roles.lib.sol": {
+			"keccak256": "0x9eda8dcfd260343e2d4b1a44e025a3b0f88f0724fe1a79b4ae3584e2b7c1ba69",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ba5717f1e354c417bad5d39b78ec8ea2a22850a7d14c48055d17d7dcde11d5a3",
+				"dweb:/ipfs/QmW4cQf7iZvLGERPhSCqCJ3Qpa7FoyE4cgmSN4F9Z21C1K"
+			]
+		},
+		"src/security/Roles.sol": {
+			"keccak256": "0x0578be66ac0415d756d2e8d98fbb814dd75a76c4f3a374f5968a6137e7ef0f5a",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://013802dbc009465895206b971930e80abad4b42758a02e40bd33883efc0b26a0",
+				"dweb:/ipfs/QmW5KrDHZyW3i77Q5H4R9S1nU7TxPnBTyE3ETQNX7QeLPx"
 			]
 		}
 	},

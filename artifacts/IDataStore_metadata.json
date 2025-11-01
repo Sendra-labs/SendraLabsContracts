@@ -102,7 +102,7 @@
 	},
 	"settings": {
 		"compilationTarget": {
-			"src/lib/GMX lib/GMXPrices.sol": "IDataStore"
+			"src/periphery/utilsGMX/GMXPrices.sol": "IDataStore"
 		},
 		"evmVersion": "cancun",
 		"libraries": {},
@@ -116,12 +116,12 @@
 		"remappings": []
 	},
 	"sources": {
-		"src/lib/GMX lib/GMXPrices.sol": {
-			"keccak256": "0x7fe0ec196b8050f970dffde1d5e104b7f9838b2a03575029307f2663a63eb7c2",
+		"src/core/config/AddressProvider.sol": {
+			"keccak256": "0x8bfb8b5d36ef0965ee0f8df4c13c8b73904941bbb66c72a60ccc2f7d9868707a",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://6bbe4dee556a3615d2de18830609e332c2ff7de608341680f7dc07258c7dffe8",
-				"dweb:/ipfs/QmcFSLWYARjFU5P789iDKBo94wnrDwqkPzKmC9MvdRAYb9"
+				"bzz-raw://0f756274a5944b5717eb803f93b79618031f8f6e187d8e31b28823d3e67e2cc3",
+				"dweb:/ipfs/QmeMwNVFk6zafR1tPpJrXBRCJHaHdF5kncS9WuBYvTTmcF"
 			]
 		},
 		"src/lib/Prices.lib.sol": {
@@ -130,6 +130,30 @@
 			"urls": [
 				"bzz-raw://171ec130651593abdd2bf2c612a64f71a1b8e70bbb056ac1a22f236bf0bd0ecd",
 				"dweb:/ipfs/QmZAdX5zcQJLZPxWsp39ARKFjtZt1voJ3E7nexnqTGzcJN"
+			]
+		},
+		"src/lib/security/Roles.lib.sol": {
+			"keccak256": "0x9eda8dcfd260343e2d4b1a44e025a3b0f88f0724fe1a79b4ae3584e2b7c1ba69",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ba5717f1e354c417bad5d39b78ec8ea2a22850a7d14c48055d17d7dcde11d5a3",
+				"dweb:/ipfs/QmW4cQf7iZvLGERPhSCqCJ3Qpa7FoyE4cgmSN4F9Z21C1K"
+			]
+		},
+		"src/periphery/utilsGMX/GMXPrices.sol": {
+			"keccak256": "0x34dff7310a01d2f1b7d096b2a07ed293c2c7404debfd2074d193704fdf77e743",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://d8bbdd1cf3c660f0e2bab96407baec356d247b96b649d6a872293b19cce4b18e",
+				"dweb:/ipfs/QmSh12bQi9yoHD4EcfpWXLHJjqpUyxGrydwdvuCZJgFBEw"
+			]
+		},
+		"src/security/Roles.sol": {
+			"keccak256": "0x0578be66ac0415d756d2e8d98fbb814dd75a76c4f3a374f5968a6137e7ef0f5a",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://013802dbc009465895206b971930e80abad4b42758a02e40bd33883efc0b26a0",
+				"dweb:/ipfs/QmW5KrDHZyW3i77Q5H4R9S1nU7TxPnBTyE3ETQNX7QeLPx"
 			]
 		}
 	},
