@@ -8,6 +8,7 @@ import { GMXMarketsRegistry } from "../../config/gmxMarkets.sol";
 import { ProtocolStorage } from "../../ProtocolStorage.sol";
 import { ProxyManager } from "../storage/ProxyManager.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { MarketNeutral } from "./MarketNeutral.sol";
 
 contract MarketNeutralProxy is ReentrancyGuard {
 
@@ -36,9 +37,9 @@ contract MarketNeutralProxy is ReentrancyGuard {
     function openEtherMarketNeutralDelegatecall(MarketNeutralLib.EtherMarketNeutralInput calldata _input) public payable onlyOwner nonReentrant {
         manageMarkets(_input.marketLong, _input.marketShort);
         (bool success,) = marketNeutral.delegatecall(
-            abi.encodeWithSignature(
-                "openEtherMarketNeutral((string,string,uint256,uint256,uint256,uint256,uint256))",
-                _input
+            abi.encodeCall(
+                MarketNeutral.openEtherMarketNeutral,
+                (_input)
             )
         );
         require(success, "Delegatecall failed");
@@ -47,9 +48,9 @@ contract MarketNeutralProxy is ReentrancyGuard {
     function openUSDCMarketNeutralDelegatecall(MarketNeutralLib.UsdcMarketNeutralInput calldata _input) public payable onlyOwner nonReentrant {
         manageMarkets(_input.marketLong, _input.marketShort);
         (bool success,) = marketNeutral.delegatecall(
-            abi.encodeWithSignature(
-                "openUSDCMarketNeutral((string,string,uint256,uint256,uint256,uint256,uint256))",
-                _input
+            abi.encodeCall(
+                MarketNeutral.openUSDCMarketNeutral,
+                (_input)
             )
         );
         require(success, "Delegatecall failed");
@@ -59,9 +60,9 @@ contract MarketNeutralProxy is ReentrancyGuard {
     function closeMarketNeutralDelegatecall(MarketNeutralLib.CloseMarketNeutralInput calldata _input) public payable onlyOwner nonReentrant {
         deleteMarket(_input.positionId);
         (bool success,) = marketNeutral.delegatecall(
-            abi.encodeWithSignature(
-                "closeMarketNeutral((uint256,uint256,uint256))",
-                _input
+            abi.encodeCall(
+                MarketNeutral.closeMarketNeutral,
+                (_input)
             )
         );
         require(success, "Delegatecall failed");

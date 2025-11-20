@@ -1,0 +1,87 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"name": "deposit",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"name": "withdraw",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"details": "Standard interface for WETH operations",
+			"kind": "dev",
+			"methods": {
+				"withdraw(uint256)": {
+					"params": {
+						"amount": "Amount of WETH to withdraw"
+					}
+				}
+			},
+			"title": "IWETH",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"deposit()": {
+					"notice": "Deposit ETH and receive WETH"
+				},
+				"withdraw(uint256)": {
+					"notice": "Withdraw WETH and receive ETH"
+				}
+			},
+			"notice": "Interface for Wrapped Ether (WETH) token",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/interfaces/IWETH.sol": "IWETH"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": [
+			":ds-test/=lib/forge-std/lib/ds-test/src/",
+			":forge-std/=lib /forge-std/src/",
+			":gmx-synthetics/=lib/gmx-synthetics/contracts/"
+		],
+		"viaIR": true
+	},
+	"sources": {
+		"src/interfaces/IWETH.sol": {
+			"keccak256": "0x2cb9c126ebc630805cc80fb1e1c402e8923566167ab02d8947ba02a718a4afe5",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://23c7809c434881303d951199dd57abecd4f9e2b4bd9316000f5dfc844d56a7fd",
+				"dweb:/ipfs/QmYXKeL2NsCoeAwvkHvWuAPmjbeXgVToKjpZvWgp9AFrxp"
+			]
+		}
+	},
+	"version": 1
+}

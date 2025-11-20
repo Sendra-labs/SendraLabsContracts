@@ -1,0 +1,502 @@
+{
+  "name": "MainReader",
+  "address": "0xB7fAf7bde9997E2A318fb65157bB9c7a8eEa01f2",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_addressProvider",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "addressProvider",
+      "outputs": [
+        {
+          "internalType": "contract AddressProvider",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getEtherPrice",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        }
+      ],
+      "name": "getGlobalUserData",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "int256",
+              "name": "totalPnl",
+              "type": "int256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalVolume",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalTransactions",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalPositions",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalActivePositions",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalValueLocked",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "averagePositionSize",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct MainReader.GlobalUserData",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_positionId",
+          "type": "uint256"
+        }
+      ],
+      "name": "getMarketNeutralPositionDataById",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "positionId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "int256",
+              "name": "pnlRealTime",
+              "type": "int256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeRealTime",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "investedInitialValue",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "initialToken",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "initialUsdValue",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "initialPriceTokenLong",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "initialPriceTokenShort",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "openDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeDeltaUsdLong",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeDeltaUsdShort",
+              "type": "uint256"
+            },
+            {
+              "internalType": "int256",
+              "name": "longPnl",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "shortPnl",
+              "type": "int256"
+            },
+            {
+              "internalType": "address",
+              "name": "marketLong",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "marketShort",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "proxy",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "isActive",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct MainReader.MarketNeutralPosition",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        }
+      ],
+      "name": "getMarketNeutralPositionsData",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "positionId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "int256",
+              "name": "pnlRealTime",
+              "type": "int256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeRealTime",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "investedInitialValue",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "initialToken",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "initialUsdValue",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "initialPriceTokenLong",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "initialPriceTokenShort",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "openDate",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeDeltaUsdLong",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeDeltaUsdShort",
+              "type": "uint256"
+            },
+            {
+              "internalType": "int256",
+              "name": "longPnl",
+              "type": "int256"
+            },
+            {
+              "internalType": "int256",
+              "name": "shortPnl",
+              "type": "int256"
+            },
+            {
+              "internalType": "address",
+              "name": "marketLong",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "marketShort",
+              "type": "address"
+            },
+            {
+              "internalType": "address",
+              "name": "proxy",
+              "type": "address"
+            },
+            {
+              "internalType": "bool",
+              "name": "isActive",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct MainReader.MarketNeutralPosition[]",
+          "name": "",
+          "type": "tuple[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_marketLong",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_marketShort",
+          "type": "string"
+        }
+      ],
+      "name": "getPrices",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getProtocolStats",
+      "outputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "totalUsers",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalVolume",
+              "type": "uint256"
+            },
+            {
+              "internalType": "int256",
+              "name": "totalPnl",
+              "type": "int256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalTransactions",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalPositions",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalActivePositions",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalValueLocked",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct ProtocolLib.ProtocolStats",
+          "name": "",
+          "type": "tuple"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        }
+      ],
+      "name": "getUserUsdcBalance",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gmxMarkets",
+      "outputs": [
+        {
+          "internalType": "contract GMXMarketsRegistry",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "gmxPrices",
+      "outputs": [
+        {
+          "internalType": "contract GMXPrices",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_user",
+          "type": "address"
+        },
+        {
+          "internalType": "string",
+          "name": "_marketLong",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_marketShort",
+          "type": "string"
+        }
+      ],
+      "name": "isProxyNeeded",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "marketNeutralReader",
+      "outputs": [
+        {
+          "internalType": "contract MarketNeutralReader",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "protocolStorage",
+      "outputs": [
+        {
+          "internalType": "contract ProtocolStorage",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "filePath": " - connect to localhost - /src/core/MainReader.sol",
+  "pinnedAt": 1762971083433
+}

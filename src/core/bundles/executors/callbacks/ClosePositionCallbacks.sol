@@ -2,10 +2,11 @@
 pragma solidity 0.8.28;
 
 import { IOrderCallbackReceiver } from "../../../../interfaces/GMX/IOrderCallbackReceiver.sol";
+import { IGasFeeCallbackReceiver } from "gmx-synthetics/callback/IGasFeeCallbackReceiver.sol";
 import { AddressProvider } from "../../../../core/config/AddressProvider.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { EventUtils } from "../../../../lib/GMX lib/EventUtils.sol";
+import { EventUtils } from "gmx-synthetics/event/EventUtils.sol";
 import { ProtocolStorage } from "../../../../core/ProtocolStorage.sol";
 import { MarketNeutralStorage } from "../../storage/MarketNeutralStorage.sol";
 import { MarketNeutralLib } from "../../../../lib/MarketNeutral/MarketNeutralLib.sol";
@@ -16,7 +17,7 @@ import { Roles } from "../../../../security/Roles.sol";
 import { ProxyManager } from "../../storage/ProxyManager.sol";
 import { MarketNeutralProxy } from "../proxy.sol";
 
-contract ClosePositionCallbacks is IOrderCallbackReceiver, ReentrancyGuard {
+contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiver, ReentrancyGuard {
     
     using SafeERC20 for IERC20;
     using EventUtils for EventUtils.AddressItems;
@@ -257,7 +258,13 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, ReentrancyGuard {
     function afterOrderCancellation(bytes32 key, EventUtils.EventLogData memory order, EventUtils.EventLogData memory eventData) external {}
     function afterOrderFrozen(bytes32 key, EventUtils.EventLogData memory order, EventUtils.EventLogData memory eventData) external {}
 
-    receive() external payable {}
+    function refundExecutionFee(bytes32 key, EventUtils.EventLogData memory eventData) external payable {
+        MarketNeutralLib.PendingOrder memory pendingOrder = MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).getPendingOrder(key);
+        if (msg.value > 0 && pendingOrder.receiver != address(0)) {
+            (bool success, ) = pendingOrder.receiver.call{value: msg.value}("");
+            require(success, "Refund execution fee transfer failed");
+        }
+    }   
 
     /**
      * @notice Función de rescue SIMPLE para cuando el callback falla

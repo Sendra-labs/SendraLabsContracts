@@ -1,0 +1,64 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"name": "getCurrentTxL1GasFees",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"lib/gmx-synthetics/contracts/chain/ArbGasInfo.sol": "ArbGasInfo"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": [
+			":ds-test/=lib/forge-std/lib/ds-test/src/",
+			":forge-std/=lib /forge-std/src/",
+			":gmx-synthetics/=lib/gmx-synthetics/contracts/"
+		],
+		"viaIR": true
+	},
+	"sources": {
+		"lib/gmx-synthetics/contracts/chain/ArbGasInfo.sol": {
+			"keccak256": "0x48c4ffaab45cc49cf4d4014eaf92867b65f7cf5c20deca5199e746d72c197816",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://76acc33e12994e11b47a1324a53f5716d565cc56b0ad3ec9630bbc5c122e0c53",
+				"dweb:/ipfs/QmYJSPZwQaWZvWZndBDDKmy1NzZFVDqTJR4SZivkSCMPXZ"
+			]
+		}
+	},
+	"version": 1
+}

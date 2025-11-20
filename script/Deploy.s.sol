@@ -9,21 +9,34 @@ import { ProtocolStorage } from "../src/core/ProtocolStorage.sol";
 import { GMXMarketsRegistry } from "../src/core/config/gmxMarkets.sol";
 import { GMXPrices } from "../src/periphery/utilsGMX/GMXPrices.sol";
 import { UpgradeableLib } from "../src/core/UpgradeableLib.sol";
+import { ProxyFactory } from "../src/core/bundles/executors/ProxyFactory.sol";
+import { ProxyManager } from "../src/core/bundles/storage/ProxyManager.sol";
+import { MarketNeutralStorage } from "../src/core/bundles/storage/MarketNeutralStorage.sol";
+import { ClosePositionCallbacks } from "../src/core/bundles/executors/callbacks/ClosePositionCallbacks.sol";
+import { MarketNeutralReader } from "../src/core/bundles/readers/marketNeutralReader.sol";
+import { MainReader } from "../src/core/MainReader.sol";
 
 contract Deploy is Script {
+
+    uint256 public ADMIN1_PRIVATE_KEY = vm.envUint("ADMIN1_PRIVATE_KEY");
 
     AddressProvider public addressProvider;
     Roles public roles;
     MarketNeutral public marketNeutral;
-    BundlesRouter public bundlesRouter;
     ProtocolStorage public protocolStorage;
     GMXMarketsRegistry public gmxMarketsRegistry;
     GMXPrices public gmxPrices;
     UpgradeableLib public upgradeableLib;
+    ProxyFactory public proxyFactory;
+    ProxyManager public proxyManager;
+    MarketNeutralStorage public marketNeutralStorage;
+    ClosePositionCallbacks public closePositionCallbacks;
+    MarketNeutralReader public marketNeutralReader;
+    MainReader public mainReader;
 
-    address public constant ADMIN1 = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; // CHANGE THIS
-    //address public constant ADMIN2 = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; // CHANGE THIS
-    //address public constant ADMIN3 = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; // CHANGE THIS
+    address public constant ADMIN1 = 0x7F4C831de10684f85867899708cB49FfbF4983B9; // CHANGE THIS
+    address public constant ADMIN2 = 0xdD8f39262841F9425ed9180D0D989312E41EbEEc; // CHANGE THIS
+    address public constant ADMIN3 = 0xD023851C8AC8ceC385988e7E5af84b1A6D1f9079; // CHANGE THIS
 
     struct Contracts {
         string name;
@@ -34,43 +47,83 @@ contract Deploy is Script {
     function setUp() public {}
 
     function run() public {
-        vm.startBroadcast();
-        
+
+        vm.startBroadcast(ADMIN1_PRIVATE_KEY);
+        console.log("Deploying contracts...");
+
         roles = new Roles(ADMIN1, ADMIN2, ADMIN3);
         addressProvider = new AddressProvider(address(roles));
-        marketNeutral = new MarketNeutral(address(addressProvider));
-        bundlesRouter = new BundlesRouter(address(addressProvider));
+        
+        console.log("Registering external dependencies...");
+        scriptSetAddresses(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8, "GMXDataStore");
+        
+        scriptSetAddresses(address(roles), "Roles");
+
         protocolStorage = new ProtocolStorage(address(roles));
         gmxMarketsRegistry = new GMXMarketsRegistry(address(roles));
+        marketNeutral = new MarketNeutral(address(addressProvider));
+        marketNeutralStorage = new MarketNeutralStorage(address(roles));
+        closePositionCallbacks = new ClosePositionCallbacks(address(addressProvider));
+        marketNeutralReader = new MarketNeutralReader(address(addressProvider));
+        proxyFactory = new ProxyFactory(address(addressProvider));
+        
         gmxPrices = new GMXPrices(address(addressProvider));
-        upgradeableLib = new UpgradeableLib(address(roles));
+        
+        proxyManager = new ProxyManager(address(addressProvider));
+        
+        scriptSetAddresses(address(protocolStorage), "ProtocolStorage");
+        scriptSetAddresses(address(gmxMarketsRegistry), "GMXMarkets");
+        scriptSetAddresses(address(gmxPrices), "GMXPrices");
+        scriptSetAddresses(address(marketNeutralReader), "MarketNeutralReader");
+        
+        mainReader = new MainReader(address(addressProvider));
 
         console.log("--------------------------------");
         console.log("Roles -------------> ", address(roles));
         console.log("AddressProvider ---> ", address(addressProvider));
         console.log("MarketNeutral -----> ", address(marketNeutral));
-        console.log("BundlesRouter -----> ", address(bundlesRouter));
         console.log("ProtocolStorage ---> ", address(protocolStorage));
         console.log("GMXMarketsRegistry -> ", address(gmxMarketsRegistry));
         console.log("GMXPrices --------> ", address(gmxPrices));
-        console.log("UpgradeableLib ----> ", address(upgradeableLib));
+        console.log("ProxyFactory -----> ", address(proxyFactory));
+        console.log("ProxyManager -----> ", address(proxyManager));
+        console.log("MarketNeutralStorage -> ", address(marketNeutralStorage));
+        console.log("ClosePositionCallbacks -> ", address(closePositionCallbacks));
+        console.log("MarketNeutralReader -> ", address(marketNeutralReader));
+        console.log("MainReader --------> ", address(mainReader));
         console.log("--------------------------------");
         
-        Contracts[] memory contracts = new Contracts[](6);
-        contracts[0] = Contracts("BundlesRouter", address(bundlesRouter), true);
+        Contracts[] memory contracts = new Contracts[](12);
+        contracts[0] = Contracts("Roles", address(roles), false);
         contracts[1] = Contracts("MarketNeutral", address(marketNeutral), true);
         contracts[2] = Contracts("ProtocolStorage", address(protocolStorage), false);
         contracts[3] = Contracts("AddressProvider", address(addressProvider), false);
-        contracts[4] = Contracts("GMXMarketsRegistry", address(gmxMarketsRegistry), false);
+        contracts[4] = Contracts("GMXMarkets", address(gmxMarketsRegistry), false);
         contracts[5] = Contracts("GMXPrices", address(gmxPrices), false);
-
+        contracts[6] = Contracts("ProxyFactory", address(proxyFactory), false);
+        contracts[7] = Contracts("ProxyManager", address(proxyManager), true);
+        contracts[8] = Contracts("MarketNeutralStorage", address(marketNeutralStorage), false);
+        contracts[9] = Contracts("ClosePositionCallbacks", address(closePositionCallbacks), true);
+        contracts[10] = Contracts("MarketNeutralReader", address(marketNeutralReader), false);
+        contracts[11] = Contracts("MainReader", address(mainReader), false);
+            
         scriptManager(contracts);
+
+        scriptSetAddresses(0x04315E233C1c6FfA61080B76E29d5e8a1f7B4A35, "OrderHandlerGMX");
+        scriptSetAddresses(0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5, "OrderVaultGMX");
+        scriptSetAddresses(0x87d66368cD08a7Ca42252f5ab44B2fb6d1Fb8d15, "ExchangeRouterGMX");
+        scriptSetAddresses(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8, "GMXDataStore");
+        scriptSetAddresses(0xaf88d065e77c8cC2239327C5EDb3A432268e5831, "USDC");
+        scriptSetAddresses(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1, "WETH");
+        scriptSetAddresses(0xe6fab3F0c7199b0d34d7FbE83394fc0e0D06e99d, "ReferralStorageGMX");
+        scriptSetAddresses(0xf60becbba223EEA9495Da3f606753867eC10d139, "ReaderGMX");
 
         vm.stopBroadcast();
     }
 
     function scriptManager(Contracts[] memory _contracts) public {
         for(uint i = 0; i < _contracts.length; i++) {
+            console.log("Managing contract...", _contracts[i].name);
             scriptSetAddresses(_contracts[i].contractAddress, _contracts[i].name);
             if(_contracts[i].isAllowanceRequired) {
                 scriptAllowContract(_contracts[i].contractAddress, _contracts[i].name);
@@ -79,19 +132,11 @@ contract Deploy is Script {
     }
 
     function scriptAllowContract(address _contract, string memory _name) public {
-        vm.startBroadcast(ADMIN1_PRIVATE_KEY);
         roles.allowContract(_contract, _name);
-        vm.stopBroadcast();
-
-        vm.startBroadcast(ADMIN2_PRIVATE_KEY);
-        roles.allowContract(_contract, _name);
-        vm.stopBroadcast();
     }
-
+    
     function scriptSetAddresses(address _address, string memory _name) public {
-        vm.startBroadcast(ADMIN1_PRIVATE_KEY);
         addressProvider.setAddress(_name, _address);
-        vm.stopBroadcast();
     }
 
 }

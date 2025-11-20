@@ -1,0 +1,60 @@
+{
+	"deploy": {
+		"VM:-": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"main:1": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"ropsten:3": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"rinkeby:4": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"kovan:42": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"goerli:5": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"Custom": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		}
+	},
+	"data": {
+		"bytecode": {
+			"functionDebugData": {},
+			"generatedSources": [],
+			"linkReferences": {},
+			"object": "6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea264697066735822122007938019475cffb738bb46bbd85351cf66c9232844570213437c92f045c66c9064736f6c634300081c0033",
+			"opcodes": "PUSH1 0x80 DUP1 PUSH1 0x40 MSTORE CALLVALUE PUSH1 0x17 JUMPI PUSH1 0x39 SWAP1 DUP2 PUSH1 0x1C DUP3 CODECOPY ADDRESS DUP2 POP POP RETURN JUMPDEST PUSH0 DUP1 REVERT INVALID PUSH0 DUP1 REVERT INVALID LOG2 PUSH5 0x6970667358 0x22 SLT KECCAK256 SMOD SWAP4 DUP1 NOT SELFBALANCE TLOAD SELFDESTRUCT 0xB7 CODESIZE 0xBB CHAINID 0xBB 0xD8 MSTORE8 MLOAD 0xCF PUSH7 0xC9232844570213 NUMBER PUSH29 0x92F045C66C9064736F6C634300081C0033000000000000000000000000 ",
+			"sourceMap": "59:1909:0:-:0;;;;;;;;;;;;;;;;;;;;;"
+		},
+		"deployedBytecode": {
+			"functionDebugData": {},
+			"generatedSources": [],
+			"immutableReferences": {},
+			"linkReferences": {},
+			"object": "5f80fdfea264697066735822122007938019475cffb738bb46bbd85351cf66c9232844570213437c92f045c66c9064736f6c634300081c0033",
+			"opcodes": "PUSH0 DUP1 REVERT INVALID LOG2 PUSH5 0x6970667358 0x22 SLT KECCAK256 SMOD SWAP4 DUP1 NOT SELFBALANCE TLOAD SELFDESTRUCT 0xB7 CODESIZE 0xBB CHAINID 0xBB 0xD8 MSTORE8 MLOAD 0xCF PUSH7 0xC9232844570213 NUMBER PUSH29 0x92F045C66C9064736F6C634300081C0033000000000000000000000000 ",
+			"sourceMap": "59:1909:0:-:0;;"
+		},
+		"gasEstimates": {
+			"creation": {
+				"codeDepositCost": "11400",
+				"executionCost": "infinite",
+				"totalCost": "infinite"
+			}
+		},
+		"methodIdentifiers": {}
+	},
+	"abi": []
+}

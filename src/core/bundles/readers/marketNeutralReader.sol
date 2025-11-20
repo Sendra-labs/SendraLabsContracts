@@ -6,7 +6,7 @@ import { ProtocolStorage } from "../../ProtocolStorage.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { MarketNeutralLib } from "../../../lib/MarketNeutral/MarketNeutralLib.sol";
 import { IReader } from "../../../interfaces/GMX/IReader.sol";
-import { GMXPrices } from "../../../periphery/utilsGMX/GMXPrices.sol";
+import { GMXPricesV2 } from "../../../periphery/utilsGMX/GMXPricesV2.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 // GMX Types imports
@@ -38,7 +38,7 @@ contract MarketNeutralReader {
         bytes32 positionKey
     ) public view returns (IReader.Position memory position) {
         IReader reader = IReader(addressProvider.getAddress("ReaderGMX"));
-        address dataStore = addressProvider.getAddress("DataStoreGMX");
+        address dataStore = addressProvider.getAddress("GMXDataStore");
         
         return reader.getPosition(dataStore, positionKey);
     }
@@ -240,7 +240,7 @@ contract MarketNeutralReader {
         address market
     ) public view returns (IReader.PositionInfo memory positionInfo) {
         IReader reader = IReader(addressProvider.getAddress("ReaderGMX"));
-        address dataStore = addressProvider.getAddress("DataStoreGMX");
+        address dataStore = addressProvider.getAddress("GMXDataStore");
         address referralStorage = addressProvider.getAddress("ReferralStorageGMX");
         
         // Get current market prices
@@ -266,17 +266,19 @@ contract MarketNeutralReader {
     function _getCurrentMarketPrices(
         address market
     ) internal view returns (IReader.MarketPrices memory prices) {
-        GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
+        GMXPricesV2 gmxPrices = GMXPricesV2(addressProvider.getAddress("GMXPrices"));
         IReader reader = IReader(addressProvider.getAddress("ReaderGMX"));
-        address dataStore = addressProvider.getAddress("DataStoreGMX");
+        address dataStore = addressProvider.getAddress("GMXDataStore");
         
         // Get market info
         IReader.Market memory marketProps = reader.getMarket(dataStore, market);
         
         // Get prices (adjust according to your GMXPrices implementation)
-        uint256 indexPrice = gmxPrices.getPrice(marketProps.indexToken);
-        uint256 longPrice = gmxPrices.getPrice(marketProps.longToken);
-        uint256 shortPrice = gmxPrices.getPrice(marketProps.shortToken);
+        (
+            uint256 indexPrice,
+            uint256 longPrice,
+            uint256 shortPrice
+        ) = gmxPrices.getMarketPrices(market);
         
         // Build price struct
         // NOTE: For simplicity, using same price for min/max

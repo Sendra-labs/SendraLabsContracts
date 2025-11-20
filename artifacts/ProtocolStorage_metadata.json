@@ -1,0 +1,778 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_roles",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidProtocol",
+				"type": "error"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_positionId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					}
+				],
+				"name": "finalizePosition",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getProtocolStats",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "totalUsers",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "totalVolume",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "totalPnl",
+								"type": "int256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "totalTransactions",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "totalPositions",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "totalActivePositions",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "totalValueLocked",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct ProtocolLib.ProtocolStats",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					}
+				],
+				"name": "getUser",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "id",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "globalPnl",
+								"type": "int256"
+							},
+							{
+								"components": [
+									{
+										"internalType": "uint256",
+										"name": "totalPositions",
+										"type": "uint256"
+									},
+									{
+										"internalType": "uint256",
+										"name": "activePositions",
+										"type": "uint256"
+									},
+									{
+										"components": [
+											{
+												"internalType": "uint128",
+												"name": "positionType",
+												"type": "uint128"
+											},
+											{
+												"internalType": "uint256",
+												"name": "id",
+												"type": "uint256"
+											},
+											{
+												"internalType": "int256",
+												"name": "pnl",
+												"type": "int256"
+											},
+											{
+												"internalType": "bool",
+												"name": "isActive",
+												"type": "bool"
+											},
+											{
+												"internalType": "bytes[]",
+												"name": "positionData",
+												"type": "bytes[]"
+											}
+										],
+										"internalType": "struct ProtocolLib.Position[]",
+										"name": "positions",
+										"type": "tuple[]"
+									}
+								],
+								"internalType": "struct ProtocolLib.GlobalPosition",
+								"name": "globalPosition",
+								"type": "tuple"
+							},
+							{
+								"internalType": "uint256",
+								"name": "transactionCount",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bytes[]",
+								"name": "userData",
+								"type": "bytes[]"
+							}
+						],
+						"internalType": "struct ProtocolLib.User",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint128",
+								"name": "positionType",
+								"type": "uint128"
+							},
+							{
+								"internalType": "uint256",
+								"name": "id",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "pnl",
+								"type": "int256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isActive",
+								"type": "bool"
+							},
+							{
+								"internalType": "bytes[]",
+								"name": "positionData",
+								"type": "bytes[]"
+							}
+						],
+						"internalType": "struct ProtocolLib.Position[]",
+						"name": "_positions",
+						"type": "tuple[]"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_positionId",
+						"type": "uint256"
+					}
+				],
+				"name": "getUserPosition",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint128",
+								"name": "positionType",
+								"type": "uint128"
+							},
+							{
+								"internalType": "uint256",
+								"name": "id",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "pnl",
+								"type": "int256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isActive",
+								"type": "bool"
+							},
+							{
+								"internalType": "bytes[]",
+								"name": "positionData",
+								"type": "bytes[]"
+							}
+						],
+						"internalType": "struct ProtocolLib.Position",
+						"name": "",
+						"type": "tuple"
+					},
+					{
+						"internalType": "uint256",
+						"name": "index",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "pure",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_positionId",
+						"type": "uint256"
+					}
+				],
+				"name": "getUserPositionById",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint128",
+								"name": "positionType",
+								"type": "uint128"
+							},
+							{
+								"internalType": "uint256",
+								"name": "id",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "pnl",
+								"type": "int256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isActive",
+								"type": "bool"
+							},
+							{
+								"internalType": "bytes[]",
+								"name": "positionData",
+								"type": "bytes[]"
+							}
+						],
+						"internalType": "struct ProtocolLib.Position",
+						"name": "position",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getUsersCount",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					}
+				],
+				"name": "isUser",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "roles",
+				"outputs": [
+					{
+						"internalType": "contract Roles",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "int256",
+						"name": "_change",
+						"type": "int256"
+					}
+				],
+				"name": "updateTotalActivePositions",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "int256",
+						"name": "_pnl",
+						"type": "int256"
+					}
+				],
+				"name": "updateTotalPnl",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "updateTotalPositions",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "updateTotalTransactions",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "int256",
+						"name": "_change",
+						"type": "int256"
+					}
+				],
+				"name": "updateTotalValueLocked",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_amount",
+						"type": "uint256"
+					}
+				],
+				"name": "updateTotalVolume",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"internalType": "int256",
+						"name": "_pnlChange",
+						"type": "int256"
+					}
+				],
+				"name": "updateUserGlobalPnl",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "totalPositions",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "activePositions",
+								"type": "uint256"
+							},
+							{
+								"components": [
+									{
+										"internalType": "uint128",
+										"name": "positionType",
+										"type": "uint128"
+									},
+									{
+										"internalType": "uint256",
+										"name": "id",
+										"type": "uint256"
+									},
+									{
+										"internalType": "int256",
+										"name": "pnl",
+										"type": "int256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isActive",
+										"type": "bool"
+									},
+									{
+										"internalType": "bytes[]",
+										"name": "positionData",
+										"type": "bytes[]"
+									}
+								],
+								"internalType": "struct ProtocolLib.Position[]",
+								"name": "positions",
+								"type": "tuple[]"
+							}
+						],
+						"internalType": "struct ProtocolLib.GlobalPosition",
+						"name": "_globalPosition",
+						"type": "tuple"
+					}
+				],
+				"name": "updateUserGlobalPosition",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_transactionCount",
+						"type": "uint256"
+					}
+				],
+				"name": "updateUserTransactionCount",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"name": "users",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "id",
+						"type": "uint256"
+					},
+					{
+						"internalType": "int256",
+						"name": "globalPnl",
+						"type": "int256"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "totalPositions",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "activePositions",
+								"type": "uint256"
+							},
+							{
+								"components": [
+									{
+										"internalType": "uint128",
+										"name": "positionType",
+										"type": "uint128"
+									},
+									{
+										"internalType": "uint256",
+										"name": "id",
+										"type": "uint256"
+									},
+									{
+										"internalType": "int256",
+										"name": "pnl",
+										"type": "int256"
+									},
+									{
+										"internalType": "bool",
+										"name": "isActive",
+										"type": "bool"
+									},
+									{
+										"internalType": "bytes[]",
+										"name": "positionData",
+										"type": "bytes[]"
+									}
+								],
+								"internalType": "struct ProtocolLib.Position[]",
+								"name": "positions",
+								"type": "tuple[]"
+							}
+						],
+						"internalType": "struct ProtocolLib.GlobalPosition",
+						"name": "globalPosition",
+						"type": "tuple"
+					},
+					{
+						"internalType": "uint256",
+						"name": "transactionCount",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"author": "@Diego-AVZ",
+			"custom:security": "All write operations require protocol contract authorization",
+			"details": "Manages user data, protocol statistics, and provides controlled access to storage operationsOnly authorized protocol contracts can modify data through onlyProtocol modifier",
+			"kind": "dev",
+			"methods": {
+				"constructor": {
+					"params": {
+						"_roles": "Address of the Roles contract for protocol contract verification"
+					}
+				},
+				"getProtocolStats()": {
+					"returns": {
+						"_0": "ProtocolStats struct containing all protocol metrics"
+					}
+				},
+				"getUser(address)": {
+					"params": {
+						"_user": "The address of the user to query"
+					},
+					"returns": {
+						"_0": "User struct containing all user data"
+					}
+				},
+				"getUsersCount()": {
+					"returns": {
+						"_0": "Total number of users registered"
+					}
+				},
+				"updateTotalActivePositions(int256)": {
+					"custom:security": "Only protocol contracts can update active positions. Prevents underflow",
+					"details": "Only callable by authorized protocol contracts. Handles both increases and decreases",
+					"params": {
+						"_change": "The change in active positions (positive or negative)"
+					}
+				},
+				"updateTotalPnl(int256)": {
+					"custom:security": "Only protocol contracts can update PnL. Prevents underflow",
+					"details": "Only callable by authorized protocol contracts. Handles both positive and negative PnL",
+					"params": {
+						"_pnl": "The PnL change (positive or negative)"
+					}
+				},
+				"updateTotalPositions()": {
+					"custom:security": "Only protocol contracts can update positions count",
+					"details": "Only callable by authorized protocol contracts"
+				},
+				"updateTotalTransactions()": {
+					"custom:security": "Only protocol contracts can update transaction count",
+					"details": "Only callable by authorized protocol contracts"
+				},
+				"updateTotalValueLocked(int256)": {
+					"custom:security": "Only protocol contracts can update TVL. Prevents underflow",
+					"details": "Only callable by authorized protocol contracts. Handles both increases and decreases",
+					"params": {
+						"_change": "The change in total value locked (positive or negative)"
+					}
+				},
+				"updateTotalVolume(uint256)": {
+					"custom:security": "Only protocol contracts can update volume",
+					"details": "Only callable by authorized protocol contracts",
+					"params": {
+						"_amount": "The amount to add to total volume"
+					}
+				}
+			},
+			"title": "ProtocolStorage",
+			"version": 1
+		},
+		"userdoc": {
+			"errors": {
+				"InvalidProtocol()": [
+					{
+						"notice": "Thrown when an unauthorized contract attempts to access storage"
+					}
+				]
+			},
+			"kind": "user",
+			"methods": {
+				"constructor": {
+					"notice": "Initializes the ProtocolStorage with Roles contract"
+				},
+				"getProtocolStats()": {
+					"notice": "Returns all protocol statistics"
+				},
+				"getUser(address)": {
+					"notice": "Retrieves user data for a specific address"
+				},
+				"getUsersCount()": {
+					"notice": "Returns the total number of users in the protocol"
+				},
+				"roles()": {
+					"notice": "Reference to the Roles contract for access control"
+				},
+				"updateTotalActivePositions(int256)": {
+					"notice": "Updates the total active positions count"
+				},
+				"updateTotalPnl(int256)": {
+					"notice": "Updates the total PnL of the protocol"
+				},
+				"updateTotalPositions()": {
+					"notice": "Increments the total positions count"
+				},
+				"updateTotalTransactions()": {
+					"notice": "Increments the total transaction count"
+				},
+				"updateTotalValueLocked(int256)": {
+					"notice": "Updates the total value locked in the protocol"
+				},
+				"updateTotalVolume(uint256)": {
+					"notice": "Updates the total volume processed by the protocol"
+				},
+				"users(address)": {
+					"notice": "Mapping of user addresses to their User data"
+				}
+			},
+			"notice": "Centralized storage contract for protocol data and statistics",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/core/ProtocolStorage.sol": "ProtocolStorage"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": [
+			":ds-test/=lib/forge-std/lib/ds-test/src/",
+			":forge-std/=lib /forge-std/src/"
+		],
+		"viaIR": true
+	},
+	"sources": {
+		"src/core/ProtocolStorage.sol": {
+			"keccak256": "0xc3d73dfad62883bf0364cc2fecc84aae967b41981a08dd473d285cab8e3fa5c0",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://de374e6230fef7f5581e19309214df1856e3d7ef9458be4ccf4417367c9a812b",
+				"dweb:/ipfs/QmX2cd1z4y58g5mtFRqJKi5MTqTUQt8WgiQMJ21dGkQXEq"
+			]
+		},
+		"src/lib/Protocol.lib.sol": {
+			"keccak256": "0x22d9ab7080b9fdd63fbc06fa8f5b2122a8adfbc48960cae13e4b1f654fbd90e8",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://c904847c49d69ae1ccb9774a8af0b7337e3d752c192da3d42ec1f0d76230fc83",
+				"dweb:/ipfs/Qmam9Rb9SDAHCfq6Ds1pQWRgRseJ8cH1XTnVc183AtaV4z"
+			]
+		},
+		"src/lib/security/Roles.lib.sol": {
+			"keccak256": "0x9eda8dcfd260343e2d4b1a44e025a3b0f88f0724fe1a79b4ae3584e2b7c1ba69",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ba5717f1e354c417bad5d39b78ec8ea2a22850a7d14c48055d17d7dcde11d5a3",
+				"dweb:/ipfs/QmW4cQf7iZvLGERPhSCqCJ3Qpa7FoyE4cgmSN4F9Z21C1K"
+			]
+		},
+		"src/security/Roles.sol": {
+			"keccak256": "0x4ffa09bf2c2d66449603088e1b0dd03e6bbc3c14532c8a0580fb7b6a867bc0c4",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://85343dc69a533acfa25b4d34763910094d417e3fba2cfa58b7c29e3de986c836",
+				"dweb:/ipfs/QmPN3eGnEzKTXSXwgXoAKV2JChXCg18TRPxy8nqU9zLERM"
+			]
+		}
+	},
+	"version": 1
+}

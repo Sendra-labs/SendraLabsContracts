@@ -1,0 +1,119 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"name": "ARBITRUM_CHAIN_ID",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "ARBITRUM_SEPOLIA_CHAIN_ID",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "arbGasInfo",
+				"outputs": [
+					{
+						"internalType": "contract ArbGasInfo",
+						"name": "",
+						"type": "ArbGasInfo"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "arbSys",
+				"outputs": [
+					{
+						"internalType": "contract ArbSys",
+						"name": "",
+						"type": "ArbSys"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"lib/gmx-synthetics/contracts/chain/Chain.sol": "Chain"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": [
+			":ds-test/=lib/forge-std/lib/ds-test/src/",
+			":forge-std/=lib /forge-std/src/",
+			":gmx-synthetics/=lib/gmx-synthetics/contracts/"
+		],
+		"viaIR": true
+	},
+	"sources": {
+		"lib/gmx-synthetics/contracts/chain/ArbGasInfo.sol": {
+			"keccak256": "0x48c4ffaab45cc49cf4d4014eaf92867b65f7cf5c20deca5199e746d72c197816",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://76acc33e12994e11b47a1324a53f5716d565cc56b0ad3ec9630bbc5c122e0c53",
+				"dweb:/ipfs/QmYJSPZwQaWZvWZndBDDKmy1NzZFVDqTJR4SZivkSCMPXZ"
+			]
+		},
+		"lib/gmx-synthetics/contracts/chain/ArbSys.sol": {
+			"keccak256": "0x97a2fcc4828af974d9e763db893b1188fec4d964ec3896611284678631dc5ffd",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://1c5933c881d68a389c9ac1d774228d1699d20f1973e8f1499da4df617cc4fc3c",
+				"dweb:/ipfs/QmdHtTziujixKVEqzcRyGUHixmZXGHAk62UAUhoU61zvco"
+			]
+		},
+		"lib/gmx-synthetics/contracts/chain/Chain.sol": {
+			"keccak256": "0x6aaf3c482b05293c1d7582182e5453a25d4e87aa7d51388865d11984daba94cd",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://f50aeee38e188b3ae1aba60491b00157774624a105b8edbedff99d247cab54e8",
+				"dweb:/ipfs/QmT8FJC3dK4jDuZHm79CbLsspK8yxccXo9B95QqsLsyA3e"
+			]
+		}
+	},
+	"version": 1
+}

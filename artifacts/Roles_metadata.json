@@ -354,7 +354,11 @@
 			"enabled": true,
 			"runs": 200
 		},
-		"remappings": []
+		"remappings": [
+			":ds-test/=lib/forge-std/lib/ds-test/src/",
+			":forge-std/=lib /forge-std/src/"
+		],
+		"viaIR": true
 	},
 	"sources": {
 		"src/lib/security/Roles.lib.sol": {
@@ -366,11 +370,11 @@
 			]
 		},
 		"src/security/Roles.sol": {
-			"keccak256": "0x0578be66ac0415d756d2e8d98fbb814dd75a76c4f3a374f5968a6137e7ef0f5a",
+			"keccak256": "0x4ffa09bf2c2d66449603088e1b0dd03e6bbc3c14532c8a0580fb7b6a867bc0c4",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://013802dbc009465895206b971930e80abad4b42758a02e40bd33883efc0b26a0",
-				"dweb:/ipfs/QmW5KrDHZyW3i77Q5H4R9S1nU7TxPnBTyE3ETQNX7QeLPx"
+				"bzz-raw://85343dc69a533acfa25b4d34763910094d417e3fba2cfa58b7c29e3de986c836",
+				"dweb:/ipfs/QmPN3eGnEzKTXSXwgXoAKV2JChXCg18TRPxy8nqU9zLERM"
 			]
 		}
 	},

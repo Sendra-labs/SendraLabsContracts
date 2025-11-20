@@ -8,7 +8,8 @@ import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.s
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { IExchangeRouter } from "../../../interfaces/GMX/IExchangeRouter.sol";
 import { IOrderVault } from "../../../interfaces/GMX/IOrderVault.sol";
-import { BaseOrderUtils } from "../../../lib/GMX lib/BaseOrdersUtils.sol";
+import { IBaseOrderUtils } from "gmx-synthetics/order/IBaseOrderUtils.sol";
+import { Order } from "gmx-synthetics/order/Order.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
 import { IOrderCallbackReceiver } from "../../../interfaces/GMX/IOrderCallbackReceiver.sol";
@@ -19,6 +20,7 @@ import { MarketNeutralLib } from "../../../lib/MarketNeutral/MarketNeutralLib.so
 import { MarketNeutralStorage } from "../storage/MarketNeutralStorage.sol";
 import { IWETH } from "../../../interfaces/IWETH.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
+import { PositionInitializer } from "./PositionInitializer.sol";
 
 contract MarketNeutral is ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -48,7 +50,7 @@ contract MarketNeutral is ReentrancyGuard {
     }
     */
 
-    function openEtherMarketNeutral(MarketNeutralLib.EtherMarketNeutralInput calldata _input) public payable nonReentrant {
+    function openEtherMarketNeutral(MarketNeutralLib.EtherMarketNeutralInput calldata _input) public payable {
         GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
         GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
 
@@ -100,7 +102,12 @@ contract MarketNeutral is ReentrancyGuard {
         //16 {2, shortKey}
         //17 {1, proxy address}
 
-        uint256 _value = msg.value / 2;
+        uint256 _value = (_input.totalEthAmount / 2) + _input.executionFee;
+        uint256 totalValueNeeded = _value * 2; // Value necesario para ambas llamadas
+        
+        // Verificar que msg.value sea suficiente
+        require(msg.value >= totalValueNeeded, "Insufficient msg.value");
+        
         initializePosition(newPositionData, 0);
         
         // Preparar parámetros para posición Long
@@ -131,7 +138,7 @@ contract MarketNeutral is ReentrancyGuard {
         openPositionWithEther(shortInput);
     }
 
-    function openUSDCMarketNeutral(MarketNeutralLib.UsdcMarketNeutralInput calldata _input) public payable nonReentrant {
+    function openUSDCMarketNeutral(MarketNeutralLib.UsdcMarketNeutralInput calldata _input) public payable {
         GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
         GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
 
@@ -215,46 +222,11 @@ contract MarketNeutral is ReentrancyGuard {
     }
 
     function initializePosition(bytes[] memory _newPositionData, uint128 _positionType) internal {
-        ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        
-        protocolStorage.updateUserTransactionCount(msg.sender, 1);
-        ProtocolLib.GlobalPosition memory userGlobalPosition = protocolStorage.getUser(msg.sender).globalPosition;
-        
-        uint256 positionId = userGlobalPosition.totalPositions + 1;
-
-        protocolStorage.updateUserGlobalPosition(
-            msg.sender, 
-            ProtocolLib.GlobalPosition(
-                positionId, // == totalPositions + 1
-                userGlobalPosition.activePositions + 1,
-                createPositions(userGlobalPosition.positions, _newPositionData, _positionType, positionId)
-            )
-        );
+        PositionInitializer positionInitializer = PositionInitializer(addressProvider.getAddress("PositionInitializer"));
+        positionInitializer.initializePosition(_newPositionData, _positionType, msg.sender);
     }
 
-    function createPositions(
-        ProtocolLib.Position[] memory _positions, 
-        bytes[] memory _newPositionData, 
-        uint128 _positionType,
-        uint256 _positionId
-    ) internal pure returns (
-        ProtocolLib.Position[] memory
-    ) {
-
-        ProtocolLib.Position[] memory newPositions = new ProtocolLib.Position[](_positions.length + 1);
-        
-        ProtocolLib.Position memory newPosition = ProtocolLib.Position(_positionType, _positionId, 0, true, _newPositionData);
-        
-        for(uint256 i = 0; i < _positions.length; i++) {
-            newPositions[i] = _positions[i];
-        }
-        
-        newPositions[newPositions.length - 1] = newPosition;
-
-        return newPositions;
-    }
-
-    function openPositionWithEther(MarketNeutralLib.EtherOneSideTradeInput memory _input) public payable nonReentrant {
+    function openPositionWithEther(MarketNeutralLib.EtherOneSideTradeInput memory _input) public payable {
 
         uint256 ethAmount = _input.ethAmount;            
         uint256 sizeDeltaUsd = _input.sizeDeltaUsd;         
@@ -270,8 +242,8 @@ contract MarketNeutral is ReentrancyGuard {
         address weth = addressProvider.getAddress("WETH");
         address orderVault = addressProvider.getAddress("OrderVaultGMX");        
         
-        BaseOrderUtils.CreateOrderParams memory orderParams = BaseOrderUtils.CreateOrderParams({
-            addresses: BaseOrderUtils.CreateOrderParamsAddresses({
+        IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
+            addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
                 receiver: receiver,
                 cancellationReceiver: receiver,
                 callbackContract: address(0),
@@ -280,7 +252,7 @@ contract MarketNeutral is ReentrancyGuard {
                 initialCollateralToken: weth,
                 swapPath: new address[](0)
             }),
-            numbers: BaseOrderUtils.CreateOrderParamsNumbers({
+            numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
                 sizeDeltaUsd: sizeDeltaUsd,
                 initialCollateralDeltaAmount: 0,
                 triggerPrice: 0,
@@ -290,8 +262,8 @@ contract MarketNeutral is ReentrancyGuard {
                 minOutputAmount: 0,
                 validFromTime: 0
             }),
-            orderType: BaseOrderUtils.OrderType.MarketIncrease,
-            decreasePositionSwapType: BaseOrderUtils.DecreasePositionSwapType.NoSwap,
+            orderType: Order.OrderType.MarketIncrease,
+            decreasePositionSwapType: Order.DecreasePositionSwapType.NoSwap,
             isLong: isLong,
             shouldUnwrapNativeToken: false,
             autoCancel: false,
@@ -311,12 +283,12 @@ contract MarketNeutral is ReentrancyGuard {
             (orderParams)
         );
         
-        IExchangeRouter(addressProvider.getAddress("ExchangeRouterGMX")).multicall{value: msg.value}(multicallData);
+        IExchangeRouter(addressProvider.getAddress("ExchangeRouterGMX")).multicall{value: _input.value}(multicallData);
         
         emit PositionOpened(receiver, market, weth, ethAmount, sizeDeltaUsd, isLong);
     }
 
-    function openPositionWithUSDC(MarketNeutralLib.UsdcOneSideTradeInput memory _input) public payable nonReentrant {
+    function openPositionWithUSDC(MarketNeutralLib.UsdcOneSideTradeInput memory _input) public payable {
 
         uint256 usdcAmount = _input.usdcAmount;
         uint256 sizeDeltaUsd = _input.sizeDeltaUsd;
@@ -328,14 +300,15 @@ contract MarketNeutral is ReentrancyGuard {
         address receiver = msg.sender;
         
         address _exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
+        address _router = addressProvider.getAddress("RouterGMX");
         address usdc = addressProvider.getAddress("USDC");
         address orderVault = addressProvider.getAddress("OrderVaultGMX");
         
-        IERC20(usdc).safeTransferFrom(msg.sender, address(this), usdcAmount);
-        IERC20(usdc).safeIncreaseAllowance(_exchangeRouter, usdcAmount);
+        IERC20(usdc).transferFrom(msg.sender, address(this), usdcAmount);
+        IERC20(usdc).approve(_router, usdcAmount);
         
-        BaseOrderUtils.CreateOrderParams memory orderParams = BaseOrderUtils.CreateOrderParams({
-            addresses: BaseOrderUtils.CreateOrderParamsAddresses({
+        IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
+            addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
                 receiver: receiver,
                 cancellationReceiver: receiver,
                 callbackContract: address(0),
@@ -344,9 +317,9 @@ contract MarketNeutral is ReentrancyGuard {
                 initialCollateralToken: usdc,
                 swapPath: new address[](0)
             }),
-            numbers: BaseOrderUtils.CreateOrderParamsNumbers({
+            numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
                 sizeDeltaUsd: sizeDeltaUsd,
-                initialCollateralDeltaAmount: 0,
+                initialCollateralDeltaAmount: usdcAmount,
                 triggerPrice: 0,
                 acceptablePrice: acceptablePrice,
                 executionFee: executionFee,
@@ -354,8 +327,8 @@ contract MarketNeutral is ReentrancyGuard {
                 minOutputAmount: 0,
                 validFromTime: 0
             }),
-            orderType: BaseOrderUtils.OrderType.MarketIncrease,
-            decreasePositionSwapType: BaseOrderUtils.DecreasePositionSwapType.NoSwap,
+            orderType: Order.OrderType.MarketIncrease,
+            decreasePositionSwapType: Order.DecreasePositionSwapType.NoSwap,
             isLong: isLong,
             shouldUnwrapNativeToken: false,
             autoCancel: false,
@@ -439,12 +412,12 @@ contract MarketNeutral is ReentrancyGuard {
         bool isNativeToken = abi.decode(position.positionData[1], (bool));
         address collateralToken = isNativeToken ? weth : usdc;
         
-        uint256 callbackGasLimit = 200000;
+        uint256 callbackGasLimit = 500000;
 
         address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
         
-        BaseOrderUtils.CreateOrderParams memory orderParams = BaseOrderUtils.CreateOrderParams({
-            addresses: BaseOrderUtils.CreateOrderParamsAddresses({
+        IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
+            addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
                 receiver:  callbackContract, // Funds come to the contract first (for security in callbacks)
                 cancellationReceiver: receiver,
                 callbackContract: callbackContract, // afterOrderExecution() para actualizar storage y transferir fondos
@@ -453,7 +426,7 @@ contract MarketNeutral is ReentrancyGuard {
                 initialCollateralToken: collateralToken, 
                 swapPath: new address[](0)
             }),
-            numbers: BaseOrderUtils.CreateOrderParamsNumbers({
+            numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
                 sizeDeltaUsd: sizeDeltaUsd, //-
                 initialCollateralDeltaAmount: 0,
                 triggerPrice: 0,
@@ -463,8 +436,8 @@ contract MarketNeutral is ReentrancyGuard {
                 minOutputAmount: 0,
                 validFromTime: 0
             }),
-            orderType: BaseOrderUtils.OrderType.MarketDecrease,
-            decreasePositionSwapType: BaseOrderUtils.DecreasePositionSwapType.NoSwap,
+            orderType: Order.OrderType.MarketDecrease,
+            decreasePositionSwapType: Order.DecreasePositionSwapType.NoSwap,
             isLong: isLong,
             shouldUnwrapNativeToken: false,
             autoCancel: false,

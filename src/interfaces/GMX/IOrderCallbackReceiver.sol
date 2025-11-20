@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../../lib/GMX lib/EventUtils.sol";
+import "gmx-synthetics/event/EventUtils.sol";
 
 // @title IOrderCallbackReceiver
 // @dev interface for an order callback contract

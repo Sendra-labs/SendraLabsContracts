@@ -1,0 +1,82 @@
+== Logs ==
+  Deploying contracts...
+  Registering external dependencies...
+  --------------------------------
+  Roles ------------->  0x5a2F59379F169E4e8657C582053Fbc5062e186f8
+  AddressProvider --->  0xac75F46b530E5638cba65297bc2cCfcef0b3841D
+  MarketNeutral ----->  0x8742B1029b7864a35cA2dd0F3c38eD0b463f3f5c
+  ProtocolStorage --->  0x88A73b2C344Adb777343E6A71Ec4e9c5Cc77B42C
+  GMXMarketsRegistry ->  0x62cb23DbD425Dc34cAdC859FcA1E67AE31086A89
+  GMXPrices -------->  0xf7c54918C638D05DB194c440362D86b6e3B3Bb26 --> V2 0x94f9645b0D4f45DcE3fCd40E9aDDe01F8e06BBBf
+  ProxyFactory ----->  0xdEde5Ac42E2578a8Ff9Fa782d27c43F75e553C00
+  ProxyManager ----->  0x5F18851887a5c9C0063d4f358CE2d55435470172
+  MarketNeutralStorage ->  0x5FBB5876ED91Ca694d450189F654e1fa5c863C0A
+  ClosePositionCallbacks ->  0xcCa5Aa795681eE8a69714b501187F567a2E15fdd
+  MarketNeutralReader ->  0x322D1B55710de7E411Cf375deB032Ca61a3e8275
+  MainReader -------->  0x62cDFd3E6B92100F3EA58088885ad44B0C3f7a51 --> 0xcc73de57bbf4ff88588707e4468be93736e7501d (with V2)
+  --------------------------------
+
+TESTER MArkNEUtr --- 0x20D630C1A8FABa28692ca8B64b96ded5c4c94462
+
+## Setting up 1 EVM.
+
+==========================
+
+Chain 42161
+
+Estimated gas price: 0.020000001 gwei
+
+Estimated total gas used for script: 27778955
+
+Estimated amount required: 0.000555579127778955 ETH
+
+==========================
+
+==========================
+
+ONCHAIN EXECUTION COMPLETE & SUCCESSFUL.
+##
+Start verification for (13) contracts
+Start verifying contract `0x9F129e9e454185f2d92498431354ab98d3f4a687` deployed on arbitrum
+Compiler version: 0.8.28
+Optimizations:    200
+
+Submitting verification for [src/lib/GMX lib/EventUtils.sol:EventUtils] 0x9F129e9e454185f2d92498431354ab98d3f4a687.
+Error: Encountered an error verifying this contract:
+Response: `NOTOK`
+Details:
+                        `You are using a deprecated V1 endpoint, switch to Etherscan API V2 using https://docs.etherscan.io/v2-migration`
+
+
+FROM PROXY calling openEtherMarketNeutralDelegatecall:
+params: ["ETHUSDC","PEPEUSDC",660000000000000,1250000000000000000000000000000,1250000000000000000000000000000,45000000000000,50]
+params: ["ETHUSDC","PEPEUSDC",750000000000000,1250000000000000000000000000000,1250000000000000000000000000000,45000000000000,50]
+
+params ONE_SIDE 
+[322000000000000,1250000000000000000000000000000,3900000000000000,45000000000000,367000000000000,"ETHUSDC",true,0x7F4C831de10684f85867899708cB49FfbF4983B9]
+
+
+DESDE EL TESTER DE MARKET NEUTRAL ABRIR MARKETNEUTRAL DOS SIDES TOMAAA
+ https://arbiscan.io/tx/0x467ab320fff744af76ae8405ceb314f5c9fc809f410a1dc06e36d2143202076e EXITOSO
+
+
+CIERRE LONG SIDE
+https://arbiscan.io/tx/0x8b2dfdf310e18b1ca81eb529b5b785b152425ae8b16c08d4294ddbce59562257
+EL callback ha fallado ... 0x498ada72f790b693ddd45262ac3e9ace1a65f0f0fe19628340e56087221ce3ae
+El dinero al fallar el callback ha ido a 0x93887763725FaB6bc22F135ef87D498ADc4970Bf (mi tester)
+
+CIERRE SHORT SIDE
+0x999bd7b45861d80603b4bbc5c4f6e5fa705806d909c7d609bdaab30835aa3735 
+no se donde ha ideo la pasta de este... Quiza el de ETHUSDC haya ido en ETHnativo y el de PEPE haya ido en wETH ¿?
+
+
+______________________________________________________--
+
+Día 03/11/2025 registro:
+
+0xb8b88ac323ab617ce4c474f648f9cf8e3c21df99a7709dacf35da8cd9221dd9c openMarNeu con ether correcto (solo abre una para por que en PEPE no hay colateral ETH en pool, lo sabiamos que iba a fallar)
+
+0x5d8c56341b787598389f7e00775c18b9dc2c7b6ca334b4c12001374f68f3e515 CLOSE side maneu de la pata logg que abrí antes...
+
+
+["BNBUSDC","PEPEUSDC",8000000,4000000000000000000000000000000,4000000000000000000000000000000,150000000000000,10000]

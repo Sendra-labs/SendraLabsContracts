@@ -1,0 +1,420 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_addressProvider",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidProxyId",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "ProxyHasPendingOrders",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "ProxyNotAvailable",
+				"type": "error"
+			},
+			{
+				"inputs": [],
+				"name": "SenderNotAllowed",
+				"type": "error"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "user",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "proxyId",
+						"type": "uint256"
+					}
+				],
+				"name": "ProxyClaimed",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "proxy",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "proxyId",
+						"type": "uint256"
+					}
+				],
+				"name": "ProxyDeployed",
+				"type": "event"
+			},
+			{
+				"inputs": [],
+				"name": "MAX_BATCH_SIZE",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "addressProvider",
+				"outputs": [
+					{
+						"internalType": "contract AddressProvider",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "availableProxiesBatch",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "availableCount",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "batchId",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getAvailableProxy",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					},
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_proxyId",
+						"type": "uint256"
+					}
+				],
+				"name": "getOwner",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_owner",
+						"type": "address"
+					}
+				],
+				"name": "initializeProxy",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "_proxyAddress",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_batchId",
+						"type": "uint256"
+					}
+				],
+				"name": "isbatchFilled",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "proxies",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "owner",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "proxy",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "proxyCount",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "roles",
+				"outputs": [
+					{
+						"internalType": "contract Roles",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
+						"name": "_proxyId",
+						"type": "uint256"
+					}
+				],
+				"name": "setAvailable",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/core/bundles/storage/ProxyManager.sol": "ProxyManager"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": [
+			":ds-test/=lib/forge-std/lib/ds-test/src/",
+			":forge-std/=lib /forge-std/src/",
+			":gmx-synthetics/=lib/gmx-synthetics/contracts/"
+		],
+		"viaIR": true
+	},
+	"sources": {
+		"@openzeppelin/contracts/utils/ReentrancyGuard.sol": {
+			"keccak256": "0x11a5a79827df29e915a12740caf62fe21ebe27c08c9ae3e09abe9ee3ba3866d3",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://3cf0c69ab827e3251db9ee6a50647d62c90ba580a4d7bbff21f2bea39e7b2f4a",
+				"dweb:/ipfs/QmZiKwtKU1SBX4RGfQtY7PZfiapbbu6SZ9vizGQD9UHjRA"
+			]
+		},
+		"src/core/ProtocolStorage.sol": {
+			"keccak256": "0xc3d73dfad62883bf0364cc2fecc84aae967b41981a08dd473d285cab8e3fa5c0",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://de374e6230fef7f5581e19309214df1856e3d7ef9458be4ccf4417367c9a812b",
+				"dweb:/ipfs/QmX2cd1z4y58g5mtFRqJKi5MTqTUQt8WgiQMJ21dGkQXEq"
+			]
+		},
+		"src/core/bundles/executors/ProxyFactory.sol": {
+			"keccak256": "0x9991fce1150fed34a5a43f0fa597c0e61d91ad9870fc30776973f43448b9b970",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://5cf0661194305c0243d58f4eaaa736bc7c011cdb9c9d27fc5f9b8a4681b633a1",
+				"dweb:/ipfs/QmYEso1GQCj58XSXMqVMhNuNCdmsuVkgkM7MPFG7eEpKBL"
+			]
+		},
+		"src/core/bundles/executors/proxy.sol": {
+			"keccak256": "0x7777a6c65b6125a16f0fb74e51d10e9ff4ebd37c331522ea751266e0d6f5129a",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://b6133bcebac23794e4b9bff4cdeda854253787c6ac4894d4cab6b1be96a322d6",
+				"dweb:/ipfs/QmSUb8cT1cgZiea7waixAUevNopd4EDZ9miozpYuoXyeAz"
+			]
+		},
+		"src/core/bundles/storage/MarketNeutralStorage.sol": {
+			"keccak256": "0x194fb1d0a9d00f0fe1ad76c66e114413751b4b877ab77c4911a06e6a5b92eac9",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://6d1c430eb21bbcb77955d2f260ce5c6679d18c4f1bbd46c625418afc974e878f",
+				"dweb:/ipfs/QmY6BtFihsxf2mcin8XdYvrYqwxy1mEcAWc2jEvNMRuVgv"
+			]
+		},
+		"src/core/bundles/storage/ProxyManager.sol": {
+			"keccak256": "0x78816dfb920898033c5e7a55b3affb212cad69ec1c46fac73d65b72af848b2f6",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://32a7f86476c698c99d761505c06dd8395fc71c5bd019307013cde5daaf539b21",
+				"dweb:/ipfs/Qma8TetcLBNBSYC7tCprcoXzQsi17GQBRuPeiuyToTwrDF"
+			]
+		},
+		"src/core/config/AddressProvider.sol": {
+			"keccak256": "0x8bfb8b5d36ef0965ee0f8df4c13c8b73904941bbb66c72a60ccc2f7d9868707a",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://0f756274a5944b5717eb803f93b79618031f8f6e187d8e31b28823d3e67e2cc3",
+				"dweb:/ipfs/QmeMwNVFk6zafR1tPpJrXBRCJHaHdF5kncS9WuBYvTTmcF"
+			]
+		},
+		"src/core/config/gmxMarkets.sol": {
+			"keccak256": "0xf81605a88bb5ed986fe3b2d7516552dfa241ea1f8fcb80460129f4a0f024fd7f",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://820c8ed078f329710b09ab5fffcb7b404922b366180bf7e438437d6e2b4264f7",
+				"dweb:/ipfs/QmTc35XA1ZekBzhh7gLM3JwBnFrpXQ684AckDTY2LR8SDM"
+			]
+		},
+		"src/lib/MarketNeutral/MarketNeutralLib.sol": {
+			"keccak256": "0x813fad43a33b3893ca18d9b7c1d87aa04e1f91fe7c63a7b1a23a74b359021e71",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ab9ff8a20baf0be352922bd89d89fa59d029bb1bfbac4effd9a515470d9dbcd7",
+				"dweb:/ipfs/QmZAae5R9bk7BTomxdxmnnWeHvs9vn41Swnw4j9NmwR85q"
+			]
+		},
+		"src/lib/Protocol.lib.sol": {
+			"keccak256": "0x22d9ab7080b9fdd63fbc06fa8f5b2122a8adfbc48960cae13e4b1f654fbd90e8",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://c904847c49d69ae1ccb9774a8af0b7337e3d752c192da3d42ec1f0d76230fc83",
+				"dweb:/ipfs/Qmam9Rb9SDAHCfq6Ds1pQWRgRseJ8cH1XTnVc183AtaV4z"
+			]
+		},
+		"src/lib/security/Roles.lib.sol": {
+			"keccak256": "0x9eda8dcfd260343e2d4b1a44e025a3b0f88f0724fe1a79b4ae3584e2b7c1ba69",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ba5717f1e354c417bad5d39b78ec8ea2a22850a7d14c48055d17d7dcde11d5a3",
+				"dweb:/ipfs/QmW4cQf7iZvLGERPhSCqCJ3Qpa7FoyE4cgmSN4F9Z21C1K"
+			]
+		},
+		"src/security/Roles.sol": {
+			"keccak256": "0x4ffa09bf2c2d66449603088e1b0dd03e6bbc3c14532c8a0580fb7b6a867bc0c4",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://85343dc69a533acfa25b4d34763910094d417e3fba2cfa58b7c29e3de986c836",
+				"dweb:/ipfs/QmPN3eGnEzKTXSXwgXoAKV2JChXCg18TRPxy8nqU9zLERM"
+			]
+		}
+	},
+	"version": 1
+}

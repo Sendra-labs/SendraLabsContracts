@@ -46,6 +46,10 @@ contract MainReader {
         for(uint256 i = 0; i < positions.length; i++) {
             if(positions[i].positionType == 0) { // MarketNeutral = 0
                 bytes[] memory positionData = positions[i].positionData;
+                
+                // Validate that positionData has at least 11 elements (need index 10)
+                if(positionData.length < 11) continue;
+                
                 uint256 initialUsdValue = abi.decode(positionData[8], (uint256));
                 totalVolume += initialUsdValue;
                 
@@ -92,21 +96,60 @@ contract MainReader {
         address proxy;
         bool isActive;
     }
+/*
+    5, //positionId
+    0, //pnlRealTime
+    100000000000000000000000000000000, //sizeRealTime
+    100000000, //investedInitialValue
+    0, //initialToken
+    100000000, //initialUsdValue
+    15620400000, //initialPriceTokenLong
+    36182417, //initialPriceTokenShort
+    1762461082, //openDate
+    50000000000000000000000000000000, sizeDeltaUsdShort
+    50000000000000000000000000000000, //sizeDeltaUsdLong        
+    0, //longPnl
+    0, //shortPnl
+    0x09400D9DB990D5ed3f35D7be61DfAEB900Af03C9, //marketLong
+    0x4fDd333FF9cA409df583f306B6F5a7fFdE790739, //marketShort
+    0x83a2db03363a1e2d791506Ee26BeCE9c671C0AA8, //proxy
+    true //isActive 
 
+    
+*/
     function getMarketNeutralPositionsData(address _user) public view returns (MarketNeutralPosition[] memory) {
         ProtocolLib.User memory user = protocolStorage.getUser(_user);
         ProtocolLib.Position[] memory positions = user.globalPosition.positions;
         MarketNeutralPosition[] memory marketNeutralPosition = new MarketNeutralPosition[](positions.length);
+        
         for(uint256 i = 0; i < positions.length; i++) {
             if(positions[i].positionType == 0) { // MarketNeutral = 0
-                (int256 longPnl, int256 shortPnl, int256 totalPnl) = marketNeutralReader.getMarketNeutralRealTimePnL(_user, positions[i].id);
                 bytes[] memory positionData = positions[i].positionData;
                 uint256 closeDate = abi.decode(positionData[10], (uint256));
                 bool isActive = closeDate == 0;
+                
+                int256 longPnl;
+                int256 shortPnl;
+                int256 totalPnl;
+                uint256 sizeRealTime;
+                
+                // For active positions, calculate real-time PNL
+                // For closed positions, use stored PNL and size = 0
+                if (isActive) {
+                    (longPnl, shortPnl, totalPnl) = marketNeutralReader.getMarketNeutralRealTimePnL(_user, positions[i].id);
+                    sizeRealTime = marketNeutralReader.getMarketNeutralTotalSize(_user, positions[i].id);
+                } else {
+                    // For closed positions, use stored PNL and size = 0
+                    totalPnl = positions[i].pnl;
+                    longPnl = 0; // Can't determine individual PNL for closed positions
+                    shortPnl = 0;
+                    sizeRealTime = 0;
+                }
+                
                 marketNeutralPosition[i] = MarketNeutralPosition(
                     positions[i].id,
                     totalPnl,
-                    marketNeutralReader.getMarketNeutralTotalSize(_user, positions[i].id),
+                    sizeRealTime,
                     abi.decode(positionData[0], (uint256)),
                     abi.decode(positionData[1], (uint256)),
                     abi.decode(positionData[8], (uint256)),
@@ -162,7 +205,7 @@ contract MainReader {
     }
 
     function getEtherPrice() public view returns (uint256) {
-        return gmxPrices.getPrice(gmxMarkets.getMarket("WETH"));
+        return gmxPrices.getPrice(gmxMarkets.getMarket("ETHUSDC"));
     }
 
     function getUserUsdcBalance(address _user) public view returns (uint256) {

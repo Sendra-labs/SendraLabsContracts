@@ -1,0 +1,87 @@
+{
+	"deploy": {
+		"VM:-": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"main:1": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"ropsten:3": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"rinkeby:4": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"kovan:42": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"goerli:5": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		},
+		"Custom": {
+			"linkReferences": {},
+			"autoDeployLib": true
+		}
+	},
+	"data": {
+		"bytecode": {
+			"functionDebugData": {},
+			"generatedSources": [],
+			"linkReferences": {},
+			"object": "6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea264697066735822122005383e68286d3afee82b90b04f01b3f090279bc2c2b5fbdecd54f412468c695f64736f6c634300081c0033",
+			"opcodes": "PUSH1 0x80 DUP1 PUSH1 0x40 MSTORE CALLVALUE PUSH1 0x17 JUMPI PUSH1 0x39 SWAP1 DUP2 PUSH1 0x1C DUP3 CODECOPY ADDRESS DUP2 POP POP RETURN JUMPDEST PUSH0 DUP1 REVERT INVALID PUSH0 DUP1 REVERT INVALID LOG2 PUSH5 0x6970667358 0x22 SLT KECCAK256 SDIV CODESIZE RETURNDATACOPY PUSH9 0x286D3AFEE82B90B04F ADD 0xB3 CREATE SWAP1 0x27 SWAP12 0xC2 0xC2 0xB5 0xFB 0xDE 0xCD SLOAD DELEGATECALL SLT CHAINID DUP13 PUSH10 0x5F64736F6C634300081C STOP CALLER ",
+			"sourceMap": "427:2869:2:-:0;;;;;;;;;;;;;;;;;;;;;"
+		},
+		"deployedBytecode": {
+			"functionDebugData": {},
+			"generatedSources": [],
+			"immutableReferences": {},
+			"linkReferences": {},
+			"object": "5f80fdfea264697066735822122005383e68286d3afee82b90b04f01b3f090279bc2c2b5fbdecd54f412468c695f64736f6c634300081c0033",
+			"opcodes": "PUSH0 DUP1 REVERT INVALID LOG2 PUSH5 0x6970667358 0x22 SLT KECCAK256 SDIV CODESIZE RETURNDATACOPY PUSH9 0x286D3AFEE82B90B04F ADD 0xB3 CREATE SWAP1 0x27 SWAP12 0xC2 0xC2 0xB5 0xFB 0xDE 0xCD SLOAD DELEGATECALL SLT CHAINID DUP13 PUSH10 0x5F64736F6C634300081C STOP CALLER ",
+			"sourceMap": "427:2869:2:-:0;;"
+		},
+		"gasEstimates": {
+			"creation": {
+				"codeDepositCost": "11400",
+				"executionCost": "infinite",
+				"totalCost": "infinite"
+			},
+			"internal": {
+				"checkOnERC1363ApprovalReceived(address,address,uint256,bytes memory)": "infinite",
+				"checkOnERC1363TransferReceived(address,address,address,uint256,bytes memory)": "infinite"
+			}
+		},
+		"methodIdentifiers": {}
+	},
+	"abi": [
+		{
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "receiver",
+					"type": "address"
+				}
+			],
+			"name": "ERC1363InvalidReceiver",
+			"type": "error"
+		},
+		{
+			"inputs": [
+				{
+					"internalType": "address",
+					"name": "spender",
+					"type": "address"
+				}
+			],
+			"name": "ERC1363InvalidSpender",
+			"type": "error"
+		}
+	]
+}

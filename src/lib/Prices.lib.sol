@@ -26,11 +26,11 @@ library PricesLib {
         AggregatorV3Interface feed = AggregatorV3Interface(priceFeed);
         
         (, int256 answer, , uint256 updatedAt, ) = feed.latestRoundData();
-        
+        /*
         require(answer > 0, "Invalid price");
         require(updatedAt > 0, "Price not updated");
         require(block.timestamp - updatedAt < 3600, "Price too old"); // 1 hour max
-        
+        */
         return uint256(answer);
     }
     
@@ -52,11 +52,11 @@ library PricesLib {
         AggregatorV3Interface feed = AggregatorV3Interface(priceFeed);
         
         (, int256 answer, , uint256 updatedAt, ) = feed.latestRoundData();
-        
+        /*
         require(answer > 0, "Invalid price");
         require(updatedAt > 0, "Price not updated");
         require(block.timestamp - updatedAt < 3600, "Price too old");
-        
+        */
         decimals = feed.decimals();
         price = uint256(answer);
         

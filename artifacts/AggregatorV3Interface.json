@@ -50,9 +50,7 @@
 		"gasEstimates": null,
 		"methodIdentifiers": {
 			"decimals()": "313ce567",
-			"description()": "7284e416",
-			"latestRoundData()": "feaf968c",
-			"version()": "54fd4d50"
+			"latestRoundData()": "feaf968c"
 		}
 	},
 	"abi": [
@@ -64,19 +62,6 @@
 					"internalType": "uint8",
 					"name": "",
 					"type": "uint8"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"inputs": [],
-			"name": "description",
-			"outputs": [
-				{
-					"internalType": "string",
-					"name": "",
-					"type": "string"
 				}
 			],
 			"stateMutability": "view",
@@ -110,19 +95,6 @@
 					"internalType": "uint80",
 					"name": "answeredInRound",
 					"type": "uint80"
-				}
-			],
-			"stateMutability": "view",
-			"type": "function"
-		},
-		{
-			"inputs": [],
-			"name": "version",
-			"outputs": [
-				{
-					"internalType": "uint256",
-					"name": "",
-					"type": "uint256"
 				}
 			],
 			"stateMutability": "view",
