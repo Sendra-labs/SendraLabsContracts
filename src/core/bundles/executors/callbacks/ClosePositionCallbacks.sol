@@ -89,52 +89,38 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         (, uint256 collateralTokenPriceMin) = eventData.uintItems.getWithoutRevert("collateralTokenPrice.min");
         (, uint256 collateralTokenPriceMax) = eventData.uintItems.getWithoutRevert("collateralTokenPrice.max");
         uint256 collateralTokenPrice = (collateralTokenPriceMin + collateralTokenPriceMax) / 2;
-        // Cache MarketNeutralStorage for pending orders
+
         MarketNeutralStorage marketNeutralStorage = MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage"));
-        // Obtener la orden pendiente (mínima operación de storage)
+
         MarketNeutralLib.PendingOrder memory pendingOrder = marketNeutralStorage.getPendingOrder(key);
-        
-        // ⚠️ GUARDAR DATOS INMEDIATAMENTE - ANTES de cualquier otra operación
-        // Esto minimiza el riesgo de fallo antes de guardar
+
         MarketNeutralLib.RawExecutionData memory executionData = MarketNeutralLib.RawExecutionData({
-            positionId: pendingOrder.positionId,  // Viene de la orden
-            receiver: pendingOrder.receiver,       // Viene de la orden
-            outputToken: outputToken,              // De GMX
-            outputAmount: outputAmount,            // De GMX
-            pnl: basePnlUsd,                      // De GMX
-            executionPrice: executionPrice,        // De GMX
-            collateralTokenPrice: collateralTokenPrice, // De GMX
-            isLongSide: false,  // ⚠️ TEMPORAL - Se actualiza después si es necesario
+            positionId: pendingOrder.positionId,  
+            receiver: pendingOrder.receiver,       
+            outputToken: outputToken,            
+            outputAmount: outputAmount, 
+            pnl: basePnlUsd,                      
+            executionPrice: executionPrice,        
+            collateralTokenPrice: collateralTokenPrice, 
+            isLongSide: false, 
             processed: false,
             timestamp: block.timestamp
         });
         
-        MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).storeRawExecutionData(key, executionData);
+        marketNeutralStorage.storeRawExecutionData(key, executionData);
         
-        // ===== FASE 1.5: Determinar qué pata es (puede fallar, pero datos ya guardados) =====
-        // Si esto falla, al menos tenemos los datos básicos para emergency withdraw
         bool isLongSideCalculated = false;
         
         try this.calculateIsLongSide(pendingOrder.receiver, pendingOrder.positionId, orderMarket) returns (bool isLong) {
-            // Actualizar el campo isLongSide con el valor correcto
-            MarketNeutralStorage storageContract = MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage"));
-            MarketNeutralLib.RawExecutionData memory data = storageContract.getRawExecutionData(key);
+            MarketNeutralLib.RawExecutionData memory data = marketNeutralStorage.getRawExecutionData(key);
             data.isLongSide = isLong;
-            storageContract.storeRawExecutionData(key, data);
+            marketNeutralStorage.storeRawExecutionData(key, data);
             isLongSideCalculated = true;
         } catch {
-            // Si falla calcular isLongSide, dejamos false
-            // El emergency withdraw manual puede corregirlo
             emit IsLongSideCalculationFailed(key, pendingOrder.positionId);
-        }
-        
-        // ===== FASE 2: PROCESAR Y TRANSFERIR (puede fallar, pero datos ya guardados) =====
-        
-        try this.processAndTransfer(key) {
-            // Éxito → marcar como procesado
-            MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).updateExecutionProcessed(key, true);
-            
-            // Eliminar key del array de pending orders del usuario
+        }        
+        try this.processAndTransfer(key,address(marketNeutralStorage)) {
+            marketNeutralStorage.updateExecutionProcessed(key, true);
             marketNeutralStorage.removeUserPendingOrderKey(pendingOrder.receiver, key);
             uint256 proxyId = MarketNeutralProxy(pendingOrder.proxy).getId();
             ProxyManager(addressProvider.getAddress("ProxyManager")).setAvailable(proxyId);
@@ -148,10 +134,8 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
                 basePnlUsd
             );
         } catch Error(string memory reason) {
-            // Falló el procesamiento, pero datos guardados para rescue
             emit ExecutionProcessingFailed(key, pendingOrder.positionId, pendingOrder.receiver, reason);
         } catch {
-            // Falló sin mensaje
             emit ExecutionProcessingFailed(key, pendingOrder.positionId, pendingOrder.receiver, "Unknown error");
         }
     }
@@ -183,10 +167,10 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
      * @notice Procesa los datos y transfiere fondos (función interna pesada)
      * @dev Solo puede ser llamada por afterOrderExecution o rescuePosition
      */
-    function processAndTransfer(bytes32 key) external {
-        require(msg.sender == address(this) || msg.sender == addressProvider.getAddress("OrderHandlerGMX"), "Internal only");
+    function processAndTransfer(bytes32 key, address _marketNeutralStorage) external {
         
-        MarketNeutralLib.RawExecutionData memory data = MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).getRawExecutionData(key);
+        require(msg.sender == address(this) || msg.sender == addressProvider.getAddress("OrderHandlerGMX"), "Internal only");
+        MarketNeutralLib.RawExecutionData memory data = MarketNeutralStorage(_marketNeutralStorage).getRawExecutionData(key);
         require(data.positionId != 0, "No data for this key");
         require(!data.processed, "Already processed");
         
@@ -200,7 +184,7 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
             user.globalPosition.positions, 
             data.positionId
         );
-        
+        /// EL ERROR ESTA A PARTIR DE AQUI, sigue el flujo y mira despues en afterorderexecution que pasa despues de esta funcinon
         // Calcular valor en USD
         uint256 tokenDecimals = data.outputToken == usdc ? 6 : 18;
         uint256 outputUsdValue = (data.outputAmount * data.collateralTokenPrice) / (10 ** tokenDecimals);
@@ -237,7 +221,7 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         user.globalPosition.positions[positionIndex] = position;
         _protocolStorage.updateUserGlobalPosition(data.receiver, user.globalPosition);
         
-        MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).updatePendingOrder(
+        MarketNeutralStorage(_marketNeutralStorage).updatePendingOrder(
             key, 
             MarketNeutralLib.PendingOrder(data.receiver, address(0), data.positionId, false)
         );
@@ -272,20 +256,20 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
      * @param key El key de la orden que falló (del evento ExecutionProcessingFailed)
      */
     function rescuePosition(bytes32 key) external nonReentrant {
-        MarketNeutralLib.RawExecutionData memory data = MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).getRawExecutionData(key);
+        address marketNeutralStorage = addressProvider.getAddress("MarketNeutralStorage");
+        MarketNeutralLib.RawExecutionData memory data = MarketNeutralStorage(marketNeutralStorage).getRawExecutionData(key);
+        MarketNeutralLib.PendingOrder memory pendingOrder = MarketNeutralStorage(marketNeutralStorage).getPendingOrder(key);
         
         require(data.positionId != 0, "No data for this key");
         require(data.receiver == msg.sender, "Not your position");
         require(!data.processed, "Already processed");
         
-        // Llamar a processAndTransfer para completar el procesamiento
-        try this.processAndTransfer(key) {
+        try this.processAndTransfer(key, marketNeutralStorage) {
             // Marcar como procesado
-            MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).updateExecutionProcessed(key, true);
-            
-            // Eliminar key del array de pending orders del usuario
-            MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).removeUserPendingOrderKey(msg.sender, key);
-            
+            MarketNeutralStorage(marketNeutralStorage).updateExecutionProcessed(key, true);
+            MarketNeutralStorage(marketNeutralStorage).removeUserPendingOrderKey(msg.sender, key);
+            uint256 proxyId = MarketNeutralProxy(pendingOrder.proxy).getId();
+            ProxyManager(addressProvider.getAddress("ProxyManager")).setAvailable(proxyId);
             emit PositionRescued(
                 msg.sender,
                 data.positionId,

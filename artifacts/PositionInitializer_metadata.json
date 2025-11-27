@@ -112,11 +112,19 @@
 			]
 		},
 		"src/core/bundles/executors/PositionInitializer.sol": {
-			"keccak256": "0x0a8d0b048939e6abe1e21a2fc437db7fc2550654f1858b2db4f850a510a6d9a1",
+			"keccak256": "0xa9b763f3c1ab2171498145bdd809c350f3847ff88e09692b9b916f32ef505d72",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://0fc073d12fcda2a1c62d928b7bbbe839ea1ad3d53d3b2f85825f129f7372a461",
-				"dweb:/ipfs/QmT2fLVQeAZPKu3rFTkEMxiHEsMcw35PXFT1LqjLLQz3ey"
+				"bzz-raw://7f598c78e9b312cce18dae9db744b104858f306a308c822b6491692c32beb060",
+				"dweb:/ipfs/QmaUFFKgrh7EejKDCCkW5Qrbboy2Dr1fHtEfEnYF7fcoo1"
+			]
+		},
+		"src/core/bundles/security/proxyAccessControl.sol": {
+			"keccak256": "0x72ec0dc798ea7f15f970a5f86782faf706a2b9da10638074a4ca139c73013b29",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://256aacf2a75a9b178d02b33d181e31e94ec8b61bc2057a2ba7119809e6e80fae",
+				"dweb:/ipfs/QmTGR9SwJ4CWkKyKDy9KEpLrt3fLnpwgDYkwQwY7SQhTe9"
 			]
 		},
 		"src/core/config/AddressProvider.sol": {

@@ -68,6 +68,16 @@ contract MarketNeutralProxy is ReentrancyGuard {
         require(success, "Delegatecall failed");
     }
 
+    function closeSideMarketNeutralDelegatecall(MarketNeutralLib.CloseSideMarketNeutralInput calldata _input) public payable onlyOwner nonReentrant {
+        deleteMarket(_input.positionId);
+        (bool success,) = marketNeutral.delegatecall(
+            abi.encodeCall(
+                MarketNeutral.closeSideMarketNeutral,
+                (_input)
+            )
+        );
+    }
+
     function manageMarkets(string calldata _marketLong, string calldata _marketShort) internal {
         GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
         address marketLong = gmxMarkets.getMarket(_marketLong);
@@ -84,17 +94,27 @@ contract MarketNeutralProxy is ReentrancyGuard {
         markets.push(marketShort);
     }
 
+    function emergencyCloseSideMarketNeutralDelegatecall(MarketNeutralLib.CloseSideMarketNeutralInput calldata _input) public payable onlyOwner nonReentrant {
+        deleteMarket(_input.positionId);
+        (bool success,) = marketNeutral.delegatecall(
+            abi.encodeCall(
+                MarketNeutral.closeSideMarketNeutral,
+                (_input)
+            )
+        );
+    }
+
     function deleteMarket(uint256 _positionId) internal {
         ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
         address owner = ProxyManager(addressProvider.getAddress("ProxyManager")).getOwner(id);
         ProtocolLib.Position memory position = protocolStorage.getUserPositionById(owner, _positionId);
         address marketLong = abi.decode(position.positionData[2], (address));
         address marketShort = abi.decode(position.positionData[3], (address));
-        for(uint256 i = 0; i < markets.length; i++) {
-        if (markets[i] == marketLong || markets[i] == marketShort) {
-                markets[i] = markets[markets.length - 1];
+        for(uint256 i = markets.length; i > 0; i--) {
+            uint256 index = i - 1;
+            if (markets[index] == marketLong || markets[index] == marketShort) {
+                markets[index] = markets[markets.length - 1];
                 markets.pop();
-                break;
             }
         }
     }

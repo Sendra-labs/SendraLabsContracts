@@ -46,10 +46,6 @@ contract MainReader {
         for(uint256 i = 0; i < positions.length; i++) {
             if(positions[i].positionType == 0) { // MarketNeutral = 0
                 bytes[] memory positionData = positions[i].positionData;
-                
-                // Validate that positionData has at least 11 elements (need index 10)
-                if(positionData.length < 11) continue;
-                
                 uint256 initialUsdValue = abi.decode(positionData[8], (uint256));
                 totalVolume += initialUsdValue;
                 
@@ -213,6 +209,7 @@ contract MainReader {
     }
 
     function isProxyNeeded(address _user, string calldata _marketLong, string calldata _marketShort) public view returns (bool, address) {
+       /* CHECK THIS
         MarketNeutralPosition[] memory marketNeutralPositions = getMarketNeutralPositionsData(_user);
         for(uint256 i = 0; i < marketNeutralPositions.length; i++) {
             if(marketNeutralPositions[i].isActive) {
@@ -223,7 +220,7 @@ contract MainReader {
                     // retunrs "false, proxy is not needed, user is owner and can use this adress"
                 }
             }
-        }
+        }*/
         return (true, address(0)); // user needs to claim or deploy a new proxy
     }
 }

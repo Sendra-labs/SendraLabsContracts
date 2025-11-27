@@ -412,7 +412,7 @@ contract MarketNeutral is ReentrancyGuard {
         bool isNativeToken = abi.decode(position.positionData[1], (bool));
         address collateralToken = isNativeToken ? weth : usdc;
         
-        uint256 callbackGasLimit = 500000;
+        uint256 callbackGasLimit = 1250000; // 1.5M gas - ajustar según MAX_CALLBACK_GAS_LIMIT de GMX
 
         address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
         

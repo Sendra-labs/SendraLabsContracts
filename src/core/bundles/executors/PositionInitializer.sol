@@ -5,6 +5,7 @@ import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { Roles } from "../../../security/Roles.sol";
 import { AddressProvider } from "../../config/AddressProvider.sol";
+import { ProxyAccessControl } from "../security/proxyAccessControl.sol";
 
 contract PositionInitializer {
 
@@ -17,13 +18,17 @@ contract PositionInitializer {
     }
 
     modifier onlyProtocol() {
-        if(!roles.isProtocolContract(msg.sender)) revert SenderNotAllowed();
+        if(
+            !roles.isProtocolContract(msg.sender)
+            && !ProxyAccessControl(addressProvider.getAddress("ProxyAccessControl")).isProtocolProxy(msg.sender)
+        ) 
+        revert SenderNotAllowed();
         _;
     }
 
     error SenderNotAllowed();
 
-    function initializePosition(bytes[] memory _newPositionData, uint128 _positionType, address _user) external /*onlyProtocol*/ {
+    function initializePosition(bytes[] memory _newPositionData, uint128 _positionType, address _user) external onlyProtocol {
         ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
         
         protocolStorage.updateUserTransactionCount(_user, 1);

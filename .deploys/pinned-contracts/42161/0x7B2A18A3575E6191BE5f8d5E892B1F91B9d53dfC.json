@@ -1,6 +1,6 @@
 {
   "name": "PositionInitializer",
-  "address": "0x43e09efe2A7c481677E6F96C931E78b104869648",
+  "address": "0x7B2A18A3575E6191BE5f8d5E892B1F91B9d53dfC",
   "abi": [
     {
       "inputs": [
@@ -69,5 +69,5 @@
     }
   ],
   "filePath": " - connect to localhost - /src/core/bundles/executors/PositionInitializer.sol",
-  "pinnedAt": 1763583393232
+  "pinnedAt": 1764074388751
 }

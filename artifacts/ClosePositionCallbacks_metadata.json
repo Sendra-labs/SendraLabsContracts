@@ -2118,11 +2118,323 @@
 						"internalType": "bytes32",
 						"name": "key",
 						"type": "bytes32"
+					},
+					{
+						"internalType": "address",
+						"name": "_marketNeutralStorage",
+						"type": "address"
 					}
 				],
 				"name": "processAndTransfer",
 				"outputs": [],
 				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "key",
+						"type": "bytes32"
+					},
+					{
+						"components": [
+							{
+								"components": [
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "address",
+												"name": "value",
+												"type": "address"
+											}
+										],
+										"internalType": "struct EventUtils.AddressKeyValue[]",
+										"name": "items",
+										"type": "tuple[]"
+									},
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "address[]",
+												"name": "value",
+												"type": "address[]"
+											}
+										],
+										"internalType": "struct EventUtils.AddressArrayKeyValue[]",
+										"name": "arrayItems",
+										"type": "tuple[]"
+									}
+								],
+								"internalType": "struct EventUtils.AddressItems",
+								"name": "addressItems",
+								"type": "tuple"
+							},
+							{
+								"components": [
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "uint256",
+												"name": "value",
+												"type": "uint256"
+											}
+										],
+										"internalType": "struct EventUtils.UintKeyValue[]",
+										"name": "items",
+										"type": "tuple[]"
+									},
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "uint256[]",
+												"name": "value",
+												"type": "uint256[]"
+											}
+										],
+										"internalType": "struct EventUtils.UintArrayKeyValue[]",
+										"name": "arrayItems",
+										"type": "tuple[]"
+									}
+								],
+								"internalType": "struct EventUtils.UintItems",
+								"name": "uintItems",
+								"type": "tuple"
+							},
+							{
+								"components": [
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "int256",
+												"name": "value",
+												"type": "int256"
+											}
+										],
+										"internalType": "struct EventUtils.IntKeyValue[]",
+										"name": "items",
+										"type": "tuple[]"
+									},
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "int256[]",
+												"name": "value",
+												"type": "int256[]"
+											}
+										],
+										"internalType": "struct EventUtils.IntArrayKeyValue[]",
+										"name": "arrayItems",
+										"type": "tuple[]"
+									}
+								],
+								"internalType": "struct EventUtils.IntItems",
+								"name": "intItems",
+								"type": "tuple"
+							},
+							{
+								"components": [
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "bool",
+												"name": "value",
+												"type": "bool"
+											}
+										],
+										"internalType": "struct EventUtils.BoolKeyValue[]",
+										"name": "items",
+										"type": "tuple[]"
+									},
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "bool[]",
+												"name": "value",
+												"type": "bool[]"
+											}
+										],
+										"internalType": "struct EventUtils.BoolArrayKeyValue[]",
+										"name": "arrayItems",
+										"type": "tuple[]"
+									}
+								],
+								"internalType": "struct EventUtils.BoolItems",
+								"name": "boolItems",
+								"type": "tuple"
+							},
+							{
+								"components": [
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "bytes32",
+												"name": "value",
+												"type": "bytes32"
+											}
+										],
+										"internalType": "struct EventUtils.Bytes32KeyValue[]",
+										"name": "items",
+										"type": "tuple[]"
+									},
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "bytes32[]",
+												"name": "value",
+												"type": "bytes32[]"
+											}
+										],
+										"internalType": "struct EventUtils.Bytes32ArrayKeyValue[]",
+										"name": "arrayItems",
+										"type": "tuple[]"
+									}
+								],
+								"internalType": "struct EventUtils.Bytes32Items",
+								"name": "bytes32Items",
+								"type": "tuple"
+							},
+							{
+								"components": [
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "bytes",
+												"name": "value",
+												"type": "bytes"
+											}
+										],
+										"internalType": "struct EventUtils.BytesKeyValue[]",
+										"name": "items",
+										"type": "tuple[]"
+									},
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "bytes[]",
+												"name": "value",
+												"type": "bytes[]"
+											}
+										],
+										"internalType": "struct EventUtils.BytesArrayKeyValue[]",
+										"name": "arrayItems",
+										"type": "tuple[]"
+									}
+								],
+								"internalType": "struct EventUtils.BytesItems",
+								"name": "bytesItems",
+								"type": "tuple"
+							},
+							{
+								"components": [
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "string",
+												"name": "value",
+												"type": "string"
+											}
+										],
+										"internalType": "struct EventUtils.StringKeyValue[]",
+										"name": "items",
+										"type": "tuple[]"
+									},
+									{
+										"components": [
+											{
+												"internalType": "string",
+												"name": "key",
+												"type": "string"
+											},
+											{
+												"internalType": "string[]",
+												"name": "value",
+												"type": "string[]"
+											}
+										],
+										"internalType": "struct EventUtils.StringArrayKeyValue[]",
+										"name": "arrayItems",
+										"type": "tuple[]"
+									}
+								],
+								"internalType": "struct EventUtils.StringItems",
+								"name": "stringItems",
+								"type": "tuple"
+							}
+						],
+						"internalType": "struct EventUtils.EventLogData",
+						"name": "eventData",
+						"type": "tuple"
+					}
+				],
+				"name": "refundExecutionFee",
+				"outputs": [],
+				"stateMutability": "payable",
 				"type": "function"
 			},
 			{
@@ -2137,10 +2449,6 @@
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
-			},
-			{
-				"stateMutability": "payable",
-				"type": "receive"
 			}
 		],
 		"devdoc": {
@@ -2179,7 +2487,7 @@
 						"unwrap": "Si true, unwrap WETH → ETH antes de enviar"
 					}
 				},
-				"processAndTransfer(bytes32)": {
+				"processAndTransfer(bytes32,address)": {
 					"details": "Solo puede ser llamada por afterOrderExecution o rescuePosition"
 				},
 				"rescuePosition(bytes32)": {
@@ -2203,7 +2511,7 @@
 				"emergencyWithdrawETH(address,uint256,bool,string)": {
 					"notice": "Retiro de emergencia de ETH (envuelto como WETH)"
 				},
-				"processAndTransfer(bytes32)": {
+				"processAndTransfer(bytes32,address)": {
 					"notice": "Procesa los datos y transfiere fondos (función interna pesada)"
 				},
 				"rescuePosition(bytes32)": {
@@ -2290,12 +2598,92 @@
 				"dweb:/ipfs/QmadRjHbkicwqwwh61raUEapaVEtaLMcYbQZWs9gUkgj3u"
 			]
 		},
+		"lib/gmx-synthetics/contracts/callback/IGasFeeCallbackReceiver.sol": {
+			"keccak256": "0xfe5c4e4729d117cd2559c0a6b20567ec940d02c2fad5f58a276e854bf5c1e15d",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://c6de5b27d8cfbb98da9b1f1c19ba5195634d3d36d3b8cc41944d266fa205700f",
+				"dweb:/ipfs/QmSAPBHekqtBVETiYZ7iYdxVqV8UkuztT4ga5QsiMiSChH"
+			]
+		},
+		"lib/gmx-synthetics/contracts/chain/ArbGasInfo.sol": {
+			"keccak256": "0x48c4ffaab45cc49cf4d4014eaf92867b65f7cf5c20deca5199e746d72c197816",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://76acc33e12994e11b47a1324a53f5716d565cc56b0ad3ec9630bbc5c122e0c53",
+				"dweb:/ipfs/QmYJSPZwQaWZvWZndBDDKmy1NzZFVDqTJR4SZivkSCMPXZ"
+			]
+		},
+		"lib/gmx-synthetics/contracts/chain/ArbSys.sol": {
+			"keccak256": "0x97a2fcc4828af974d9e763db893b1188fec4d964ec3896611284678631dc5ffd",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://1c5933c881d68a389c9ac1d774228d1699d20f1973e8f1499da4df617cc4fc3c",
+				"dweb:/ipfs/QmdHtTziujixKVEqzcRyGUHixmZXGHAk62UAUhoU61zvco"
+			]
+		},
+		"lib/gmx-synthetics/contracts/chain/Chain.sol": {
+			"keccak256": "0x6aaf3c482b05293c1d7582182e5453a25d4e87aa7d51388865d11984daba94cd",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://f50aeee38e188b3ae1aba60491b00157774624a105b8edbedff99d247cab54e8",
+				"dweb:/ipfs/QmT8FJC3dK4jDuZHm79CbLsspK8yxccXo9B95QqsLsyA3e"
+			]
+		},
+		"lib/gmx-synthetics/contracts/error/Errors.sol": {
+			"keccak256": "0xbd1dedfc1eec03422dcf70c598c4ff56d033d24727cec10601243f2e1c479c54",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://9bd3ab1e1cf757ded08ffa11197bd916815be38724cb6e123d07c751abc793e4",
+				"dweb:/ipfs/QmU5xj7wBgKktoZN5qyvkGfTKn8qSB3ijti72qadKar1AN"
+			]
+		},
+		"lib/gmx-synthetics/contracts/event/EventUtils.sol": {
+			"keccak256": "0x301b8df4bd9f7cd46804d6a732e8f092b59fda0450c59ef33845eda262f5e6d5",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://7aeaefe0d807bf7c8e2299e86fecd34e78ba33fd90ed1bb682c4d53aa17ca141",
+				"dweb:/ipfs/QmVUgfRgrnyDRi7o3M9eGrMS3oW4bnEVFAeTBWLhZ6LcCc"
+			]
+		},
+		"lib/gmx-synthetics/contracts/order/IBaseOrderUtils.sol": {
+			"keccak256": "0xd31d8184bf66bc7e6fe9830b375409a1f0499150412691710a40beedd6df47d8",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://09ddf8fe5b86228738a0b74e01c6e8d39b11569bed3460fc1fa821e5d3653693",
+				"dweb:/ipfs/QmRoaemGqVipEHGt2TfnneYEph4SxMPcavnTCPSgXYtAUC"
+			]
+		},
+		"lib/gmx-synthetics/contracts/order/Order.sol": {
+			"keccak256": "0x8b2b69bd354576aab5a08c807c7561863d60bac899eec01268d92536a562bc63",
+			"license": "BUSL-1.1",
+			"urls": [
+				"bzz-raw://f314a607c686a8e86edf5c03049a66c8652104f514837009872d8754966ddc91",
+				"dweb:/ipfs/QmZVd4vh2PBFG2fzkoSiQzLjWmP3VSDkKKgjHAMLpvBhWG"
+			]
+		},
 		"src/core/ProtocolStorage.sol": {
 			"keccak256": "0xc3d73dfad62883bf0364cc2fecc84aae967b41981a08dd473d285cab8e3fa5c0",
 			"license": "MIT",
 			"urls": [
 				"bzz-raw://de374e6230fef7f5581e19309214df1856e3d7ef9458be4ccf4417367c9a812b",
 				"dweb:/ipfs/QmX2cd1z4y58g5mtFRqJKi5MTqTUQt8WgiQMJ21dGkQXEq"
+			]
+		},
+		"src/core/bundles/executors/MarketNeutral.sol": {
+			"keccak256": "0xb9f774fc71d93a9ba024db1c001b36f94224f772afcafe1cf8ed8cba8d0117dd",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://2da76b95f03c906496c7f737d893d265046bbae3f8017aa8722956a2ada8c8a7",
+				"dweb:/ipfs/QmXowUCRcM1Pg5hxUqGYGJYMiDHW6Qvsd95wB4T2P73mrC"
+			]
+		},
+		"src/core/bundles/executors/PositionInitializer.sol": {
+			"keccak256": "0xa9b763f3c1ab2171498145bdd809c350f3847ff88e09692b9b916f32ef505d72",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://7f598c78e9b312cce18dae9db744b104858f306a308c822b6491692c32beb060",
+				"dweb:/ipfs/QmaUFFKgrh7EejKDCCkW5Qrbboy2Dr1fHtEfEnYF7fcoo1"
 			]
 		},
 		"src/core/bundles/executors/ProxyFactory.sol": {
@@ -2307,35 +2695,43 @@
 			]
 		},
 		"src/core/bundles/executors/callbacks/ClosePositionCallbacks.sol": {
-			"keccak256": "0x4b3101ee2dc636e21cbbb20dfcc730b0c1febab4eec75ec649235ada86e6ef29",
+			"keccak256": "0xc1baa6e0dbebcda18468d851b547c99a47a75c9c81a672b374a960f1d50d9c54",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2826878ce678db9f5ecef485f2d062201ac9152d37695e1fee252c27fd285847",
-				"dweb:/ipfs/QmSEXhsJed8u93zLwGKXQd4p4unDbsz1ADh3rjaLax79pS"
+				"bzz-raw://569b1388d98be2c00fd1b4e124055d81f4339daf0bf3f25d889de684d8ecc93f",
+				"dweb:/ipfs/QmaUTk5qMZsQd8HPjuarZPR3ZktgxxZXDWJsatziR6Pf2Q"
 			]
 		},
 		"src/core/bundles/executors/proxy.sol": {
-			"keccak256": "0x7777a6c65b6125a16f0fb74e51d10e9ff4ebd37c331522ea751266e0d6f5129a",
+			"keccak256": "0xee532ab053adeca3008113f41bfb7a194e7554b150fbd87967c3f9fae139cd4d",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://b6133bcebac23794e4b9bff4cdeda854253787c6ac4894d4cab6b1be96a322d6",
-				"dweb:/ipfs/QmSUb8cT1cgZiea7waixAUevNopd4EDZ9miozpYuoXyeAz"
+				"bzz-raw://974a10600f3ac120ced90f1aabb15006e73bb771e6024fb88c3a0de1df73bc0b",
+				"dweb:/ipfs/QmQ8pkNca8zzJPZ4dPPHLZwrnD676HePWoJjwesrAYPmFi"
+			]
+		},
+		"src/core/bundles/security/proxyAccessControl.sol": {
+			"keccak256": "0x72ec0dc798ea7f15f970a5f86782faf706a2b9da10638074a4ca139c73013b29",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://256aacf2a75a9b178d02b33d181e31e94ec8b61bc2057a2ba7119809e6e80fae",
+				"dweb:/ipfs/QmTGR9SwJ4CWkKyKDy9KEpLrt3fLnpwgDYkwQwY7SQhTe9"
 			]
 		},
 		"src/core/bundles/storage/MarketNeutralStorage.sol": {
-			"keccak256": "0x194fb1d0a9d00f0fe1ad76c66e114413751b4b877ab77c4911a06e6a5b92eac9",
+			"keccak256": "0x1a5605aaba4cc068e02eb5e81ed3480c16a7c1278ba08e0214754f39f22e8427",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://6d1c430eb21bbcb77955d2f260ce5c6679d18c4f1bbd46c625418afc974e878f",
-				"dweb:/ipfs/QmY6BtFihsxf2mcin8XdYvrYqwxy1mEcAWc2jEvNMRuVgv"
+				"bzz-raw://78c18067547be3f9f4f9455ed217e5bfd84560d4ed1a7d77cf3fd41460de8507",
+				"dweb:/ipfs/QmazHH5iqiQGMLueUukzVV9bicS6y2hY5pi7mCjUK7DKwy"
 			]
 		},
 		"src/core/bundles/storage/ProxyManager.sol": {
-			"keccak256": "0x78816dfb920898033c5e7a55b3affb212cad69ec1c46fac73d65b72af848b2f6",
+			"keccak256": "0x0cd76a62254d0dd5eb44c43c7cb4383ec4e2828f42c3875eee515dc38abb26fc",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://32a7f86476c698c99d761505c06dd8395fc71c5bd019307013cde5daaf539b21",
-				"dweb:/ipfs/Qma8TetcLBNBSYC7tCprcoXzQsi17GQBRuPeiuyToTwrDF"
+				"bzz-raw://b7e426586b633d15df5682cd9901dd207e67d9576970a39a60619b8788aa3aa3",
+				"dweb:/ipfs/Qmeuv7snfhPcS2J4pDURF42bQq6Rs6rJ9F5DNkYCrv2UC1"
 			]
 		},
 		"src/core/config/AddressProvider.sol": {
@@ -2354,12 +2750,28 @@
 				"dweb:/ipfs/QmTc35XA1ZekBzhh7gLM3JwBnFrpXQ684AckDTY2LR8SDM"
 			]
 		},
+		"src/interfaces/GMX/IExchangeRouter.sol": {
+			"keccak256": "0x362a8c8c1607b7536be9f89b553724756979e34f65a46ecdae78964d1146b6de",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://a669468dc0db10334647d44700197bf8135a45e49eb61447ab1c6771a6ec778b",
+				"dweb:/ipfs/QmSJPMgojiQngVRWqhMx4c2s4r6WKQMmvgGpi5D8iQg211"
+			]
+		},
 		"src/interfaces/GMX/IOrderCallbackReceiver.sol": {
-			"keccak256": "0x57dfd404171ad77831c627a195175888255784e20308df62e92623975655166d",
+			"keccak256": "0x3d5aa65a3824f3392a3cbf1c3e992b2a68d9eb711b3ff2e6bad9e84d349953d4",
 			"license": "BUSL-1.1",
 			"urls": [
-				"bzz-raw://b057e0c18585c91602a02ddf7095fcaa521e7e51f1d25d8cd363f8b38002e94f",
-				"dweb:/ipfs/QmazuWF6E63wGgnx3CgcERq5avrHrxniupNktiGmWVzmvx"
+				"bzz-raw://e162b240b17e1c06b2eef8c78483ba6876733566186ff6c8cbb037e59ffa0c77",
+				"dweb:/ipfs/Qmes9o4JbEXLEUyW6ZtzhHPzQZiEmxDRxGgKJAn68oVdLu"
+			]
+		},
+		"src/interfaces/GMX/IOrderVault.sol": {
+			"keccak256": "0x3fa36900c57e848be55d78bf11da8bd12b99974bfa71a000650493fa9a80992b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ab64a266bdb2718eed063e631aa8448761a4aec004d87cb3c033b38b3ac80d11",
+				"dweb:/ipfs/QmWThHdJV9dAtfT3SQDijmMQG7zSRyyvKeyDrppwYmzdJZ"
 			]
 		},
 		"src/interfaces/IWETH.sol": {
@@ -2368,6 +2780,14 @@
 			"urls": [
 				"bzz-raw://23c7809c434881303d951199dd57abecd4f9e2b4bd9316000f5dfc844d56a7fd",
 				"dweb:/ipfs/QmYXKeL2NsCoeAwvkHvWuAPmjbeXgVToKjpZvWgp9AFrxp"
+			]
+		},
+		"src/lib/Decoder.lib.sol": {
+			"keccak256": "0x368503d9096c7a8d929741fb8c0612b2ed3fce9a172c13ce8d30edcac0f61563",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://12fe7f4b96b9189ffac649263fa276c2672f7712a64b2878ab82b7482a942f4c",
+				"dweb:/ipfs/QmTAAD48zqEjgmPaZ2gNnVbuykiKFf2kmZuM2eqofVsVCP"
 			]
 		},
 		"src/lib/GMX lib/Errors.sol": {
@@ -2394,6 +2814,14 @@
 				"dweb:/ipfs/QmZAae5R9bk7BTomxdxmnnWeHvs9vn41Swnw4j9NmwR85q"
 			]
 		},
+		"src/lib/Prices.lib.sol": {
+			"keccak256": "0x0a25cac133542e990d700ef0c7f5244955b555dd50146c8c464c2e14c229332b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://3b8cfad2b1bdfb4b8c5bc197dfd01e79a58a6e2f231bfdf53c5d46f764ff6d29",
+				"dweb:/ipfs/QmZy321ac4aLek6ENtKufknMZ3btvZcEJw27ViU4T2RNy7"
+			]
+		},
 		"src/lib/Protocol.lib.sol": {
 			"keccak256": "0x22d9ab7080b9fdd63fbc06fa8f5b2122a8adfbc48960cae13e4b1f654fbd90e8",
 			"license": "MIT",
@@ -2408,6 +2836,14 @@
 			"urls": [
 				"bzz-raw://ba5717f1e354c417bad5d39b78ec8ea2a22850a7d14c48055d17d7dcde11d5a3",
 				"dweb:/ipfs/QmW4cQf7iZvLGERPhSCqCJ3Qpa7FoyE4cgmSN4F9Z21C1K"
+			]
+		},
+		"src/periphery/utilsGMX/GMXPrices.sol": {
+			"keccak256": "0x8131620d0856808faa1cd5ab1a040c54e460bdafaf714bcc12ed8c316305bf16",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://6c5b9f636005506f5a792883735e5efa8b687b4e968a5e28b41826fecb720125",
+				"dweb:/ipfs/QmbADjJyT5sypdScCtC2xzHgJnQURNcJKKdHehxrgcXt3B"
 			]
 		},
 		"src/security/Roles.sol": {

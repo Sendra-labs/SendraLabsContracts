@@ -8,17 +8,28 @@
 			{
 				"inputs": [
 					{
-						"internalType": "bytes32",
-						"name": "setKey",
-						"type": "bytes32"
-					},
-					{
 						"internalType": "address",
-						"name": "value",
+						"name": "_roles",
 						"type": "address"
 					}
 				],
-				"name": "containsAddress",
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "SenderNotAllowed",
+				"type": "error"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_contract",
+						"type": "address"
+					}
+				],
+				"name": "isProtocolProxy",
 				"outputs": [
 					{
 						"internalType": "bool",
@@ -32,31 +43,12 @@
 			{
 				"inputs": [
 					{
-						"internalType": "bytes32",
-						"name": "key",
-						"type": "bytes32"
-					}
-				],
-				"name": "getAddress",
-				"outputs": [
-					{
 						"internalType": "address",
 						"name": "",
 						"type": "address"
 					}
 				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "bytes32",
-						"name": "key",
-						"type": "bytes32"
-					}
-				],
-				"name": "getBool",
+				"name": "isProxy",
 				"outputs": [
 					{
 						"internalType": "bool",
@@ -68,41 +60,46 @@
 				"type": "function"
 			},
 			{
-				"inputs": [
-					{
-						"internalType": "bytes32",
-						"name": "key",
-						"type": "bytes32"
-					}
-				],
-				"name": "getUint",
+				"inputs": [],
+				"name": "roles",
 				"outputs": [
 					{
-						"internalType": "uint256",
+						"internalType": "contract Roles",
 						"name": "",
-						"type": "uint256"
+						"type": "address"
 					}
 				],
 				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_contract",
+						"type": "address"
+					}
+				],
+				"name": "setIsProtocolProxy",
+				"outputs": [],
+				"stateMutability": "nonpayable",
 				"type": "function"
 			}
 		],
 		"devdoc": {
 			"kind": "dev",
 			"methods": {},
-			"title": "IDataStore",
 			"version": 1
 		},
 		"userdoc": {
 			"kind": "user",
 			"methods": {},
-			"notice": "Interface for GMX V2 DataStore",
 			"version": 1
 		}
 	},
 	"settings": {
 		"compilationTarget": {
-			"src/periphery/utilsGMX/GMXPrices.sol": "IDataStore"
+			"src/core/bundles/security/proxyAccessControl.sol": "ProxyAccessControl"
 		},
 		"evmVersion": "cancun",
 		"libraries": {},
@@ -121,20 +118,12 @@
 		"viaIR": true
 	},
 	"sources": {
-		"src/core/config/AddressProvider.sol": {
-			"keccak256": "0x8bfb8b5d36ef0965ee0f8df4c13c8b73904941bbb66c72a60ccc2f7d9868707a",
+		"src/core/bundles/security/proxyAccessControl.sol": {
+			"keccak256": "0x72ec0dc798ea7f15f970a5f86782faf706a2b9da10638074a4ca139c73013b29",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://0f756274a5944b5717eb803f93b79618031f8f6e187d8e31b28823d3e67e2cc3",
-				"dweb:/ipfs/QmeMwNVFk6zafR1tPpJrXBRCJHaHdF5kncS9WuBYvTTmcF"
-			]
-		},
-		"src/lib/Prices.lib.sol": {
-			"keccak256": "0x0a25cac133542e990d700ef0c7f5244955b555dd50146c8c464c2e14c229332b",
-			"license": "MIT",
-			"urls": [
-				"bzz-raw://3b8cfad2b1bdfb4b8c5bc197dfd01e79a58a6e2f231bfdf53c5d46f764ff6d29",
-				"dweb:/ipfs/QmZy321ac4aLek6ENtKufknMZ3btvZcEJw27ViU4T2RNy7"
+				"bzz-raw://256aacf2a75a9b178d02b33d181e31e94ec8b61bc2057a2ba7119809e6e80fae",
+				"dweb:/ipfs/QmTGR9SwJ4CWkKyKDy9KEpLrt3fLnpwgDYkwQwY7SQhTe9"
 			]
 		},
 		"src/lib/security/Roles.lib.sol": {
@@ -143,14 +132,6 @@
 			"urls": [
 				"bzz-raw://ba5717f1e354c417bad5d39b78ec8ea2a22850a7d14c48055d17d7dcde11d5a3",
 				"dweb:/ipfs/QmW4cQf7iZvLGERPhSCqCJ3Qpa7FoyE4cgmSN4F9Z21C1K"
-			]
-		},
-		"src/periphery/utilsGMX/GMXPrices.sol": {
-			"keccak256": "0x99c985448708749cdf276c6e9fd6ce54d85f709cb4ef4ec823724e71caa1580f",
-			"license": "MIT",
-			"urls": [
-				"bzz-raw://5023db8d38fd1082d28ed5a2745b9bc4469535ffcb88a493d695cad99430cd34",
-				"dweb:/ipfs/QmQj8VfUHpbN5VTpd3WCmH1e9hHG6oQrghZZLs3e66FKt5"
 			]
 		},
 		"src/security/Roles.sol": {

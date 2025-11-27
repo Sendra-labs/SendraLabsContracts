@@ -6,6 +6,7 @@ import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 import { MarketNeutralStorage } from "./MarketNeutralStorage.sol";
 import { ProxyFactory } from "../executors/ProxyFactory.sol";
 import { MarketNeutralProxy } from "../executors/proxy.sol";
+import { ProxyAccessControl } from "../security/proxyAccessControl.sol";
 
 contract ProxyManager {
 
@@ -64,6 +65,7 @@ contract ProxyManager {
     // when deployed from factory
     function addProxy(address _proxy, address _owner) internal {
         proxies[proxyCount] = Proxy(_owner, _proxy);
+        ProxyAccessControl(addressProvider.getAddress("ProxyAccessControl")).setIsProtocolProxy(_proxy);
         proxyCount++;
     }
 
@@ -88,7 +90,6 @@ contract ProxyManager {
 
     // when proxy is not managing any position in GMX, it is available for another user to use it
     function setAvailable(uint256 _proxyId) public onlyProtocol {
-        if(msg.sender != proxies[_proxyId].proxy) revert SenderNotAllowed();
         bool isAdded = false;
         bool isAvailable = MarketNeutralProxy(proxies[_proxyId].proxy).isAvailable();
         if(isAvailable) {

@@ -539,11 +539,11 @@
 			]
 		},
 		"src/periphery/utilsGMX/GMXPrices.sol": {
-			"keccak256": "0x8131620d0856808faa1cd5ab1a040c54e460bdafaf714bcc12ed8c316305bf16",
+			"keccak256": "0x99c985448708749cdf276c6e9fd6ce54d85f709cb4ef4ec823724e71caa1580f",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://6c5b9f636005506f5a792883735e5efa8b687b4e968a5e28b41826fecb720125",
-				"dweb:/ipfs/QmbADjJyT5sypdScCtC2xzHgJnQURNcJKKdHehxrgcXt3B"
+				"bzz-raw://5023db8d38fd1082d28ed5a2745b9bc4469535ffcb88a493d695cad99430cd34",
+				"dweb:/ipfs/QmQj8VfUHpbN5VTpd3WCmH1e9hHG6oQrghZZLs3e66FKt5"
 			]
 		},
 		"src/security/Roles.sol": {

@@ -1,0 +1,827 @@
+{
+	"compiler": {
+		"version": "0.8.28+commit.7893614a"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_addressProvider",
+						"type": "address"
+					}
+				],
+				"stateMutability": "nonpayable",
+				"type": "constructor"
+			},
+			{
+				"inputs": [],
+				"name": "InvalidProtocol",
+				"type": "error"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "bytes32",
+						"name": "positionKey",
+						"type": "bytes32"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "market",
+						"type": "address"
+					}
+				],
+				"name": "PositionInfoStored",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "bytes32",
+						"name": "orderKey",
+						"type": "bytes32"
+					},
+					{
+						"indexed": true,
+						"internalType": "uint256",
+						"name": "positionId",
+						"type": "uint256"
+					},
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "receiver",
+						"type": "address"
+					}
+				],
+				"name": "RawExecutionDataStored",
+				"type": "event"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "_key",
+						"type": "bytes32"
+					}
+				],
+				"name": "addUserPendingOrderKey",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "addressProvider",
+				"outputs": [
+					{
+						"internalType": "contract AddressProvider",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "_key",
+						"type": "bytes32"
+					}
+				],
+				"name": "getPendingOrder",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "receiver",
+								"type": "address"
+							},
+							{
+								"internalType": "address",
+								"name": "proxy",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "positionId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isActive",
+								"type": "bool"
+							}
+						],
+						"internalType": "struct MarketNeutralLib.PendingOrder",
+						"name": "",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "positionKey",
+						"type": "bytes32"
+					}
+				],
+				"name": "getPositionInfo",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "account",
+								"type": "address"
+							},
+							{
+								"internalType": "address",
+								"name": "market",
+								"type": "address"
+							},
+							{
+								"internalType": "address",
+								"name": "collateralToken",
+								"type": "address"
+							},
+							{
+								"internalType": "bool",
+								"name": "isLong",
+								"type": "bool"
+							},
+							{
+								"internalType": "uint256",
+								"name": "positionId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isActive",
+								"type": "bool"
+							}
+						],
+						"internalType": "struct MarketNeutralStorage.PositionInfo",
+						"name": "info",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "orderKey",
+						"type": "bytes32"
+					}
+				],
+				"name": "getRawExecutionData",
+				"outputs": [
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "positionId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "address",
+								"name": "receiver",
+								"type": "address"
+							},
+							{
+								"internalType": "address",
+								"name": "outputToken",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "outputAmount",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "pnl",
+								"type": "int256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "executionPrice",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "collateralTokenPrice",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isLongSide",
+								"type": "bool"
+							},
+							{
+								"internalType": "bool",
+								"name": "processed",
+								"type": "bool"
+							},
+							{
+								"internalType": "uint256",
+								"name": "timestamp",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct MarketNeutralLib.RawExecutionData",
+						"name": "data",
+						"type": "tuple"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					}
+				],
+				"name": "getUserPendingOrderKeys",
+				"outputs": [
+					{
+						"internalType": "bytes32[]",
+						"name": "",
+						"type": "bytes32[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"name": "pendingOrders",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "receiver",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "proxy",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "positionId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isActive",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"name": "positionInfo",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "account",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "market",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "collateralToken",
+						"type": "address"
+					},
+					{
+						"internalType": "bool",
+						"name": "isLong",
+						"type": "bool"
+					},
+					{
+						"internalType": "uint256",
+						"name": "positionId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isActive",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"name": "rawExecutionData",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "positionId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "address",
+						"name": "receiver",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "outputToken",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "outputAmount",
+						"type": "uint256"
+					},
+					{
+						"internalType": "int256",
+						"name": "pnl",
+						"type": "int256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "executionPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "collateralTokenPrice",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "isLongSide",
+						"type": "bool"
+					},
+					{
+						"internalType": "bool",
+						"name": "processed",
+						"type": "bool"
+					},
+					{
+						"internalType": "uint256",
+						"name": "timestamp",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"internalType": "bytes32",
+						"name": "_key",
+						"type": "bytes32"
+					}
+				],
+				"name": "removeUserPendingOrderKey",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "positionKey",
+						"type": "bytes32"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "account",
+								"type": "address"
+							},
+							{
+								"internalType": "address",
+								"name": "market",
+								"type": "address"
+							},
+							{
+								"internalType": "address",
+								"name": "collateralToken",
+								"type": "address"
+							},
+							{
+								"internalType": "bool",
+								"name": "isLong",
+								"type": "bool"
+							},
+							{
+								"internalType": "uint256",
+								"name": "positionId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isActive",
+								"type": "bool"
+							}
+						],
+						"internalType": "struct MarketNeutralStorage.PositionInfo",
+						"name": "info",
+						"type": "tuple"
+					}
+				],
+				"name": "storePositionInfo",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "orderKey",
+						"type": "bytes32"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint256",
+								"name": "positionId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "address",
+								"name": "receiver",
+								"type": "address"
+							},
+							{
+								"internalType": "address",
+								"name": "outputToken",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "outputAmount",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "pnl",
+								"type": "int256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "executionPrice",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "collateralTokenPrice",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isLongSide",
+								"type": "bool"
+							},
+							{
+								"internalType": "bool",
+								"name": "processed",
+								"type": "bool"
+							},
+							{
+								"internalType": "uint256",
+								"name": "timestamp",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct MarketNeutralLib.RawExecutionData",
+						"name": "data",
+						"type": "tuple"
+					}
+				],
+				"name": "storeRawExecutionData",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "orderKey",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "bool",
+						"name": "processed",
+						"type": "bool"
+					}
+				],
+				"name": "updateExecutionProcessed",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "_key",
+						"type": "bytes32"
+					},
+					{
+						"components": [
+							{
+								"internalType": "address",
+								"name": "receiver",
+								"type": "address"
+							},
+							{
+								"internalType": "address",
+								"name": "proxy",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "positionId",
+								"type": "uint256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isActive",
+								"type": "bool"
+							}
+						],
+						"internalType": "struct MarketNeutralLib.PendingOrder",
+						"name": "_pendingOrder",
+						"type": "tuple"
+					}
+				],
+				"name": "updatePendingOrder",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "bytes32",
+						"name": "positionKey",
+						"type": "bytes32"
+					},
+					{
+						"internalType": "bool",
+						"name": "isActive",
+						"type": "bool"
+					}
+				],
+				"name": "updatePositionStatus",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"name": "userPendingOrderKeys",
+				"outputs": [
+					{
+						"internalType": "bytes32",
+						"name": "",
+						"type": "bytes32"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"details": "Manages raw execution data and position keys for MarketNeutral strategies",
+			"kind": "dev",
+			"methods": {
+				"getPositionInfo(bytes32)": {
+					"params": {
+						"positionKey": "La clave de la posición"
+					},
+					"returns": {
+						"info": "La información de la posición"
+					}
+				},
+				"getRawExecutionData(bytes32)": {
+					"params": {
+						"orderKey": "La clave de la orden"
+					},
+					"returns": {
+						"data": "Los datos de ejecución"
+					}
+				},
+				"storePositionInfo(bytes32,(address,address,address,bool,uint256,bool))": {
+					"params": {
+						"info": "La información de la posición",
+						"positionKey": "La clave de la posición"
+					}
+				},
+				"storeRawExecutionData(bytes32,(uint256,address,address,uint256,int256,uint256,uint256,bool,bool,uint256))": {
+					"params": {
+						"data": "Los datos de ejecución",
+						"orderKey": "La clave de la orden"
+					}
+				},
+				"updateExecutionProcessed(bytes32,bool)": {
+					"params": {
+						"orderKey": "La clave de la orden",
+						"processed": "Si ya fue procesado"
+					}
+				},
+				"updatePositionStatus(bytes32,bool)": {
+					"params": {
+						"isActive": "Si está activa",
+						"positionKey": "La clave de la posición"
+					}
+				}
+			},
+			"title": "MarketNeutralStorage",
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"addressProvider()": {
+					"notice": "Reference to the Roles contract for access control"
+				},
+				"constructor": {
+					"notice": "Initializes the MarketNeutralStorage with Roles contract"
+				},
+				"getPositionInfo(bytes32)": {
+					"notice": "Obtiene información de posición"
+				},
+				"getRawExecutionData(bytes32)": {
+					"notice": "Obtiene datos de ejecución crudos"
+				},
+				"storePositionInfo(bytes32,(address,address,address,bool,uint256,bool))": {
+					"notice": "Almacena información de posición"
+				},
+				"storeRawExecutionData(bytes32,(uint256,address,address,uint256,int256,uint256,uint256,bool,bool,uint256))": {
+					"notice": "Almacena datos de ejecución crudos"
+				},
+				"updateExecutionProcessed(bytes32,bool)": {
+					"notice": "Actualiza el estado de procesamiento de datos de ejecución"
+				},
+				"updatePositionStatus(bytes32,bool)": {
+					"notice": "Actualiza el estado de una posición"
+				}
+			},
+			"notice": "Storage contract for MarketNeutral execution data",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"src/core/bundles/storage/MarketNeutralStorage.sol": "MarketNeutralStorage"
+		},
+		"evmVersion": "cancun",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": true,
+			"runs": 200
+		},
+		"remappings": [
+			":ds-test/=lib/forge-std/lib/ds-test/src/",
+			":forge-std/=lib /forge-std/src/",
+			":gmx-synthetics/=lib/gmx-synthetics/contracts/"
+		],
+		"viaIR": true
+	},
+	"sources": {
+		"src/core/bundles/security/proxyAccessControl.sol": {
+			"keccak256": "0x72ec0dc798ea7f15f970a5f86782faf706a2b9da10638074a4ca139c73013b29",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://256aacf2a75a9b178d02b33d181e31e94ec8b61bc2057a2ba7119809e6e80fae",
+				"dweb:/ipfs/QmTGR9SwJ4CWkKyKDy9KEpLrt3fLnpwgDYkwQwY7SQhTe9"
+			]
+		},
+		"src/core/bundles/storage/MarketNeutralStorage.sol": {
+			"keccak256": "0x1a5605aaba4cc068e02eb5e81ed3480c16a7c1278ba08e0214754f39f22e8427",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://78c18067547be3f9f4f9455ed217e5bfd84560d4ed1a7d77cf3fd41460de8507",
+				"dweb:/ipfs/QmazHH5iqiQGMLueUukzVV9bicS6y2hY5pi7mCjUK7DKwy"
+			]
+		},
+		"src/core/config/AddressProvider.sol": {
+			"keccak256": "0x8bfb8b5d36ef0965ee0f8df4c13c8b73904941bbb66c72a60ccc2f7d9868707a",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://0f756274a5944b5717eb803f93b79618031f8f6e187d8e31b28823d3e67e2cc3",
+				"dweb:/ipfs/QmeMwNVFk6zafR1tPpJrXBRCJHaHdF5kncS9WuBYvTTmcF"
+			]
+		},
+		"src/lib/MarketNeutral/MarketNeutralLib.sol": {
+			"keccak256": "0x813fad43a33b3893ca18d9b7c1d87aa04e1f91fe7c63a7b1a23a74b359021e71",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ab9ff8a20baf0be352922bd89d89fa59d029bb1bfbac4effd9a515470d9dbcd7",
+				"dweb:/ipfs/QmZAae5R9bk7BTomxdxmnnWeHvs9vn41Swnw4j9NmwR85q"
+			]
+		},
+		"src/lib/Protocol.lib.sol": {
+			"keccak256": "0x22d9ab7080b9fdd63fbc06fa8f5b2122a8adfbc48960cae13e4b1f654fbd90e8",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://c904847c49d69ae1ccb9774a8af0b7337e3d752c192da3d42ec1f0d76230fc83",
+				"dweb:/ipfs/Qmam9Rb9SDAHCfq6Ds1pQWRgRseJ8cH1XTnVc183AtaV4z"
+			]
+		},
+		"src/lib/security/Roles.lib.sol": {
+			"keccak256": "0x9eda8dcfd260343e2d4b1a44e025a3b0f88f0724fe1a79b4ae3584e2b7c1ba69",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://ba5717f1e354c417bad5d39b78ec8ea2a22850a7d14c48055d17d7dcde11d5a3",
+				"dweb:/ipfs/QmW4cQf7iZvLGERPhSCqCJ3Qpa7FoyE4cgmSN4F9Z21C1K"
+			]
+		},
+		"src/security/Roles.sol": {
+			"keccak256": "0x4ffa09bf2c2d66449603088e1b0dd03e6bbc3c14532c8a0580fb7b6a867bc0c4",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://85343dc69a533acfa25b4d34763910094d417e3fba2cfa58b7c29e3de986c836",
+				"dweb:/ipfs/QmPN3eGnEzKTXSXwgXoAKV2JChXCg18TRPxy8nqU9zLERM"
+			]
+		}
+	},
+	"version": 1
+}

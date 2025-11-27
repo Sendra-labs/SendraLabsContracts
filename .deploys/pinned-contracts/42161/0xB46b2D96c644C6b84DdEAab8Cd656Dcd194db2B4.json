@@ -1,6 +1,6 @@
 {
   "name": "MainReader",
-  "address": "0xB7fAf7bde9997E2A318fb65157bB9c7a8eEa01f2",
+  "address": "0xB46b2D96c644C6b84DdEAab8Cd656Dcd194db2B4",
   "abi": [
     {
       "inputs": [
@@ -498,5 +498,5 @@
     }
   ],
   "filePath": " - connect to localhost - /src/core/MainReader.sol",
-  "pinnedAt": 1762971083433
+  "pinnedAt": 1764183702137
 }

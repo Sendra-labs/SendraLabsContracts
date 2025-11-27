@@ -4,6 +4,8 @@ pragma solidity 0.8.28;
 import { MarketNeutralLib } from "../../../lib/MarketNeutral/MarketNeutralLib.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { Roles } from "../../../security/Roles.sol";
+import { AddressProvider } from "../../config/AddressProvider.sol";
+import { ProxyAccessControl } from "../security/proxyAccessControl.sol";
 
 /**
  * @title MarketNeutralStorage
@@ -13,14 +15,12 @@ import { Roles } from "../../../security/Roles.sol";
 contract MarketNeutralStorage {
     
     /// @notice Reference to the Roles contract for access control
-    Roles public roles;
-    
+    AddressProvider public immutable addressProvider;
     /**
      * @notice Initializes the MarketNeutralStorage with Roles contract
-     * @param _roles Address of the Roles contract for protocol contract verification
-     */
-    constructor(address _roles) {
-        roles = Roles(_roles);
+    */
+    constructor(address _addressProvider) {
+        addressProvider = AddressProvider(_addressProvider);
     }
 
     /**
@@ -28,7 +28,10 @@ contract MarketNeutralStorage {
      * @dev Uses Roles contract to verify that caller is a registered protocol contract
      */
     modifier onlyProtocol() {
-        if(!roles.isProtocolContract(msg.sender)) revert InvalidProtocol();
+        if(
+            !Roles(addressProvider.getAddress("Roles")).isProtocolContract(msg.sender)
+            && !ProxyAccessControl(addressProvider.getAddress("ProxyAccessControl")).isProtocolProxy(msg.sender)
+        ) revert InvalidProtocol();
         _;
     }
     
