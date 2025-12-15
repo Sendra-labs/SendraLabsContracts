@@ -37,19 +37,18 @@ contract MainReader {
     }
 
     function getGlobalUserData(address _user) public view returns (GlobalUserData memory) {
-        ProtocolLib.User memory user = protocolStorage.getUser(_user);
-        ProtocolLib.Position[] memory positions = user.globalPosition.positions;
+        ProtocolLib.UserInfoRead memory user = protocolStorage.getUser(_user);
         
         uint256 totalVolume = 0;
         uint256 totalValueLocked = 0;
         
-        for(uint256 i = 0; i < positions.length; i++) {
-            if(positions[i].positionType == 0) { // MarketNeutral = 0
-                bytes[] memory positionData = positions[i].positionData;
+        for(uint256 i = 1; i <= user.totalPositions; i++) {
+            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            if(position.positionType == 0) { // MarketNeutral = 0
+                bytes[] memory positionData = position.positionData;
                 uint256 initialUsdValue = abi.decode(positionData[8], (uint256));
                 totalVolume += initialUsdValue;
                 
-                // Verificar si la posición está activa (closeDate == 0)
                 uint256 closeDate = abi.decode(positionData[10], (uint256));
                 if(closeDate == 0) {
                     totalValueLocked += initialUsdValue;
@@ -58,16 +57,16 @@ contract MainReader {
         }
         
         uint256 averagePositionSize = 0;
-        if(user.globalPosition.totalPositions > 0) {
-            averagePositionSize = totalVolume / user.globalPosition.totalPositions;
+        if(user.totalPositions > 0) {
+            averagePositionSize = totalVolume / user.totalPositions;
         }
         
         return GlobalUserData(
             user.globalPnl,
             totalVolume,
             user.transactionCount,
-            user.globalPosition.totalPositions,
-            user.globalPosition.activePositions,
+            user.totalPositions,
+            user.activePositions,
             totalValueLocked,
             averagePositionSize
         );
@@ -114,13 +113,26 @@ contract MainReader {
     
 */
     function getMarketNeutralPositionsData(address _user) public view returns (MarketNeutralPosition[] memory) {
-        ProtocolLib.User memory user = protocolStorage.getUser(_user);
-        ProtocolLib.Position[] memory positions = user.globalPosition.positions;
-        MarketNeutralPosition[] memory marketNeutralPosition = new MarketNeutralPosition[](positions.length);
+        ProtocolLib.UserInfoRead memory user = protocolStorage.getUser(_user);
         
-        for(uint256 i = 0; i < positions.length; i++) {
-            if(positions[i].positionType == 0) { // MarketNeutral = 0
-                bytes[] memory positionData = positions[i].positionData;
+        // First pass: count MarketNeutral positions
+        uint256 marketNeutralCount = 0;
+        for(uint256 i = 1; i <= user.totalPositions; i++) {
+            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            if(position.positionType == 0) { // MarketNeutral = 0
+                marketNeutralCount++;
+            }
+        }
+        
+        // Create array with correct size
+        MarketNeutralPosition[] memory marketNeutralPosition = new MarketNeutralPosition[](marketNeutralCount);
+        uint256 index = 0;
+        
+        // Second pass: populate array
+        for(uint256 i = 1; i <= user.totalPositions; i++) {
+            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            if(position.positionType == 0) { // MarketNeutral = 0
+                bytes[] memory positionData = position.positionData;
                 uint256 closeDate = abi.decode(positionData[10], (uint256));
                 bool isActive = closeDate == 0;
                 
@@ -132,18 +144,18 @@ contract MainReader {
                 // For active positions, calculate real-time PNL
                 // For closed positions, use stored PNL and size = 0
                 if (isActive) {
-                    (longPnl, shortPnl, totalPnl) = marketNeutralReader.getMarketNeutralRealTimePnL(_user, positions[i].id);
-                    sizeRealTime = marketNeutralReader.getMarketNeutralTotalSize(_user, positions[i].id);
+                    (longPnl, shortPnl, totalPnl) = marketNeutralReader.getMarketNeutralRealTimePnL(_user, position.id);
+                    sizeRealTime = marketNeutralReader.getMarketNeutralTotalSize(_user, position.id);
                 } else {
                     // For closed positions, use stored PNL and size = 0
-                    totalPnl = positions[i].pnl;
+                    totalPnl = position.pnl;
                     longPnl = 0; // Can't determine individual PNL for closed positions
                     shortPnl = 0;
                     sizeRealTime = 0;
                 }
                 
-                marketNeutralPosition[i] = MarketNeutralPosition(
-                    positions[i].id,
+                marketNeutralPosition[index] = MarketNeutralPosition(
+                    position.id,
                     totalPnl,
                     sizeRealTime,
                     abi.decode(positionData[0], (uint256)),
@@ -161,6 +173,7 @@ contract MainReader {
                     abi.decode(positionData[17], (address)),
                     isActive
                 );
+                index++;
             }
         }
         return marketNeutralPosition;
@@ -192,6 +205,14 @@ contract MainReader {
         );
     }
 
+    function getPositions(address _user, uint256 _from, uint256 _to) public view returns (ProtocolLib.Position[] memory) {
+        ProtocolLib.Position[] memory positions = new ProtocolLib.Position[](_to - _from + 1);
+        for(uint256 i = _from; i <= _to; i++) {
+            positions[i - _from] = protocolStorage.getUserPositionById(_user, i);
+        }
+        return positions;
+    }
+
     function getProtocolStats() public view returns (ProtocolLib.ProtocolStats memory) {
         return protocolStorage.getProtocolStats();
     }
@@ -208,19 +229,85 @@ contract MainReader {
         return IERC20(addressProvider.getAddress("USDC")).balanceOf(_user);
     }
 
+    function getMarketNeutralPositionsDataSimple(address _user) public view returns (MarketNeutralPosition[] memory) {
+        ProtocolLib.UserInfoRead memory user = protocolStorage.getUser(_user);
+        
+        uint256 marketNeutralCount = 0;
+        for(uint256 i = 1; i <= user.totalPositions; i++) {
+            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            if(position.positionType == 0) { // MarketNeutral = 0
+                marketNeutralCount++;
+            }
+        }
+        
+        MarketNeutralPosition[] memory marketNeutralPosition = new MarketNeutralPosition[](marketNeutralCount);
+        uint256 index = 0;
+        
+        for(uint256 i = 1; i <= user.totalPositions; i++) {
+            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            if(position.positionType == 0) { // MarketNeutral = 0
+                bytes[] memory positionData = position.positionData;
+                uint256 closeDate = abi.decode(positionData[10], (uint256));
+                bool isActive = closeDate == 0;
+                
+                int256 longPnl;
+                int256 shortPnl;
+                int256 totalPnl;
+                uint256 sizeRealTime;
+                
+                // For active positions, calculate real-time PNL
+                // For closed positions, use stored PNL and size = 0
+                if (isActive) {
+                    (longPnl, shortPnl, totalPnl) = (0, 0, 0);
+                    sizeRealTime = 0;
+                } else {
+                    // For closed positions, use stored PNL and size = 0
+                    totalPnl = position.pnl;
+                    longPnl = 0; // Can't determine individual PNL for closed positions
+                    shortPnl = 0;
+                    sizeRealTime = 0;
+                }
+                
+                marketNeutralPosition[index] = MarketNeutralPosition(
+                    position.id,
+                    totalPnl,
+                    sizeRealTime,
+                    abi.decode(positionData[0], (uint256)),
+                    abi.decode(positionData[1], (uint256)),
+                    abi.decode(positionData[8], (uint256)),
+                    abi.decode(positionData[6], (uint256)),
+                    abi.decode(positionData[7], (uint256)),
+                    abi.decode(positionData[9], (uint256)),
+                    abi.decode(positionData[4], (uint256)),
+                    abi.decode(positionData[5], (uint256)),
+                    longPnl,
+                    shortPnl,
+                    abi.decode(positionData[2], (address)),
+                    abi.decode(positionData[3], (address)),
+                    abi.decode(positionData[17], (address)),
+                    isActive
+                );
+                index++;
+            }
+        }
+        return marketNeutralPosition;
+    }
+
     function isProxyNeeded(address _user, string calldata _marketLong, string calldata _marketShort) public view returns (bool, address) {
-       /* CHECK THIS
-        MarketNeutralPosition[] memory marketNeutralPositions = getMarketNeutralPositionsData(_user);
+        MarketNeutralPosition[] memory marketNeutralPositions = getMarketNeutralPositionsDataSimple(_user);
         for(uint256 i = 0; i < marketNeutralPositions.length; i++) {
             if(marketNeutralPositions[i].isActive) {
                 address proxy = marketNeutralPositions[i].proxy;
+                // Skip if proxy is address(0) (shouldn't happen, but safety check)
+                if(proxy == address(0)) continue;
+                
                 bool isMarketBeingUsed = MarketNeutralProxy(proxy).isMarketBeingUsed(_marketLong, _marketShort);
                 if(!isMarketBeingUsed) {
                     return (false, marketNeutralPositions[i].proxy); // user is owner of a proxy that is not being used for this markets
                     // retunrs "false, proxy is not needed, user is owner and can use this adress"
                 }
             }
-        }*/
+        }
         return (true, address(0)); // user needs to claim or deploy a new proxy
     }
 }

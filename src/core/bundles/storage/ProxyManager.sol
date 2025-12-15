@@ -1,3 +1,26 @@
+/*
+________________________________________________________________
+
+  █████████                          █████                    
+ ███▒▒▒▒▒███                        ▒▒███                     
+▒███    ▒▒▒   ██████  ████████    ███████  ████████   ██████  
+▒▒█████████  ███▒▒███▒▒███▒▒███  ███▒▒███ ▒▒███▒▒███ ▒▒▒▒▒███ 
+ ▒▒▒▒▒▒▒▒███▒███████  ▒███ ▒███ ▒███ ▒███  ▒███ ▒▒▒   ███████ 
+ ███    ▒███▒███▒▒▒   ▒███ ▒███ ▒███ ▒███  ▒███      ███▒▒███ 
+▒▒█████████ ▒▒██████  ████ █████▒▒████████ █████    ▒▒████████
+ ▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒  ▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒      ▒▒▒▒▒▒▒▒                                        
+                                                              
+ █████                 █████                                  
+▒▒███                 ▒▒███                                   
+ ▒███         ██████   ▒███████   █████                       
+ ▒███        ▒▒▒▒▒███  ▒███▒▒███ ███▒▒                        
+ ▒███         ███████  ▒███ ▒███▒▒█████                       
+ ▒███      █ ███▒▒███  ▒███ ▒███ ▒▒▒▒███                      
+ ███████████▒▒████████ ████████  ██████                       
+▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒                                                                                                                                                    
+________________________________________________________________
+*/
+
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
@@ -7,8 +30,9 @@ import { MarketNeutralStorage } from "./MarketNeutralStorage.sol";
 import { ProxyFactory } from "../executors/ProxyFactory.sol";
 import { MarketNeutralProxy } from "../executors/proxy.sol";
 import { ProxyAccessControl } from "../security/proxyAccessControl.sol";
+import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
-contract ProxyManager {
+contract ProxyManager is ReentrancyGuard {
 
     Roles public immutable roles;
     AddressProvider public immutable addressProvider;
@@ -43,7 +67,7 @@ contract ProxyManager {
     event ProxyDeployed(address indexed owner, address indexed proxy, uint256 indexed proxyId);
     event ProxyClaimed(address indexed user, uint256 indexed proxyId);
 
-    function initializeProxy(address _owner) public returns (address _proxyAddress) {
+    function initializeProxy(address _owner) public nonReentrant returns (address _proxyAddress) {
         (uint256 _proxyId, uint256 _batchId, address proxyAddress, bool isAvailable) = getAvailableProxy();  
         if(!isAvailable) {
             _proxyAddress = deployProxy(_owner);
@@ -92,26 +116,28 @@ contract ProxyManager {
     function setAvailable(uint256 _proxyId) public onlyProtocol {
         bool isAdded = false;
         bool isAvailable = MarketNeutralProxy(proxies[_proxyId].proxy).isAvailable();
-        if(isAvailable) {
-            for(uint256 i = 0; i < batchId + 1; i++) {
-                if(!isbatchFilled(i)) {
-                    availableProxiesBatch[i].availableCount++;
-                    availableProxiesBatch[i].proxyIds.push(_proxyId);
-                    isAdded = true;
-                    break;
+        if(getOwner(_proxyId) != address(0)) {
+            if(isAvailable) {
+                for(uint256 i = 0; i < batchId + 1; i++) {
+                    if(!isbatchFilled(i)) {
+                        availableProxiesBatch[i].availableCount++;
+                        availableProxiesBatch[i].proxyIds.push(_proxyId);
+                        isAdded = true;
+                        break;
+                    }
                 }
+                if(!isAdded) {
+                    batchId++;
+                    uint256[] memory proxyIds = new uint256[](1);
+                    proxyIds[0] = _proxyId;
+                    availableProxiesBatch[batchId] = Batch(1, proxyIds);
+                }
+                setOwner(_proxyId, address(0));
             }
-            if(!isAdded) {
-                batchId++;
-                uint256[] memory proxyIds = new uint256[](1);
-                proxyIds[0] = _proxyId;
-                availableProxiesBatch[batchId] = Batch(1, proxyIds);
-            }
-            setOwner(_proxyId, address(0));
         }
     }
 
-    function getOwner(uint256 _proxyId) external view returns (address) {
+    function getOwner(uint256 _proxyId) public view returns (address) {
         return proxies[_proxyId].owner;
     }
 

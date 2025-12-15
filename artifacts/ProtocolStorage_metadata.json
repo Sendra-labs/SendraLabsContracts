@@ -24,6 +24,64 @@
 			{
 				"inputs": [
 					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint128",
+								"name": "positionType",
+								"type": "uint128"
+							},
+							{
+								"internalType": "uint256",
+								"name": "id",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "pnl",
+								"type": "int256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isActive",
+								"type": "bool"
+							},
+							{
+								"internalType": "bytes[]",
+								"name": "positionData",
+								"type": "bytes[]"
+							}
+						],
+						"internalType": "struct ProtocolLib.Position",
+						"name": "_position",
+						"type": "tuple"
+					}
+				],
+				"name": "addPositionToUser",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					}
+				],
+				"name": "decreaseGlobalPositionActivePositions",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
 						"internalType": "uint256",
 						"name": "_positionId",
 						"type": "uint256"
@@ -112,53 +170,14 @@
 								"type": "int256"
 							},
 							{
-								"components": [
-									{
-										"internalType": "uint256",
-										"name": "totalPositions",
-										"type": "uint256"
-									},
-									{
-										"internalType": "uint256",
-										"name": "activePositions",
-										"type": "uint256"
-									},
-									{
-										"components": [
-											{
-												"internalType": "uint128",
-												"name": "positionType",
-												"type": "uint128"
-											},
-											{
-												"internalType": "uint256",
-												"name": "id",
-												"type": "uint256"
-											},
-											{
-												"internalType": "int256",
-												"name": "pnl",
-												"type": "int256"
-											},
-											{
-												"internalType": "bool",
-												"name": "isActive",
-												"type": "bool"
-											},
-											{
-												"internalType": "bytes[]",
-												"name": "positionData",
-												"type": "bytes[]"
-											}
-										],
-										"internalType": "struct ProtocolLib.Position[]",
-										"name": "positions",
-										"type": "tuple[]"
-									}
-								],
-								"internalType": "struct ProtocolLib.GlobalPosition",
-								"name": "globalPosition",
-								"type": "tuple"
+								"internalType": "uint256",
+								"name": "totalPositions",
+								"type": "uint256"
+							},
+							{
+								"internalType": "uint256",
+								"name": "activePositions",
+								"type": "uint256"
 							},
 							{
 								"internalType": "uint256",
@@ -171,95 +190,12 @@
 								"type": "bytes[]"
 							}
 						],
-						"internalType": "struct ProtocolLib.User",
+						"internalType": "struct ProtocolLib.UserInfoRead",
 						"name": "",
 						"type": "tuple"
 					}
 				],
 				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"components": [
-							{
-								"internalType": "uint128",
-								"name": "positionType",
-								"type": "uint128"
-							},
-							{
-								"internalType": "uint256",
-								"name": "id",
-								"type": "uint256"
-							},
-							{
-								"internalType": "int256",
-								"name": "pnl",
-								"type": "int256"
-							},
-							{
-								"internalType": "bool",
-								"name": "isActive",
-								"type": "bool"
-							},
-							{
-								"internalType": "bytes[]",
-								"name": "positionData",
-								"type": "bytes[]"
-							}
-						],
-						"internalType": "struct ProtocolLib.Position[]",
-						"name": "_positions",
-						"type": "tuple[]"
-					},
-					{
-						"internalType": "uint256",
-						"name": "_positionId",
-						"type": "uint256"
-					}
-				],
-				"name": "getUserPosition",
-				"outputs": [
-					{
-						"components": [
-							{
-								"internalType": "uint128",
-								"name": "positionType",
-								"type": "uint128"
-							},
-							{
-								"internalType": "uint256",
-								"name": "id",
-								"type": "uint256"
-							},
-							{
-								"internalType": "int256",
-								"name": "pnl",
-								"type": "int256"
-							},
-							{
-								"internalType": "bool",
-								"name": "isActive",
-								"type": "bool"
-							},
-							{
-								"internalType": "bytes[]",
-								"name": "positionData",
-								"type": "bytes[]"
-							}
-						],
-						"internalType": "struct ProtocolLib.Position",
-						"name": "",
-						"type": "tuple"
-					},
-					{
-						"internalType": "uint256",
-						"name": "index",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "pure",
 				"type": "function"
 			},
 			{
@@ -432,6 +368,79 @@
 						"type": "address"
 					},
 					{
+						"internalType": "uint256",
+						"name": "_dataIndex",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bytes",
+						"name": "_data",
+						"type": "bytes"
+					}
+				],
+				"name": "updateUserData",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_positionId",
+						"type": "uint256"
+					},
+					{
+						"components": [
+							{
+								"internalType": "uint128",
+								"name": "positionType",
+								"type": "uint128"
+							},
+							{
+								"internalType": "uint256",
+								"name": "id",
+								"type": "uint256"
+							},
+							{
+								"internalType": "int256",
+								"name": "pnl",
+								"type": "int256"
+							},
+							{
+								"internalType": "bool",
+								"name": "isActive",
+								"type": "bool"
+							},
+							{
+								"internalType": "bytes[]",
+								"name": "positionData",
+								"type": "bytes[]"
+							}
+						],
+						"internalType": "struct ProtocolLib.Position",
+						"name": "_position",
+						"type": "tuple"
+					}
+				],
+				"name": "updateUserFullPosition",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
 						"internalType": "int256",
 						"name": "_pnlChange",
 						"type": "int256"
@@ -450,56 +459,68 @@
 						"type": "address"
 					},
 					{
-						"components": [
-							{
-								"internalType": "uint256",
-								"name": "totalPositions",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "activePositions",
-								"type": "uint256"
-							},
-							{
-								"components": [
-									{
-										"internalType": "uint128",
-										"name": "positionType",
-										"type": "uint128"
-									},
-									{
-										"internalType": "uint256",
-										"name": "id",
-										"type": "uint256"
-									},
-									{
-										"internalType": "int256",
-										"name": "pnl",
-										"type": "int256"
-									},
-									{
-										"internalType": "bool",
-										"name": "isActive",
-										"type": "bool"
-									},
-									{
-										"internalType": "bytes[]",
-										"name": "positionData",
-										"type": "bytes[]"
-									}
-								],
-								"internalType": "struct ProtocolLib.Position[]",
-								"name": "positions",
-								"type": "tuple[]"
-							}
-						],
-						"internalType": "struct ProtocolLib.GlobalPosition",
-						"name": "_globalPosition",
-						"type": "tuple"
+						"internalType": "uint256",
+						"name": "_positionId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_positionField",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bytes",
+						"name": "_value",
+						"type": "bytes"
 					}
 				],
-				"name": "updateUserGlobalPosition",
+				"name": "updateUserPositionData",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_positionId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "bool",
+						"name": "_isActive",
+						"type": "bool"
+					}
+				],
+				"name": "updateUserPositionIsActive",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "_user",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "_positionId",
+						"type": "uint256"
+					},
+					{
+						"internalType": "int256",
+						"name": "_pnlChange",
+						"type": "int256"
+					}
+				],
+				"name": "updateUserPositionPnl",
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
@@ -521,84 +542,6 @@
 				"outputs": [],
 				"stateMutability": "nonpayable",
 				"type": "function"
-			},
-			{
-				"inputs": [
-					{
-						"internalType": "address",
-						"name": "",
-						"type": "address"
-					}
-				],
-				"name": "users",
-				"outputs": [
-					{
-						"internalType": "uint256",
-						"name": "id",
-						"type": "uint256"
-					},
-					{
-						"internalType": "int256",
-						"name": "globalPnl",
-						"type": "int256"
-					},
-					{
-						"components": [
-							{
-								"internalType": "uint256",
-								"name": "totalPositions",
-								"type": "uint256"
-							},
-							{
-								"internalType": "uint256",
-								"name": "activePositions",
-								"type": "uint256"
-							},
-							{
-								"components": [
-									{
-										"internalType": "uint128",
-										"name": "positionType",
-										"type": "uint128"
-									},
-									{
-										"internalType": "uint256",
-										"name": "id",
-										"type": "uint256"
-									},
-									{
-										"internalType": "int256",
-										"name": "pnl",
-										"type": "int256"
-									},
-									{
-										"internalType": "bool",
-										"name": "isActive",
-										"type": "bool"
-									},
-									{
-										"internalType": "bytes[]",
-										"name": "positionData",
-										"type": "bytes[]"
-									}
-								],
-								"internalType": "struct ProtocolLib.Position[]",
-								"name": "positions",
-								"type": "tuple[]"
-							}
-						],
-						"internalType": "struct ProtocolLib.GlobalPosition",
-						"name": "globalPosition",
-						"type": "tuple"
-					},
-					{
-						"internalType": "uint256",
-						"name": "transactionCount",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
 			}
 		],
 		"devdoc": {
@@ -619,10 +562,10 @@
 				},
 				"getUser(address)": {
 					"params": {
-						"_user": "The address of the user to query"
+						"_user": "The address of the user"
 					},
 					"returns": {
-						"_0": "User struct containing all user data"
+						"_0": "User struct (note: cannot return nested mapping, use getUserPositionById instead)"
 					}
 				},
 				"getUsersCount()": {
@@ -687,7 +630,7 @@
 					"notice": "Returns all protocol statistics"
 				},
 				"getUser(address)": {
-					"notice": "Retrieves user data for a specific address"
+					"notice": "Getter for users mapping (required because cannot be public with nested mappings)"
 				},
 				"getUsersCount()": {
 					"notice": "Returns the total number of users in the protocol"
@@ -712,9 +655,6 @@
 				},
 				"updateTotalVolume(uint256)": {
 					"notice": "Updates the total volume processed by the protocol"
-				},
-				"users(address)": {
-					"notice": "Mapping of user addresses to their User data"
 				}
 			},
 			"notice": "Centralized storage contract for protocol data and statistics",
@@ -743,19 +683,19 @@
 	},
 	"sources": {
 		"src/core/ProtocolStorage.sol": {
-			"keccak256": "0xc3d73dfad62883bf0364cc2fecc84aae967b41981a08dd473d285cab8e3fa5c0",
+			"keccak256": "0x42c3d86586cb50875a3ebb6f081928e9e6739541541d76bb3b7d7110d5f7e24d",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://de374e6230fef7f5581e19309214df1856e3d7ef9458be4ccf4417367c9a812b",
-				"dweb:/ipfs/QmX2cd1z4y58g5mtFRqJKi5MTqTUQt8WgiQMJ21dGkQXEq"
+				"bzz-raw://d0f38764d041905fda13164ddca66c6e690c07d21122d77582d7390d21d74152",
+				"dweb:/ipfs/QmRCkAg5J6eitHfKqZihKKo1Xo47HD99utVdKEGWLKQpPj"
 			]
 		},
 		"src/lib/Protocol.lib.sol": {
-			"keccak256": "0x22d9ab7080b9fdd63fbc06fa8f5b2122a8adfbc48960cae13e4b1f654fbd90e8",
+			"keccak256": "0x4581f43d0bcd663d48203ed9f778442fdf18787207a5ae2c094ca1a8280ef03e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://c904847c49d69ae1ccb9774a8af0b7337e3d752c192da3d42ec1f0d76230fc83",
-				"dweb:/ipfs/Qmam9Rb9SDAHCfq6Ds1pQWRgRseJ8cH1XTnVc183AtaV4z"
+				"bzz-raw://c668f704be4f8d78c8b2635168d38b3a00c2a3c5f666a7b6ae7340d43049ef33",
+				"dweb:/ipfs/Qmamkx7iDuKgNhmHUWKoKCTpDQBc8M7VAS7ohEBeM7Y9jR"
 			]
 		},
 		"src/lib/security/Roles.lib.sol": {

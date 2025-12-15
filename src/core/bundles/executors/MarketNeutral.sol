@@ -39,23 +39,13 @@ contract MarketNeutral is ReentrancyGuard {
         if(!Roles(addressProvider.getAddress("Roles")).isProtocolContract(msg.sender)) revert SenderNotAllowed();
         _;
     }
-/*
-    function execute(uint8 functionId, bytes[] calldata _data) external payable onlyProtocol {
-        ProtocolLib.DeFiParam[] memory params = DecoderLib.decoder(_data);
-        if     (functionId == 0) openPositionWithEther(params);
-        else if(functionId == 1) closeSideMarketNeutral(params);
-        else if(functionId == 2) openPositionWithUSDC(params);
-        else if(functionId == 3) openEtherMarketNeutral(params);
-        else if(functionId == 4) openUSDCMarketNeutral(params);
-    }
-    */
 
     function openEtherMarketNeutral(MarketNeutralLib.EtherMarketNeutralInput calldata _input) public payable {
-        GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
-        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
+        GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices")); //OPTIMIZATION
+        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets")); //OPTIMIZATION
 
-        (uint256 aceptablePriceLong, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketLong), true, true, _input.slippageBps);
-        (uint256 aceptablePriceShort, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketShort), false, true, _input.slippageBps);
+        (uint256 aceptablePriceLong,) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketLong), true, true, _input.slippageBps);
+        (uint256 aceptablePriceShort,) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketShort), false, true, _input.slippageBps);
         
         bytes[] memory newPositionData = new bytes[](18);
         newPositionData[0] = abi.encode(_input.totalEthAmount);
@@ -73,8 +63,8 @@ contract MarketNeutral is ReentrancyGuard {
         newPositionData[12] = abi.encode(uint256(0));  // finalPriceTokenLong
         newPositionData[13] = abi.encode(uint256(0));  // finalPriceTokenShort
         newPositionData[14] = abi.encode(int256(0));  // PNL
-        // Calcular las claves ANTES de initializePosition
-        address weth = addressProvider.getAddress("WETH");
+
+        address weth = addressProvider.getAddress("WETH"); //OPTIMIZATION
         bytes32 longKey = calculatePositionKey(address(this), gmxMarkets.getMarket(_input.marketLong), weth, true);
         bytes32 shortKey = calculatePositionKey(address(this), gmxMarkets.getMarket(_input.marketShort), weth, false);
         
@@ -141,7 +131,8 @@ contract MarketNeutral is ReentrancyGuard {
     function openUSDCMarketNeutral(MarketNeutralLib.UsdcMarketNeutralInput calldata _input) public payable {
         GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
         GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
-
+        // metemos transfer de USDC entry fee aqui 0.1% if(entry fee isActivated)
+        // que salga de _input.totalUsdcAmount y se envie a nuestra tesorería. Frontend tendrá que approve y enviar el 0.1% de más.
         (uint256 aceptablePriceLong, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketLong), true, true, _input.slippageBps);
         (uint256 aceptablePriceShort, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketShort), false, true, _input.slippageBps);
         
@@ -189,11 +180,15 @@ contract MarketNeutral is ReentrancyGuard {
         //15 {2, longKey}
         //16 {2, shortKey}
         //17 {1, proxy address}
+        /// NOT YET BUT MUST BE ADDED:
+        // position is copied from 'address' ALPHA COPY
+        // Stop Loss && Take Profit
+        // Close date long && close date short
+
 
         uint256 _value = msg.value / 2;
         initializePosition(newPositionData, 0);
         
-        // Preparar parámetros para posición Long
         MarketNeutralLib.UsdcOneSideTradeInput memory longInput = MarketNeutralLib.UsdcOneSideTradeInput({
             usdcAmount: _input.totalUsdcAmount / 2,
             sizeDeltaUsd: _input.sizeDeltaUsdLong,
@@ -205,7 +200,6 @@ contract MarketNeutral is ReentrancyGuard {
             receiver: msg.sender
         });
         
-        // Preparar parámetros para posición Short
         MarketNeutralLib.UsdcOneSideTradeInput memory shortInput = MarketNeutralLib.UsdcOneSideTradeInput({
             usdcAmount: _input.totalUsdcAmount / 2,
             sizeDeltaUsd: _input.sizeDeltaUsdShort,
@@ -315,7 +309,7 @@ contract MarketNeutral is ReentrancyGuard {
                 uiFeeReceiver: address(0),
                 market: market,
                 initialCollateralToken: usdc,
-                swapPath: new address[](0)
+                swapPath: getSwapPath(market, usdc, gmxMarkets, true)
             }),
             numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
                 sizeDeltaUsd: sizeDeltaUsd,
@@ -358,6 +352,30 @@ contract MarketNeutral is ReentrancyGuard {
         emit PositionOpened(receiver, market, usdc, usdcAmount, sizeDeltaUsd, isLong);
     }
 
+    function getSwapPath(
+        address _market, 
+        address _initialCollateralToken,
+        GMXMarketsRegistry _gmxMarkets,
+        bool isIncrease
+    ) public view returns (address[] memory) {
+        address collateralToken = _gmxMarkets.getMarketCollateralTokenByAddress(_market);
+        if (collateralToken == address(0)) {
+            return new address[](0);
+        } else {
+            if (isIncrease) {
+                address[] memory swapPath = new address[](2);
+                swapPath[0] = _initialCollateralToken;
+                swapPath[1] = collateralToken;
+                return swapPath;
+            } else {
+                address[] memory swapPath = new address[](2);
+                swapPath[0] = collateralToken;
+                swapPath[1] = _initialCollateralToken;
+                return swapPath;
+            }
+        }
+    }
+
     function closeMarketNeutral(MarketNeutralLib.CloseMarketNeutralInput calldata _input) public payable {
         uint256 _value = msg.value / 2;
         MarketNeutralLib.CloseSideMarketNeutralInput memory longSideInput = MarketNeutralLib.CloseSideMarketNeutralInput({
@@ -387,8 +405,10 @@ contract MarketNeutral is ReentrancyGuard {
         address orderVault = addressProvider.getAddress("OrderVaultGMX");
         address exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
         
-        ProtocolLib.User memory userData = _protocolStorage.getUser(msg.sender);
-        (ProtocolLib.Position memory position, ) = _protocolStorage.getUserPosition(userData.globalPosition.positions, _input.positionId);
+        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(msg.sender,_input.positionId);
+        if(!position.isActive) {
+            revert PositionNotActive();
+        }
         bytes[] memory positionData = position.positionData;
 
         address market = abi.decode(_input.isLongSide ? positionData[2] : positionData[3], (address));
@@ -413,9 +433,10 @@ contract MarketNeutral is ReentrancyGuard {
         address collateralToken = isNativeToken ? weth : usdc;
         
         uint256 callbackGasLimit = 1250000; // 1.5M gas - ajustar según MAX_CALLBACK_GAS_LIMIT de GMX
-
+        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
+        address[] memory swapPath = getSwapPath(market, collateralToken, gmxMarkets, false);
         address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
-        
+
         IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
             addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
                 receiver:  callbackContract, // Funds come to the contract first (for security in callbacks)
@@ -423,8 +444,8 @@ contract MarketNeutral is ReentrancyGuard {
                 callbackContract: callbackContract, // afterOrderExecution() para actualizar storage y transferir fondos
                 uiFeeReceiver: address(0),
                 market: market,
-                initialCollateralToken: collateralToken, 
-                swapPath: new address[](0)
+                initialCollateralToken: swapPath.length > 0 ? swapPath[0] : collateralToken, 
+                swapPath: swapPath
             }),
             numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
                 sizeDeltaUsd: sizeDeltaUsd, //-
@@ -517,5 +538,5 @@ contract MarketNeutral is ReentrancyGuard {
     error InsufficientParameters();
     error InvalidMarket();
     error InvalidCollateralToken();
-
+    error PositionNotActive();
 }

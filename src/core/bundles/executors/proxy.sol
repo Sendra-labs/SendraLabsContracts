@@ -76,6 +76,7 @@ contract MarketNeutralProxy is ReentrancyGuard {
                 (_input)
             )
         );
+        require(success, "Delegatecall failed");
     }
 
     function manageMarkets(string calldata _marketLong, string calldata _marketShort) internal {
@@ -92,16 +93,6 @@ contract MarketNeutralProxy is ReentrancyGuard {
         }
         markets.push(marketLong);
         markets.push(marketShort);
-    }
-
-    function emergencyCloseSideMarketNeutralDelegatecall(MarketNeutralLib.CloseSideMarketNeutralInput calldata _input) public payable onlyOwner nonReentrant {
-        deleteMarket(_input.positionId);
-        (bool success,) = marketNeutral.delegatecall(
-            abi.encodeCall(
-                MarketNeutral.closeSideMarketNeutral,
-                (_input)
-            )
-        );
     }
 
     function deleteMarket(uint256 _positionId) internal {

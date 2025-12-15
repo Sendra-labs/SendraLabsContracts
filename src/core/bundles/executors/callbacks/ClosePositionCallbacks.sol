@@ -16,6 +16,8 @@ import { ProtocolLib } from "../../../../lib/Protocol.lib.sol";
 import { Roles } from "../../../../security/Roles.sol";
 import { ProxyManager } from "../../storage/ProxyManager.sol";
 import { MarketNeutralProxy } from "../proxy.sol";
+import { GMXMarketsRegistry } from "../../../../core/config/gmxMarkets.sol";
+import { GMXPrices } from "../../../../periphery/utilsGMX/GMXPrices.sol";
 
 contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiver, ReentrancyGuard {
     
@@ -26,9 +28,15 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
     using EventUtils for EventUtils.BoolItems;
 
     AddressProvider public immutable addressProvider;
-
+    address public immutable usdc;
+    address public immutable weth;
+    GMXMarketsRegistry public immutable gmxMarkets;
+    
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
+        weth = addressProvider.getAddress("WETH");
+        usdc = addressProvider.getAddress("USDC");
+        gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
     }
 
     modifier onlyOrderHandler() {
@@ -46,8 +54,8 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         uint256 indexed positionId,
         bool isLongSide,
         address outputToken,
-        uint256 outputAmount,
-        int256 pnl
+        uint256 outputAmount
+        
     );
 
     event ExecutionProcessingFailed(
@@ -79,27 +87,32 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         bytes32 key,
         EventUtils.EventLogData memory orderData,
         EventUtils.EventLogData memory eventData
-    ) external override onlyOrderHandler {
+    ) external override onlyOrderHandler nonReentrant { // discutir si puedo quitar el cntrolador...
         
         (, address orderMarket) = orderData.addressItems.getWithoutRevert("market");
         (, address outputToken) = eventData.addressItems.getWithoutRevert("outputToken");
         (, uint256 outputAmount) = eventData.uintItems.getWithoutRevert("outputAmount");
-        (, int256 basePnlUsd) = eventData.intItems.getWithoutRevert("basePnlUsd");
-        (, uint256 executionPrice) = eventData.uintItems.getWithoutRevert("executionPrice");
-        (, uint256 collateralTokenPriceMin) = eventData.uintItems.getWithoutRevert("collateralTokenPrice.min");
-        (, uint256 collateralTokenPriceMax) = eventData.uintItems.getWithoutRevert("collateralTokenPrice.max");
-        uint256 collateralTokenPrice = (collateralTokenPriceMin + collateralTokenPriceMax) / 2;
+        
+        uint256 collateralTokenPrice = outputToken == usdc ? 1
+            : GMXPrices(addressProvider.getAddress("GMXPrices")).getPrice(gmxMarkets.getMarket("ETHUSDC"));
 
         MarketNeutralStorage marketNeutralStorage = MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage"));
 
         MarketNeutralLib.PendingOrder memory pendingOrder = marketNeutralStorage.getPendingOrder(key);
+
+        uint256 executionPrice;
+        try GMXPrices(addressProvider.getAddress("GMXPrices")).getPrice(orderMarket) returns (uint256 price) {
+            executionPrice = price;
+        } catch {
+            executionPrice = 1;
+        }
 
         MarketNeutralLib.RawExecutionData memory executionData = MarketNeutralLib.RawExecutionData({
             positionId: pendingOrder.positionId,  
             receiver: pendingOrder.receiver,       
             outputToken: outputToken,            
             outputAmount: outputAmount, 
-            pnl: basePnlUsd,                      
+            pnl: 0,                      
             executionPrice: executionPrice,        
             collateralTokenPrice: collateralTokenPrice, 
             isLongSide: false, 
@@ -107,7 +120,7 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
             timestamp: block.timestamp
         });
         
-        marketNeutralStorage.storeRawExecutionData(key, executionData);
+        marketNeutralStorage.storeRawExecutionData(key, executionData); // seguro que hay datos que no necesitamos
         
         bool isLongSideCalculated = false;
         
@@ -118,11 +131,13 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
             isLongSideCalculated = true;
         } catch {
             emit IsLongSideCalculationFailed(key, pendingOrder.positionId);
-        }        
-        try this.processAndTransfer(key,address(marketNeutralStorage)) {
+        }
+        
+        uint256 proxyId = MarketNeutralProxy(pendingOrder.proxy).getId();
+        
+        try this.processAndTransfer(key, address(marketNeutralStorage)) {
             marketNeutralStorage.updateExecutionProcessed(key, true);
             marketNeutralStorage.removeUserPendingOrderKey(pendingOrder.receiver, key);
-            uint256 proxyId = MarketNeutralProxy(pendingOrder.proxy).getId();
             ProxyManager(addressProvider.getAddress("ProxyManager")).setAvailable(proxyId);
 
             emit PositionSideClosedSuccess(
@@ -130,8 +145,7 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
                 pendingOrder.positionId,
                 isLongSideCalculated,
                 outputToken,
-                outputAmount,
-                basePnlUsd
+                outputAmount
             );
         } catch Error(string memory reason) {
             emit ExecutionProcessingFailed(key, pendingOrder.positionId, pendingOrder.receiver, reason);
@@ -141,8 +155,8 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
     }
 
     /**
-     * @notice Calcula si la orden que se cerró es Long o Short
-     * @dev Función separada para poder usar try-catch
+     * @notice Checks if the closed order is long or short
+     * @dev Separated function to use try-catch
      */
     function calculateIsLongSide(
         address receiver,
@@ -150,89 +164,71 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         address orderMarket
     ) external view returns (bool) {
         require(msg.sender == address(this), "Internal only");
-        
-        // Cache ProtocolStorage to avoid multiple getAddress calls
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        ProtocolLib.User memory user = _protocolStorage.getUser(receiver);
-        (ProtocolLib.Position memory position, ) = _protocolStorage.getUserPosition(
-            user.globalPosition.positions, 
-            positionId
-        );
-        
+        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));  // se puede optimizar a solo una llamada
+        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(receiver, positionId); // se puede optimizar a solo una llamada
         address marketLong = abi.decode(position.positionData[2], (address));
         return (orderMarket == marketLong);
     }
 
     /**
-     * @notice Procesa los datos y transfiere fondos (función interna pesada)
-     * @dev Solo puede ser llamada por afterOrderExecution o rescuePosition
+     * @notice Processes the data and transfers funds.
+     * @dev external to allow try-catch, only called internally via this.
      */
     function processAndTransfer(bytes32 key, address _marketNeutralStorage) external {
-        
-        require(msg.sender == address(this) || msg.sender == addressProvider.getAddress("OrderHandlerGMX"), "Internal only");
+        require(msg.sender == address(this), "Internal only");
         MarketNeutralLib.RawExecutionData memory data = MarketNeutralStorage(_marketNeutralStorage).getRawExecutionData(key);
         require(data.positionId != 0, "No data for this key");
         require(!data.processed, "Already processed");
         
-        // Cache addresses to avoid multiple getAddress calls
         ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        address usdc = addressProvider.getAddress("USDC");
-        address weth = addressProvider.getAddress("WETH");
-        // Obtener el usuario y su posición
-        ProtocolLib.User memory user = _protocolStorage.getUser(data.receiver);
-        (ProtocolLib.Position memory position, uint256 positionIndex) = _protocolStorage.getUserPosition(
-            user.globalPosition.positions, 
-            data.positionId
-        );
-        /// EL ERROR ESTA A PARTIR DE AQUI, sigue el flujo y mira despues en afterorderexecution que pasa despues de esta funcinon
-        // Calcular valor en USD
+        
+        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(data.receiver, data.positionId); // se puede optimizar a solo una llamada
+
         uint256 tokenDecimals = data.outputToken == usdc ? 6 : 18;
         uint256 outputUsdValue = (data.outputAmount * data.collateralTokenPrice) / (10 ** tokenDecimals);
         
-        // Actualizar el precio final correspondiente
         if (data.isLongSide) {
             position.positionData[12] = abi.encode(data.executionPrice);
         } else {
             position.positionData[13] = abi.encode(data.executionPrice);
         }
         
-        // Acumular PNL
-        int256 currentPnl = abi.decode(position.positionData[14], (int256));
-        int256 totalPnl = currentPnl + data.pnl;
-        position.positionData[14] = abi.encode(totalPnl);
-        position.pnl = totalPnl;
-        
-        // Acumular valor final USD
         uint256 currentFinalUsdValue = abi.decode(position.positionData[11], (uint256));
         uint256 totalFinalUsdValue = currentFinalUsdValue + outputUsdValue;
         position.positionData[11] = abi.encode(totalFinalUsdValue);
+
+        int256 currentPnl = abi.decode(position.positionData[14], (int256));
+        uint256 initialUsdValueHalf = abi.decode(position.positionData[8], (uint256)) / 2;
+        uint256 totalFinalUsdValueScaled = totalFinalUsdValue * 10**tokenDecimals;
+        int256 totalPnl = currentPnl - (int256(initialUsdValueHalf) - int256(totalFinalUsdValueScaled));
+        position.positionData[14] = abi.encode(totalPnl);
+        position.pnl = totalPnl;
         
-        // Verificar si ambas patas están cerradas
         uint256 finalPriceTokenLong = abi.decode(position.positionData[12], (uint256));
         uint256 finalPriceTokenShort = abi.decode(position.positionData[13], (uint256));
         bool bothSidesClosed = (finalPriceTokenLong != 0 && finalPriceTokenShort != 0);
         
         if (bothSidesClosed) {
             position.positionData[10] = abi.encode(block.timestamp);
-            user.globalPosition.activePositions -= 1;
+            position.isActive = false;
+            _protocolStorage.decreaseGlobalPositionActivePositions(data.receiver);
         }
         
-        // Actualizar storage
-        user.globalPosition.positions[positionIndex] = position;
-        _protocolStorage.updateUserGlobalPosition(data.receiver, user.globalPosition);
+        _protocolStorage.updateUserFullPosition(data.receiver, data.positionId, position); // aqui probablemente se pueda optimizar
         
         MarketNeutralStorage(_marketNeutralStorage).updatePendingOrder(
             key, 
-            MarketNeutralLib.PendingOrder(data.receiver, address(0), data.positionId, false)
+            MarketNeutralLib.PendingOrder(data.receiver, address(0), data.positionId, false) // aqui probablemente se pueda optimizar
         );
         
-        // Transferir fondos al usuario
         if (data.outputAmount > 0) {
             if (data.outputToken == weth) {
                 IWETH(weth).withdraw(data.outputAmount);
                 (bool success, ) = data.receiver.call{value: data.outputAmount}("");
                 require(success, "ETH transfer failed");
             } else {
+                // aqui if(performance fee isActivated) transfer performance fee to fee manager contract
+                // o llamada view a fee manager contract para obtener instrucciones de envios.
                 IERC20(data.outputToken).safeTransfer(data.receiver, data.outputAmount);
             }
         }
@@ -242,7 +238,7 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
     function afterOrderCancellation(bytes32 key, EventUtils.EventLogData memory order, EventUtils.EventLogData memory eventData) external {}
     function afterOrderFrozen(bytes32 key, EventUtils.EventLogData memory order, EventUtils.EventLogData memory eventData) external {}
 
-    function refundExecutionFee(bytes32 key, EventUtils.EventLogData memory eventData) external payable {
+    function refundExecutionFee(bytes32 key, EventUtils.EventLogData memory /* eventData */) external payable {
         MarketNeutralLib.PendingOrder memory pendingOrder = MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).getPendingOrder(key);
         if (msg.value > 0 && pendingOrder.receiver != address(0)) {
             (bool success, ) = pendingOrder.receiver.call{value: msg.value}("");
@@ -265,7 +261,6 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         require(!data.processed, "Already processed");
         
         try this.processAndTransfer(key, marketNeutralStorage) {
-            // Marcar como procesado
             MarketNeutralStorage(marketNeutralStorage).updateExecutionProcessed(key, true);
             MarketNeutralStorage(marketNeutralStorage).removeUserPendingOrderKey(msg.sender, key);
             uint256 proxyId = MarketNeutralProxy(pendingOrder.proxy).getId();
@@ -276,7 +271,7 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
                 data.isLongSide,
                 data.outputToken,
                 data.outputAmount,
-                true // rescued = true
+                true
             );
         } catch Error(string memory reason) {
             revert(string(abi.encodePacked("Rescue failed: ", reason)));
@@ -335,10 +330,7 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         require(Roles(addressProvider.getAddress("Roles")).isProtocolContract(msg.sender) , "Not authorized");
         require(to != address(0), "Invalid destination");
         require(amount > 0, "Amount must be > 0");
-        
-        // Cache WETH address to avoid multiple getAddress calls
-        address weth = addressProvider.getAddress("WETH");
-        
+                
         if (unwrap) {
             // Unwrap WETH → ETH y enviar
             IWETH(weth).withdraw(amount);

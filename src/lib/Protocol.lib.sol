@@ -37,7 +37,7 @@ contract ProtocolLib {
     struct GlobalPosition {
         uint256 totalPositions; // closed and active // used to get the positionId
         uint256 activePositions; 
-        Position[] positions; // Only active positions ??
+        mapping(uint256 => Position) positions;
     }
 
     struct UserDataField {
@@ -51,6 +51,15 @@ contract ProtocolLib {
         GlobalPosition globalPosition;
         // i think transactionCount it is the same as totalPositions 
         uint256 transactionCount; // will be used as positionId for each user also
+        bytes[] userData;
+    }
+
+    struct UserInfoRead {
+        uint256 id;
+        int256 globalPnl;
+        uint256 totalPositions;
+        uint256 activePositions;
+        uint256 transactionCount;
         bytes[] userData;
     }
 

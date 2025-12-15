@@ -1,17 +1,24 @@
 /*
+________________________________________________________________
 
-REBEL type ASCII art
-
- ███████████ ████                           ███████████  ███ 
-▒▒███▒▒▒▒▒▒█▒▒███                          ▒▒███▒▒▒▒▒▒█ ▒▒▒  
- ▒███   █ ▒  ▒███   ██████  █████ ███ █████ ▒███   █ ▒  ████ 
- ▒███████    ▒███  ███▒▒███▒▒███ ▒███▒▒███  ▒███████   ▒▒███ 
- ▒███▒▒▒█    ▒███ ▒███ ▒███ ▒███ ▒███ ▒███  ▒███▒▒▒█    ▒███ 
- ▒███  ▒     ▒███ ▒███ ▒███ ▒▒███████████   ▒███  ▒     ▒███ 
- █████       █████▒▒██████   ▒▒████▒████    █████       █████
-▒▒▒▒▒       ▒▒▒▒▒  ▒▒▒▒▒▒     ▒▒▒▒ ▒▒▒▒    ▒▒▒▒▒       ▒▒▒▒▒ 
-                                                             
-                                                                              
+  █████████                          █████                    
+ ███▒▒▒▒▒███                        ▒▒███                     
+▒███    ▒▒▒   ██████  ████████    ███████  ████████   ██████  
+▒▒█████████  ███▒▒███▒▒███▒▒███  ███▒▒███ ▒▒███▒▒███ ▒▒▒▒▒███ 
+ ▒▒▒▒▒▒▒▒███▒███████  ▒███ ▒███ ▒███ ▒███  ▒███ ▒▒▒   ███████ 
+ ███    ▒███▒███▒▒▒   ▒███ ▒███ ▒███ ▒███  ▒███      ███▒▒███ 
+▒▒█████████ ▒▒██████  ████ █████▒▒████████ █████    ▒▒████████
+ ▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒  ▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒      ▒▒▒▒▒▒▒▒                                        
+                                                              
+ █████                 █████                                  
+▒▒███                 ▒▒███                                   
+ ▒███         ██████   ▒███████   █████                       
+ ▒███        ▒▒▒▒▒███  ▒███▒▒███ ███▒▒                        
+ ▒███         ███████  ▒███ ▒███▒▒█████                       
+ ▒███      █ ███▒▒███  ▒███ ▒███ ▒▒▒▒███                      
+ ███████████▒▒████████ ████████  ██████                       
+▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒        PROTOCOL STORAGE                                                                                                                                  
+________________________________________________________________
 */
 
 //SPDX-License-Identifier: MIT
@@ -57,7 +64,7 @@ contract ProtocolStorage {
     ProtocolLib.ProtocolStats internal protocolStats;
 
     /// @notice Mapping of user addresses to their User data
-    mapping(address => ProtocolLib.User) public users;
+    mapping(address => ProtocolLib.User) internal users;
 
     /**
      * @notice Creates a new user in the protocol
@@ -67,76 +74,112 @@ contract ProtocolStorage {
     */
     function createUser(address _user) internal onlyProtocol {
         protocolStats.totalUsers++;
-        users[_user] = ProtocolLib.User(protocolStats.totalUsers, 0, ProtocolLib.GlobalPosition(0, 0, new ProtocolLib.Position[](0)), 0, new bytes[](0));
+        ProtocolLib.User storage newUser = users[_user];
+        newUser.id = protocolStats.totalUsers;
+        newUser.globalPnl = 0;
+        newUser.globalPosition.totalPositions = 0;
+        newUser.globalPosition.activePositions = 0;
+        newUser.transactionCount = 0;
     }
-
-    function updateUserGlobalPnl(address _user, int256 _pnlChange) public onlyProtocol {
-        ProtocolLib.User memory updatedUser = users[_user];
-        updatedUser.globalPnl += _pnlChange;
-        updateUser(_user, updatedUser);
+    
+    /**
+     * @notice Getter for users mapping (required because cannot be public with nested mappings)
+     * @param _user The address of the user
+     * @return User struct (note: cannot return nested mapping, use getUserPositionById instead)
+     */
+    function getUser(address _user) public view returns(ProtocolLib.UserInfoRead memory) {
+        ProtocolLib.User storage user = users[_user];
+        
+        return ProtocolLib.UserInfoRead(
+            user.id,
+            user.globalPnl,
+            user.globalPosition.totalPositions,
+            user.globalPosition.activePositions,
+            user.transactionCount,
+            user.userData
+        );
     }
-
+    
     function updateUserTransactionCount(address _user, uint256 _transactionCount) public onlyProtocol {
-        ProtocolLib.User memory updatedUser = users[_user];
-        updatedUser.transactionCount += _transactionCount;
-        updateUser(_user, updatedUser);
-    }
-
-    function updateUserGlobalPosition(address _user, ProtocolLib.GlobalPosition memory _globalPosition) public onlyProtocol {
-        ProtocolLib.User memory updatedUser = users[_user];
-        updatedUser.globalPosition = _globalPosition;
-        updateUser(_user, updatedUser);
-    }
-
-    function updateUser(address _user, ProtocolLib.User memory _userData) internal {
         if (!isUser(_user)) createUser(_user);
-        users[_user] = _userData;
+        ProtocolLib.User storage user = users[_user];
+        user.transactionCount += _transactionCount;
     }
 
     function finalizePosition(uint256 _positionId, address _user) external onlyProtocol {
-        ProtocolLib.GlobalPosition memory userGlobalPosition = getUser(_user).globalPosition;
-        
-        (,uint256 index) = getUserPosition(userGlobalPosition.positions, _positionId);
-
-        ProtocolLib.Position[] memory _updatedPositions = userGlobalPosition.positions;
-
-        _updatedPositions[index].isActive = false;
-        
-        updateUserGlobalPosition(
-            _user, 
-            ProtocolLib.GlobalPosition(
-                userGlobalPosition.totalPositions, 
-                userGlobalPosition.activePositions - 1,
-                _updatedPositions
-            )
-        );
+        ProtocolLib.User storage user = users[_user];
+        user.globalPosition.positions[_positionId].isActive = false;
+        user.globalPosition.activePositions--;
     }
 
-    function getUserPosition(ProtocolLib.Position[] memory _positions, uint256 _positionId) public pure returns (ProtocolLib.Position memory, uint256 index) {
-        for(uint256 i = 0; i < _positions.length; i++) {
-            if(_positions[i].id == _positionId) {
-                return (_positions[i], i);
-            }
+    // NEW FUNCTIONS STORAGE v2
+
+    function addPositionToUser(address _user, ProtocolLib.Position memory _position) public onlyProtocol {
+        if (!isUser(_user)) createUser(_user);
+        ProtocolLib.User storage user = users[_user];
+        user.transactionCount++;
+        user.globalPosition.totalPositions++;
+        user.globalPosition.activePositions++;
+        user.globalPosition.positions[user.globalPosition.totalPositions] = _position;
+    }
+
+    function updateUserFullPosition(address _user, uint256 _positionId, ProtocolLib.Position memory _position) public onlyProtocol {
+        ProtocolLib.User storage user = users[_user];
+        user.globalPosition.positions[_positionId] = _position;
+    }
+
+    function updateUserPositionData(address _user, uint256 _positionId, uint256 _positionField, bytes memory _value) public onlyProtocol {
+        ProtocolLib.User storage user = users[_user];
+        if(_positionField >= user.globalPosition.positions[_positionId].positionData.length) {
+            user.globalPosition.positions[_positionId].positionData.push(_value);
+        } else {
+            user.globalPosition.positions[_positionId].positionData[_positionField] = _value;
         }
-        revert("Position not found");
     }
+
+    function updateUserPositionPnl(address _user, uint256 _positionId, int256 _pnlChange) public onlyProtocol {
+        ProtocolLib.User storage user = users[_user];
+        user.globalPosition.positions[_positionId].pnl += _pnlChange;
+    }
+
+    function updateUserPositionIsActive(address _user, uint256 _positionId, bool _isActive) public onlyProtocol {
+        ProtocolLib.User storage user = users[_user];
+        user.globalPosition.positions[_positionId].isActive = _isActive;
+    }
+
+    function updateUserGlobalPnl(address _user, int256 _pnlChange) public onlyProtocol {
+        ProtocolLib.User storage user = users[_user];
+        user.globalPnl += _pnlChange;
+    }
+
+    function addUserData(ProtocolLib.User storage _user, bytes memory _data) internal {
+        _user.userData.push(_data);
+    }
+
+    function updateUserData(address _user, uint256 _dataIndex, bytes memory _data) public onlyProtocol {
+        ProtocolLib.User storage user = users[_user];
+        if(_dataIndex >= user.userData.length) {
+            addUserData(user, _data);
+        } else {
+            user.userData[_dataIndex] = _data;
+        }
+    }
+
+    function decreaseGlobalPositionActivePositions(address _user) public onlyProtocol {
+        ProtocolLib.User storage user = users[_user];
+        user.globalPosition.activePositions--;
+    }
+
+    //____________
+
 
     function getUserPositionById(address _user, uint256 _positionId) public view returns (ProtocolLib.Position memory position) {
-        (position, ) = getUserPosition(users[_user].globalPosition.positions, _positionId);
+        position = users[_user].globalPosition.positions[_positionId];
         return position;
     }
 
     function isUser(address _user) public view returns(bool) {
         return users[_user].id != 0;
-    }
-
-    /**
-     * @notice Retrieves user data for a specific address
-     * @param _user The address of the user to query
-     * @return User struct containing all user data
-     */
-    function getUser(address _user) public view returns(ProtocolLib.User memory) {
-        return users[_user];
     }
 
     /**

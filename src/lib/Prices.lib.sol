@@ -25,7 +25,7 @@ library PricesLib {
         
         AggregatorV3Interface feed = AggregatorV3Interface(priceFeed);
         
-        (, int256 answer, , uint256 updatedAt, ) = feed.latestRoundData();
+        (, int256 answer, , , ) = feed.latestRoundData();
         /*
         require(answer > 0, "Invalid price");
         require(updatedAt > 0, "Price not updated");
@@ -51,7 +51,7 @@ library PricesLib {
         
         AggregatorV3Interface feed = AggregatorV3Interface(priceFeed);
         
-        (, int256 answer, , uint256 updatedAt, ) = feed.latestRoundData();
+        (, int256 answer, , , ) = feed.latestRoundData();
         /*
         require(answer > 0, "Invalid price");
         require(updatedAt > 0, "Price not updated");

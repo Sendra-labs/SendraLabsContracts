@@ -6,7 +6,7 @@ import { ProtocolStorage } from "../../ProtocolStorage.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { MarketNeutralLib } from "../../../lib/MarketNeutral/MarketNeutralLib.sol";
 import { IReader } from "../../../interfaces/GMX/IReader.sol";
-import { GMXPricesV2 } from "../../../periphery/utilsGMX/GMXPricesV2.sol";
+import { GMXPrices } from "../../../periphery/utilsGMX/GMXPrices.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 // GMX Types imports
@@ -104,19 +104,13 @@ contract MarketNeutralReader {
      * @param user User address
      * @param positionId Position ID in ProtocolStorage
      * @return position ProtocolLib.Position struct
-     * @return positionIndex Index of the position in the array
      */
     function getMarketNeutralPosition(
         address user,
         uint256 positionId
-    ) public view returns (ProtocolLib.Position memory position, uint256 positionIndex) {
+    ) public view returns (ProtocolLib.Position memory position) {
         ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        ProtocolLib.User memory userData = protocolStorage.getUser(user);
-        
-        return protocolStorage.getUserPosition(
-            userData.globalPosition.positions,
-            positionId
-        );
+        return protocolStorage.getUserPositionById(user, positionId);
     }
     
     /**
@@ -130,7 +124,7 @@ contract MarketNeutralReader {
         address user,
         uint256 positionId
     ) public view returns (bytes32 longKey, bytes32 shortKey) {
-        (ProtocolLib.Position memory position, ) = getMarketNeutralPosition(user, positionId);
+        ProtocolLib.Position memory position = getMarketNeutralPosition(user, positionId);
         
         longKey = abi.decode(position.positionData[15], (bytes32));
         shortKey = abi.decode(position.positionData[16], (bytes32));
@@ -149,7 +143,7 @@ contract MarketNeutralReader {
         address user,
         uint256 positionId
     ) public view returns (address marketLong, address marketShort) {
-        (ProtocolLib.Position memory position, ) = getMarketNeutralPosition(user, positionId);
+        ProtocolLib.Position memory position = getMarketNeutralPosition(user, positionId);
         
         marketLong = abi.decode(position.positionData[2], (address));
         marketShort = abi.decode(position.positionData[3], (address));
@@ -266,14 +260,7 @@ contract MarketNeutralReader {
     function _getCurrentMarketPrices(
         address market
     ) internal view returns (IReader.MarketPrices memory prices) {
-        GMXPricesV2 gmxPrices = GMXPricesV2(addressProvider.getAddress("GMXPrices"));
-        IReader reader = IReader(addressProvider.getAddress("ReaderGMX"));
-        address dataStore = addressProvider.getAddress("GMXDataStore");
-        
-        // Get market info
-        IReader.Market memory marketProps = reader.getMarket(dataStore, market);
-        
-        // Get prices (adjust according to your GMXPrices implementation)
+        GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));        
         (
             uint256 indexPrice,
             uint256 longPrice,
