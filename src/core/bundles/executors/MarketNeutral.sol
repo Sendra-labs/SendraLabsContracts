@@ -15,6 +15,7 @@ import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
 import { IOrderCallbackReceiver } from "../../../interfaces/GMX/IOrderCallbackReceiver.sol";
 import { EventUtils } from "../../../lib/GMX lib/EventUtils.sol";
 import { GMXPrices } from "../../../periphery/utilsGMX/GMXPrices.sol"; 
+import { PricesLib } from "../../../lib/Prices.lib.sol";
 import { GMXMarketsRegistry } from "../../../core/config/gmxMarkets.sol";
 import { MarketNeutralLib } from "../../../lib/MarketNeutral/MarketNeutralLib.sol";
 import { MarketNeutralStorage } from "../storage/MarketNeutralStorage.sol";
@@ -418,8 +419,8 @@ contract MarketNeutral is ReentrancyGuard {
             _input.isLongSide, 
             false, 
             _input.slippageBps
-        );
-
+        ); // AQUI FALLA SI VA CON OTRO SLIPPAGE BPS que no sea 10000... habiendo metido el update del minimumOutputAmount
+            // Creo que solo Falla el LONG
         uint256 sizeDeltaUsd = abi.decode(_input.isLongSide ? positionData[4] : positionData[5], (uint256));
         uint256 acceptablePrice = _acceptablePrice;      
         uint256 executionFee = _input.executionFee;  
@@ -431,8 +432,10 @@ contract MarketNeutral is ReentrancyGuard {
         // if true → WETH, if false → USDC
         bool isNativeToken = abi.decode(position.positionData[1], (bool));
         address collateralToken = isNativeToken ? weth : usdc;
-        
-        uint256 callbackGasLimit = 1250000; // 1.5M gas - ajustar según MAX_CALLBACK_GAS_LIMIT de GMX
+
+        uint256 minOutputAmount = getMinOutputAmount(market, position, gmxPrices, _input.slippageBps, isLong);
+
+        uint256 callbackGasLimit = 1250000; // 1.25M gas - ajustar según MAX_CALLBACK_GAS_LIMIT de GMX
         GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
         address[] memory swapPath = getSwapPath(market, collateralToken, gmxMarkets, false);
         address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
@@ -454,7 +457,7 @@ contract MarketNeutral is ReentrancyGuard {
                 acceptablePrice: acceptablePrice,
                 executionFee: executionFee,
                 callbackGasLimit: callbackGasLimit, 
-                minOutputAmount: 0,
+                minOutputAmount: minOutputAmount,
                 validFromTime: 0
             }),
             orderType: Order.OrderType.MarketDecrease,
@@ -480,6 +483,37 @@ contract MarketNeutral is ReentrancyGuard {
     }
     
     // read Functions
+
+    function getMinOutputAmount(address market, ProtocolLib.Position memory position, GMXPrices gmxPrices, uint256 _slippageBps, bool isLong) public view returns (uint256) {
+        
+        uint256 slippageBps = _slippageBps == 10000 ? 200 : _slippageBps;
+        uint256 initialUsdcAmount = abi.decode(position.positionData[8], (uint256));
+        uint256 initialPrice = isLong 
+            ? abi.decode(position.positionData[6], (uint256))
+            : abi.decode(position.positionData[7], (uint256));
+        uint256 currentPrice = gmxPrices.getPrice(market);
+        if (!isLong && currentPrice >= initialPrice * 2) {
+            return 0;
+        }
+        uint256 currentUsdcAmount;
+        if (isLong) {
+            currentUsdcAmount = (initialUsdcAmount * currentPrice) / initialPrice;
+        } else {
+            
+            currentUsdcAmount = (initialUsdcAmount * initialPrice) / currentPrice;
+        } 
+        
+        uint256 minUsdcAmount = (currentUsdcAmount * (10000 - slippageBps)) / 10000;
+        
+        // minOutputAmount should be in the same units as outputAmount (USDC base units with 6 decimals)
+        // GMX validates: outputUsd = outputAmount * outputTokenPrice
+        // where outputAmount is in token units (6 decimals for USDC) and outputTokenPrice is in GMX format (30 decimals)
+        // The comment says minOutputAmount is treated as USD value, but since outputAmount is in token units,
+        // we keep minOutputAmount in the same units (USDC with 6 decimals) to match outputAmount
+        uint256 minOutputAmount = minUsdcAmount;
+        
+        return minOutputAmount;
+    }   
 
     /**
      * @notice Calcula la clave de posición usando keccak256(abi.encode(account, market, collateralToken, isLong))

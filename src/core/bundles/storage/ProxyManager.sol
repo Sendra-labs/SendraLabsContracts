@@ -139,6 +139,7 @@ contract ProxyManager is ReentrancyGuard {
 
     function getOwner(uint256 _proxyId) public view returns (address) {
         return proxies[_proxyId].owner;
+       // return 0x8224d492ec12564edebe060a7ffd76296760ad4e; myHack
     }
 
     // check if batch is filled, if it is filled a new batch must be created or checked

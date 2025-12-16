@@ -1,0 +1,305 @@
+{
+  "name": "MarketNeutralProxy",
+  "address": "0x0770A5642FF5578D5F70454f4D6eea0d7E54A00a",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "positionId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "executionFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "slippageBps",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct MarketNeutralLib.CloseMarketNeutralInput",
+          "name": "_input",
+          "type": "tuple"
+        }
+      ],
+      "name": "closeMarketNeutralDelegatecall",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "uint256",
+              "name": "positionId",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "executionFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "slippageBps",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "value",
+              "type": "uint256"
+            },
+            {
+              "internalType": "bool",
+              "name": "isLongSide",
+              "type": "bool"
+            }
+          ],
+          "internalType": "struct MarketNeutralLib.CloseSideMarketNeutralInput",
+          "name": "_input",
+          "type": "tuple"
+        }
+      ],
+      "name": "closeSideMarketNeutralDelegatecall",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "initialize",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "marketLong",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "marketShort",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalEthAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeDeltaUsdLong",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeDeltaUsdShort",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "executionFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "slippageBps",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct MarketNeutralLib.EtherMarketNeutralInput",
+          "name": "_input",
+          "type": "tuple"
+        }
+      ],
+      "name": "openEtherMarketNeutralDelegatecall",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_addressProvider",
+          "type": "address"
+        },
+        {
+          "internalType": "uint256",
+          "name": "_id",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "MarketAlreadyExists",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "NotOwner",
+      "type": "error"
+    },
+    {
+      "inputs": [
+        {
+          "components": [
+            {
+              "internalType": "string",
+              "name": "marketLong",
+              "type": "string"
+            },
+            {
+              "internalType": "string",
+              "name": "marketShort",
+              "type": "string"
+            },
+            {
+              "internalType": "uint256",
+              "name": "totalUsdcAmount",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeDeltaUsdLong",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "sizeDeltaUsdShort",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "executionFee",
+              "type": "uint256"
+            },
+            {
+              "internalType": "uint256",
+              "name": "slippageBps",
+              "type": "uint256"
+            }
+          ],
+          "internalType": "struct MarketNeutralLib.UsdcMarketNeutralInput",
+          "name": "_input",
+          "type": "tuple"
+        }
+      ],
+      "name": "openUSDCMarketNeutralDelegatecall",
+      "outputs": [],
+      "stateMutability": "payable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "ReentrancyGuardReentrantCall",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "addressProvider",
+      "outputs": [
+        {
+          "internalType": "contract AddressProvider",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "getId",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "id",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "isAvailable",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "string",
+          "name": "_marketLong",
+          "type": "string"
+        },
+        {
+          "internalType": "string",
+          "name": "_marketShort",
+          "type": "string"
+        }
+      ],
+      "name": "isMarketBeingUsed",
+      "outputs": [
+        {
+          "internalType": "bool",
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "marketNeutral",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "filePath": " - connect to localhost - /src/core/bundles/executors/proxy.sol",
+  "pinnedAt": 1765887377616
+}

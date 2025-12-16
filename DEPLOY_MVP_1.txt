@@ -79,9 +79,10 @@ Día 03/11/2025 registro:
 0x5d8c56341b787598389f7e00775c18b9dc2c7b6ca334b4c12001374f68f3e515 CLOSE side maneu de la pata logg que abrí antes...
 
 
-["BNBUSDC","PEPEUSDC",8000000,4000000000000000000000000000000,4000000000000000000000000000000,150000000000000,10000]
+["LINKUSDC","PEPEUSDC",8000000,4000000000000000000000000000000,4000000000000000000000000000000,150000000000000,10000]
 [2,200000000000000,10000]
 300000000000000
+150000000000000
 
 == Logs ==
   Deploying contracts...
@@ -89,7 +90,7 @@ Día 03/11/2025 registro:
   --------------------------------
   Roles ------------->   0xa160a99ec745fc1e3aa6b144971225596a26bfb4
   AddressProvider --->  0x81806092f74bEd8B100c29517Fbb5765fBe592f1
-  MarketNeutral ----->  0x9223482EF1dC62B4581B28d39e9bCcA86dE9983d
+  MarketNeutral ----->  0x9223482ef1dc62b4581b28d39e9bcca86de9983d -- 0x152205AEfB707eEE09BCFe8076C0Df52BC869873 
   ProtocolStorage --->  0x7466068FBF3dbe1539c261492802C5d4b1a4ad67 new 0x9a8e26F20cd479FDF34FC3217eaAD27eF7B286EE
   GMXMarketsRegistry ->  0xf36Dc8Fbe1e52891d40032db66Fe2fB8488E6BA1 NEW 0x443f648FEB21B0a9827bC2AC88d2147D91ad9487 
   GMXPrices -------->  0xe6A1135C24064A2a3790F3F2d5F7DFeE088F3ED0
@@ -176,3 +177,5 @@ Tokens que NO tienen Chainlink Price Feed (requieren Pyth o keeper):
 
 ═══════════════════════════════════════════════════════════════════════════════
 
+ExchangeRouterGMX usaba este 0x87d66368cD08a7Ca42252f5ab44B2fb6d1Fb8d15
+Tengo que actualizarlo a este 0x1C3fa76e6E1088bCE750f23a5BFcffa1efEF6A41 por que lo han actualizado parece
