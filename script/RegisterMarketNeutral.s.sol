@@ -16,7 +16,7 @@ contract RegisterMarketNeutral is Script {
         vm.startBroadcast(ADMIN1_PRIVATE_KEY);
         
         AddressProvider addressProvider = AddressProvider(ADDRESS_PROVIDER);
-        addressProvider.setAddress("MarketNeutral", MARKET_NEUTRAL);
+        addressProvider.setAddress("PairTrading", MARKET_NEUTRAL);
         
         vm.stopBroadcast();
     }

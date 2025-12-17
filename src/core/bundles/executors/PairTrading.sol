@@ -1,3 +1,26 @@
+/*
+________________________________________________________________
+
+  █████████                          █████                    
+ ███▒▒▒▒▒███                        ▒▒███                     
+▒███    ▒▒▒   ██████  ████████    ███████  ████████   ██████  
+▒▒█████████  ███▒▒███▒▒███▒▒███  ███▒▒███ ▒▒███▒▒███ ▒▒▒▒▒███ 
+ ▒▒▒▒▒▒▒▒███▒███████  ▒███ ▒███ ▒███ ▒███  ▒███ ▒▒▒   ███████ 
+ ███    ▒███▒███▒▒▒   ▒███ ▒███ ▒███ ▒███  ▒███      ███▒▒███ 
+▒▒█████████ ▒▒██████  ████ █████▒▒████████ █████    ▒▒████████
+ ▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒  ▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒      ▒▒▒▒▒▒▒▒                                        
+                                                              
+ █████                 █████                                  
+▒▒███                 ▒▒███                                   
+ ▒███         ██████   ▒███████   █████                       
+ ▒███        ▒▒▒▒▒███  ▒███▒▒███ ███▒▒                        
+ ▒███         ███████  ▒███ ▒███▒▒█████                       
+ ▒███      █ ███▒▒███  ▒███ ▒███ ▒▒▒▒███                      
+ ███████████▒▒████████ ████████  ██████                       
+▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒                                                                                                                                                    
+________________________________________________________________
+*/
+
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
@@ -17,31 +40,79 @@ import { EventUtils } from "../../../lib/GMX lib/EventUtils.sol";
 import { GMXPrices } from "../../../periphery/utilsGMX/GMXPrices.sol"; 
 import { PricesLib } from "../../../lib/Prices.lib.sol";
 import { GMXMarketsRegistry } from "../../../core/config/gmxMarkets.sol";
-import { MarketNeutralLib } from "../../../lib/MarketNeutral/MarketNeutralLib.sol";
-import { MarketNeutralStorage } from "../storage/MarketNeutralStorage.sol";
+import { PairTradingLib } from "../../../lib/PairTrading/PairTradingLib.sol";
+import { PairTradingStorage } from "../storage/PairTradingStorage.sol";
 import { IWETH } from "../../../interfaces/IWETH.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 import { PositionInitializer } from "./PositionInitializer.sol";
 
-contract MarketNeutral is ReentrancyGuard {
+/**
+ * @title PairTrading
+ * @author 
+ * @notice Executor contract for market neutral trading strategies on GMX
+ * @dev This contract enables users to open simultaneous long and short positions
+ *      in different markets to create market-neutral strategies. It supports both
+ *      ETH and USDC as collateral tokens. The contract handles position initialization,
+ *      order creation on GMX, and position closure through callbacks.
+ * 
+ *      Key features:
+ *      - Market neutral position opening (long + short simultaneously)
+ *      - Support for ETH and USDC collateral
+ *      - Position closing with callback handling
+ *      - Slippage protection via acceptable price calculations
+ *      - Automatic position key generation and storage
+ */
+contract PairTrading is ReentrancyGuard {
     using SafeERC20 for IERC20;
     using EventUtils for EventUtils.AddressItems;
     using EventUtils for EventUtils.UintItems;
     using EventUtils for EventUtils.IntItems;
     using EventUtils for EventUtils.BoolItems;
 
+    /// @notice Address provider that stores all protocol addresses
     AddressProvider public immutable addressProvider;
     
+    /**
+     * @notice Constructs the PairTrading contract
+     * @param _addressProvider Address of the AddressProvider contract
+     */
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
     }
 
+    /**
+     * @notice Modifier to restrict function access to protocol contracts only
+     * @dev Checks if the caller is a registered protocol contract via Roles
+     */
     modifier onlyProtocol() {
         if(!Roles(addressProvider.getAddress("Roles")).isProtocolContract(msg.sender)) revert SenderNotAllowed();
         _;
     }
 
-    function openEtherMarketNeutral(MarketNeutralLib.EtherMarketNeutralInput calldata _input) public payable {
+    /**
+     * @notice Opens a market neutral strategy using ETH as collateral
+     * @dev Divides the provided ETH equally into two parts and simultaneously opens:
+     *      - A long position in the specified market (_input.marketLong)
+     *      - A short position in the specified market (_input.marketShort)
+     * 
+     *      The function calculates acceptable prices with slippage, initializes position
+     *      data in protocol storage, and executes both orders on GMX.
+     * 
+     * @param _input Input parameters containing:
+     *        - totalEthAmount: Total amount of ETH to be divided between long and short
+     *        - marketLong: Market identifier for the long position
+     *        - marketShort: Market identifier for the short position
+     *        - sizeDeltaUsdLong: Size of the long position in USD
+     *        - sizeDeltaUsdShort: Size of the short position in USD
+     *        - slippageBps: Allowed slippage in basis points (1 = 0.01%)
+     *        - executionFee: Execution fee for each order on GMX
+     * 
+     * @custom:require msg.value >= (totalEthAmount / 2 + executionFee) * 2
+     *           The sent value must cover half of ETH for each position plus execution fee for both orders
+     * 
+     * @custom:emit PositionOpened Emitted twice, once for each opened position (long and short)
+     */
+    function openEtherPairTrading(PairTradingLib.EtherPairTradingInput calldata _input) public payable {
         GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices")); //OPTIMIZATION
         GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets")); //OPTIMIZATION
 
@@ -94,15 +165,13 @@ contract MarketNeutral is ReentrancyGuard {
         //17 {1, proxy address}
 
         uint256 _value = (_input.totalEthAmount / 2) + _input.executionFee;
-        uint256 totalValueNeeded = _value * 2; // Value necesario para ambas llamadas
+        uint256 totalValueNeeded = _value * 2; 
         
-        // Verificar que msg.value sea suficiente
         require(msg.value >= totalValueNeeded, "Insufficient msg.value");
         
         initializePosition(newPositionData, 0);
         
-        // Preparar parámetros para posición Long
-        MarketNeutralLib.EtherOneSideTradeInput memory longInput = MarketNeutralLib.EtherOneSideTradeInput({
+        PairTradingLib.EtherOneSideTradeInput memory longInput = PairTradingLib.EtherOneSideTradeInput({
             ethAmount: _input.totalEthAmount / 2,
             sizeDeltaUsd: _input.sizeDeltaUsdLong,
             acceptablePrice: aceptablePriceLong,
@@ -113,8 +182,7 @@ contract MarketNeutral is ReentrancyGuard {
             receiver: msg.sender
         });
         
-        // Preparar parámetros para posición Short
-        MarketNeutralLib.EtherOneSideTradeInput memory shortInput = MarketNeutralLib.EtherOneSideTradeInput({
+        PairTradingLib.EtherOneSideTradeInput memory shortInput = PairTradingLib.EtherOneSideTradeInput({
             ethAmount: _input.totalEthAmount / 2,
             sizeDeltaUsd: _input.sizeDeltaUsdShort,
             acceptablePrice: aceptablePriceShort,
@@ -129,7 +197,32 @@ contract MarketNeutral is ReentrancyGuard {
         openPositionWithEther(shortInput);
     }
 
-    function openUSDCMarketNeutral(MarketNeutralLib.UsdcMarketNeutralInput calldata _input) public payable {
+    /**
+     * @notice Opens a market neutral strategy using USDC as collateral
+     * @dev Divides the provided USDC equally into two parts and simultaneously opens:
+     *      - A long position in the specified market (_input.marketLong)
+     *      - A short position in the specified market (_input.marketShort)
+     * 
+     *      The function calculates acceptable prices with slippage, transfers USDC from
+     *      the user, initializes position data in protocol storage, and executes both
+     *      orders on GMX.
+     * 
+     * @param _input Input parameters containing:
+     *        - totalUsdcAmount: Total amount of USDC to be divided between long and short
+     *        - marketLong: Market identifier for the long position
+     *        - marketShort: Market identifier for the short position
+     *        - sizeDeltaUsdLong: Size of the long position in USD
+     *        - sizeDeltaUsdShort: Size of the short position in USD
+     *        - slippageBps: Allowed slippage in basis points (1 = 0.01%)
+     *        - executionFee: Execution fee for each order on GMX
+     * 
+     * @custom:require User must have approved this contract to spend totalUsdcAmount USDC
+     * @custom:require msg.value >= executionFee * 2
+     *           The sent value must cover execution fees for both orders
+     * 
+     * @custom:emit PositionOpened Emitted twice, once for each opened position (long and short)
+     */
+    function openUSDCPairTrading(PairTradingLib.UsdcPairTradingInput calldata _input) public payable {
         GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
         GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
         // metemos transfer de USDC entry fee aqui 0.1% if(entry fee isActivated)
@@ -139,7 +232,7 @@ contract MarketNeutral is ReentrancyGuard {
         
         bytes[] memory newPositionData = new bytes[](18);
         newPositionData[0] = abi.encode(_input.totalUsdcAmount);
-        newPositionData[1] = abi.encode(false); // isNativeToken = false para USDC
+        newPositionData[1] = abi.encode(false); // isNativeToken = false if is USDC
         newPositionData[2] = abi.encode(gmxMarkets.getMarket(_input.marketLong));
         newPositionData[3] = abi.encode(gmxMarkets.getMarket(_input.marketShort));
         newPositionData[4] = abi.encode(_input.sizeDeltaUsdLong); 
@@ -152,7 +245,7 @@ contract MarketNeutral is ReentrancyGuard {
         newPositionData[11] = abi.encode(uint256(0));  // finalUsdValue
         newPositionData[12] = abi.encode(uint256(0));  // finalPriceTokenLong
         newPositionData[13] = abi.encode(uint256(0));  // finalPriceTokenShort
-        newPositionData[14] = abi.encode(int256(0));  // PNL
+        newPositionData[14] = abi.encode(int256(0));  // PNL  we can Delete This One
 
         address usdc = addressProvider.getAddress("USDC");
         bytes32 longKey = calculatePositionKey(address(this), gmxMarkets.getMarket(_input.marketLong), usdc, true);
@@ -190,7 +283,7 @@ contract MarketNeutral is ReentrancyGuard {
         uint256 _value = msg.value / 2;
         initializePosition(newPositionData, 0);
         
-        MarketNeutralLib.UsdcOneSideTradeInput memory longInput = MarketNeutralLib.UsdcOneSideTradeInput({
+        PairTradingLib.UsdcOneSideTradeInput memory longInput = PairTradingLib.UsdcOneSideTradeInput({
             usdcAmount: _input.totalUsdcAmount / 2,
             sizeDeltaUsd: _input.sizeDeltaUsdLong,
             acceptablePrice: aceptablePriceLong,
@@ -201,7 +294,7 @@ contract MarketNeutral is ReentrancyGuard {
             receiver: msg.sender
         });
         
-        MarketNeutralLib.UsdcOneSideTradeInput memory shortInput = MarketNeutralLib.UsdcOneSideTradeInput({
+        PairTradingLib.UsdcOneSideTradeInput memory shortInput = PairTradingLib.UsdcOneSideTradeInput({
             usdcAmount: _input.totalUsdcAmount / 2,
             sizeDeltaUsd: _input.sizeDeltaUsdShort,
             acceptablePrice: aceptablePriceShort,
@@ -216,12 +309,36 @@ contract MarketNeutral is ReentrancyGuard {
         openPositionWithUSDC(shortInput);
     }
 
+    /**
+     * @notice Initializes a new position in protocol storage
+     * @dev Delegates position initialization to the PositionInitializer contract
+     * @param _newPositionData Array of encoded position parameters
+     * @param _positionType Type identifier for the position (0 for market neutral)
+     */
     function initializePosition(bytes[] memory _newPositionData, uint128 _positionType) internal {
         PositionInitializer positionInitializer = PositionInitializer(addressProvider.getAddress("PositionInitializer"));
         positionInitializer.initializePosition(_newPositionData, _positionType, msg.sender);
     }
 
-    function openPositionWithEther(MarketNeutralLib.EtherOneSideTradeInput memory _input) public payable {
+    /**
+     * @notice Opens a single position using ETH as collateral on GMX
+     * @dev Creates a market increase order on GMX ExchangeRouter. The ETH is wrapped to WETH
+     *      and sent to GMX OrderVault along with the execution fee. The order is created as
+     *      a MarketIncrease order type.
+     * 
+     * @param _input Input parameters containing:
+     *        - ethAmount: Amount of ETH to use as collateral
+     *        - sizeDeltaUsd: Size of the position in USD
+     *        - acceptablePrice: Maximum/minimum acceptable price depending on direction
+     *        - executionFee: Fee paid to GMX for order execution
+     *        - value: Total ETH value to send (ethAmount + executionFee)
+     *        - market: Market identifier
+     *        - isLong: Whether this is a long (true) or short (false) position
+     *        - receiver: Address that will receive the position
+     * 
+     * @custom:emit PositionOpened Emitted when the order is successfully created
+     */
+    function openPositionWithEther(PairTradingLib.EtherOneSideTradeInput memory _input) public payable {
 
         uint256 ethAmount = _input.ethAmount;            
         uint256 sizeDeltaUsd = _input.sizeDeltaUsd;         
@@ -283,7 +400,27 @@ contract MarketNeutral is ReentrancyGuard {
         emit PositionOpened(receiver, market, weth, ethAmount, sizeDeltaUsd, isLong);
     }
 
-    function openPositionWithUSDC(MarketNeutralLib.UsdcOneSideTradeInput memory _input) public payable {
+    /**
+     * @notice Opens a single position using USDC as collateral on GMX
+     * @dev Creates a market increase order on GMX ExchangeRouter. The USDC is transferred
+     *      from the caller, approved to GMX Router, and sent to GMX OrderVault. If the market
+     *      requires a different collateral token, a swap path is configured.
+     * 
+     * @param _input Input parameters containing:
+     *        - usdcAmount: Amount of USDC to use as collateral
+     *        - sizeDeltaUsd: Size of the position in USD
+     *        - acceptablePrice: Maximum/minimum acceptable price depending on direction
+     *        - executionFee: Fee paid to GMX for order execution
+     *        - value: ETH value to send for execution fee
+     *        - market: Market identifier
+     *        - isLong: Whether this is a long (true) or short (false) position
+     *        - receiver: Address that will receive the position
+     * 
+     * @custom:require User must have approved this contract to spend usdcAmount USDC
+     * 
+     * @custom:emit PositionOpened Emitted when the order is successfully created
+     */
+    function openPositionWithUSDC(PairTradingLib.UsdcOneSideTradeInput memory _input) public payable {
 
         uint256 usdcAmount = _input.usdcAmount;
         uint256 sizeDeltaUsd = _input.sizeDeltaUsd;
@@ -300,7 +437,7 @@ contract MarketNeutral is ReentrancyGuard {
         address orderVault = addressProvider.getAddress("OrderVaultGMX");
         
         IERC20(usdc).transferFrom(msg.sender, address(this), usdcAmount);
-        IERC20(usdc).approve(_router, usdcAmount);
+        IERC20(usdc).approve(_router, usdcAmount); // We can do an infinite approval in the PROXIES constructor for gas optimization or Approve just one time in the openUSDCPairTrading function 
         
         IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
             addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
@@ -310,7 +447,7 @@ contract MarketNeutral is ReentrancyGuard {
                 uiFeeReceiver: address(0),
                 market: market,
                 initialCollateralToken: usdc,
-                swapPath: getSwapPath(market, usdc, gmxMarkets, true)
+                swapPath: getSwapPath(market, usdc, gmxMarkets, true) // I think every available market has USDC as collateral token, we can remove this function.
             }),
             numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
                 sizeDeltaUsd: sizeDeltaUsd,
@@ -353,6 +490,21 @@ contract MarketNeutral is ReentrancyGuard {
         emit PositionOpened(receiver, market, usdc, usdcAmount, sizeDeltaUsd, isLong);
     }
 
+    /**
+     * @notice Calculates the swap path for collateral token conversion
+     * @dev Returns an empty array if no swap is needed, otherwise returns a 2-token path
+     *      for swapping between the initial collateral token and the market's required collateral token
+     * 
+     * @param _market Address of the GMX market
+     * @param _initialCollateralToken The collateral token being provided (WETH or USDC)
+     * @param _gmxMarkets GMXMarketsRegistry instance to query market collateral token
+     * @param isIncrease Whether this is for opening (true) or closing (false) a position
+     * 
+     * @return swapPath Array of token addresses for the swap path:
+     *         - Empty array if no swap needed
+     *         - [initialCollateralToken, marketCollateralToken] for increase orders
+     *         - [marketCollateralToken, initialCollateralToken] for decrease orders
+     */
     function getSwapPath(
         address _market, 
         address _initialCollateralToken,
@@ -377,28 +529,46 @@ contract MarketNeutral is ReentrancyGuard {
         }
     }
 
-    function closeMarketNeutral(MarketNeutralLib.CloseMarketNeutralInput calldata _input) public payable {
+    /**
+     * @notice Closes both sides of a market neutral position simultaneously
+     * @dev Splits the provided execution fee equally and closes both the long and short
+     *      positions associated with the given position ID. Both orders are submitted
+     *      to GMX for execution.
+     * 
+     * @param _input Input parameters containing:
+     *        - positionId: ID of the market neutral position to close
+     *        - executionFee: Total execution fee to be split between both orders
+     *        - slippageBps: Allowed slippage in basis points for closing
+     * 
+     * @custom:require msg.value >= executionFee
+     *           The sent value must cover the total execution fee for both orders
+     * 
+     * @custom:require Position must be active
+     * 
+     * @custom:emit PositionClosed Emitted twice, once for each closed position (long and short)
+     */
+    function closePairTrading(PairTradingLib.ClosePairTradingInput calldata _input) public payable {
         uint256 _value = msg.value / 2;
-        MarketNeutralLib.CloseSideMarketNeutralInput memory longSideInput = MarketNeutralLib.CloseSideMarketNeutralInput({
+        PairTradingLib.CloseSidePairTradingInput memory longSideInput = PairTradingLib.CloseSidePairTradingInput({
             positionId: _input.positionId,
             executionFee: _input.executionFee,
             slippageBps: _input.slippageBps,
             value: _value,
             isLongSide: true
         });
-        MarketNeutralLib.CloseSideMarketNeutralInput memory shortSideInput = MarketNeutralLib.CloseSideMarketNeutralInput({
+        PairTradingLib.CloseSidePairTradingInput memory shortSideInput = PairTradingLib.CloseSidePairTradingInput({
             positionId: _input.positionId,
             executionFee: _input.executionFee,
             slippageBps: _input.slippageBps,
             value: _value,
             isLongSide: false
         });
-        closeSideMarketNeutral(longSideInput);
-        closeSideMarketNeutral(shortSideInput);
+        closeSidePairTrading(longSideInput);
+        closeSidePairTrading(shortSideInput);
     }
 
 
-    function closeSideMarketNeutral( MarketNeutralLib.CloseSideMarketNeutralInput memory _input ) public payable {
+    function closeSidePairTrading( PairTradingLib.CloseSidePairTradingInput memory _input ) public payable {
 
         ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
         address weth = addressProvider.getAddress("WETH");
@@ -435,23 +605,23 @@ contract MarketNeutral is ReentrancyGuard {
 
         uint256 minOutputAmount = getMinOutputAmount(market, position, gmxPrices, _input.slippageBps, isLong);
 
-        uint256 callbackGasLimit = 1250000; // 1.25M gas - ajustar según MAX_CALLBACK_GAS_LIMIT de GMX
+        uint256 callbackGasLimit = 1250000; // 1.25M gas
         GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
         address[] memory swapPath = getSwapPath(market, collateralToken, gmxMarkets, false);
         address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
 
         IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
             addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
-                receiver:  callbackContract, // Funds come to the contract first (for security in callbacks)
+                receiver:  callbackContract,
                 cancellationReceiver: receiver,
-                callbackContract: callbackContract, // afterOrderExecution() para actualizar storage y transferir fondos
+                callbackContract: callbackContract,
                 uiFeeReceiver: address(0),
                 market: market,
                 initialCollateralToken: swapPath.length > 0 ? swapPath[0] : collateralToken, 
                 swapPath: swapPath
             }),
             numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
-                sizeDeltaUsd: sizeDeltaUsd, //-
+                sizeDeltaUsd: sizeDeltaUsd,
                 initialCollateralDeltaAmount: 0,
                 triggerPrice: 0,
                 acceptablePrice: acceptablePrice,
@@ -475,15 +645,30 @@ contract MarketNeutral is ReentrancyGuard {
         
         bytes32 key = exchangeRouterInstance.createOrder(orderParams);
 
-        MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).updatePendingOrder(key, MarketNeutralLib.PendingOrder(receiver, address(this), positionId, true));
+        PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).updatePendingOrder(key, PairTradingLib.PendingOrder(receiver, address(this), positionId, true));
         
-        MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage")).addUserPendingOrderKey(receiver, key);
+        PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).addUserPendingOrderKey(receiver, key);
 
         emit PositionClosed(receiver, market, sizeDeltaUsd, isLong); 
     }
     
     // read Functions
 
+    /**
+     * @notice Calculates the minimum output amount when closing a position
+     * @dev Computes the expected output value based on price changes and applies slippage
+     *      protection. For short positions, returns 0 if price has doubled or more.
+     *      Uses a default slippage of 200 bps (2%) if slippageBps is 10000.
+     * 
+     * @param market Address of the GMX market
+     * @param position The position data containing initial values and prices
+     * @param gmxPrices GMXPrices instance to query current market price
+     * @param _slippageBps Allowed slippage in basis points (10000 = use default 200 bps)
+     * @param isLong Whether this is for a long (true) or short (false) position
+     * 
+     * @return minOutputAmount Minimum acceptable output amount in USDC (6 decimals)
+     *         Returns 0 for short positions if currentPrice >= initialPrice * 2
+     */
     function getMinOutputAmount(address market, ProtocolLib.Position memory position, GMXPrices gmxPrices, uint256 _slippageBps, bool isLong) public view returns (uint256) {
         
         uint256 slippageBps = _slippageBps == 10000 ? 200 : _slippageBps;
@@ -516,12 +701,13 @@ contract MarketNeutral is ReentrancyGuard {
     }   
 
     /**
-     * @notice Calcula la clave de posición usando keccak256(abi.encode(account, market, collateralToken, isLong))
-     * @param account Dirección del contrato (msg.sender)
-     * @param market Dirección del mercado
-     * @param collateralToken Token de colateral (WETH o USDC)
-     * @param isLong Si es posición long o short
-     * @return positionKey La clave calculada
+     * @notice Calculates the position key using keccak256(abi.encode(account, market, collateralToken, isLong))
+     * @dev This key uniquely identifies a position on GMX and is used for position lookups
+     * @param account Address of the account holding the position
+     * @param market Address of the GMX market
+     * @param collateralToken Address of the collateral token (WETH or USDC)
+     * @param isLong Whether this is a long (true) or short (false) position
+     * @return positionKey The calculated keccak256 hash identifying the position
      */
     function calculatePositionKey(
         address account,
@@ -532,6 +718,17 @@ contract MarketNeutral is ReentrancyGuard {
         positionKey = keccak256(abi.encode(account, market, collateralToken, isLong));
     }
 
+    /**
+     * @notice Calculates the leverage ratio for a position
+     * @dev Leverage = (sizeDeltaUsd / 1e24) * 1e18 / collateralAmount
+     *      Adjusts for GMX's 30-decimal price format (sizeDeltaUsd has 30 decimals)
+     * 
+     * @param collateralAmount Amount of collateral in token units (with 18 decimals for ETH/WETH)
+     * @param sizeDeltaUsd Position size in USD with 30 decimals (GMX format)
+     * 
+     * @return leverage The leverage ratio scaled by 1e18 (e.g., 1e18 = 1x, 2e18 = 2x)
+     *         Returns 0 if collateralAmount is 0
+     */
     function calculateLeverage(uint256 collateralAmount, uint256 sizeDeltaUsd) public pure returns (uint256) {
         if (collateralAmount == 0) return 0;
         
@@ -541,6 +738,17 @@ contract MarketNeutral is ReentrancyGuard {
         return (adjustedSizeDelta * 1e18) / collateralAmount;
     }
   
+    /**
+     * @notice Calculates the required collateral amount for a target leverage
+     * @dev Collateral = (sizeDeltaUsd / 1e24) * 1e18 / leverage
+     *      Adjusts for GMX's 30-decimal price format (sizeDeltaUsd has 30 decimals)
+     * 
+     * @param sizeDeltaUsd Target position size in USD with 30 decimals (GMX format)
+     * @param leverage Target leverage ratio scaled by 1e18 (e.g., 2e18 = 2x leverage)
+     * 
+     * @return collateralAmount Required collateral amount in token units (with 18 decimals)
+     *         Returns 0 if leverage is 0
+     */
     function calculateCollateralForLeverage(uint256 sizeDeltaUsd, uint256 leverage) public pure returns (uint256) {
         if (leverage == 0) return 0;
         
@@ -551,6 +759,15 @@ contract MarketNeutral is ReentrancyGuard {
 
     // events
 
+    /**
+     * @notice Emitted when a position order is successfully created on GMX
+     * @param receiver Address that will receive the position ownership
+     * @param market Address of the GMX market
+     * @param collateralToken Address of the collateral token used
+     * @param collateralAmount Amount of collateral deposited
+     * @param sizeDeltaUsd Size of the position in USD
+     * @param isLong Whether this is a long (true) or short (false) position
+     */
     event PositionOpened(
         address indexed receiver,
         address indexed market,
@@ -560,6 +777,13 @@ contract MarketNeutral is ReentrancyGuard {
         bool isLong
     );
     
+    /**
+     * @notice Emitted when a position close order is successfully created on GMX
+     * @param receiver Address that will receive the returned funds
+     * @param market Address of the GMX market
+     * @param sizeDeltaUsd Size of the position being closed in USD
+     * @param isLong Whether this is for a long (true) or short (false) position
+     */
     event PositionClosed(
         address indexed receiver,
         address indexed market,
@@ -568,9 +792,18 @@ contract MarketNeutral is ReentrancyGuard {
     );
 
 
+    /// @notice Thrown when the caller is not authorized (not a protocol contract)
     error SenderNotAllowed();
+    
+    /// @notice Thrown when required parameters are missing or invalid
     error InsufficientParameters();
+    
+    /// @notice Thrown when an invalid market address is provided
     error InvalidMarket();
+    
+    /// @notice Thrown when an invalid collateral token is provided
     error InvalidCollateralToken();
+    
+    /// @notice Thrown when attempting to operate on an inactive position
     error PositionNotActive();
 }

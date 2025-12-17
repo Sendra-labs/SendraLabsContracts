@@ -3,7 +3,7 @@ pragma solidity ^0.8.13;
 
 import {Script} from "forge-std/Script.sol";
 import { AddressProvider } from "../src/core/config/AddressProvider.sol";
-import { MarketNeutral } from "../src/core/bundles/executors/MarketNeutral.sol";
+import { PairTrading } from "../src/core/bundles/executors/PairTrading.sol";
 
 contract DeployMarketNeutral is Script {
 
@@ -17,9 +17,9 @@ contract DeployMarketNeutral is Script {
         
         vm.startBroadcast(ADMIN1_PRIVATE_KEY);
         
-        MarketNeutral marketNeutral = new MarketNeutral(ADDRESS_PROVIDER);
+        PairTrading pairTrading = new PairTrading(ADDRESS_PROVIDER);
         AddressProvider addressProvider = AddressProvider(ADDRESS_PROVIDER);
-        addressProvider.setAddress("MarketNeutral", address(marketNeutral));
+        addressProvider.setAddress("PairTrading", address(pairTrading));
         
         vm.stopBroadcast();
     }

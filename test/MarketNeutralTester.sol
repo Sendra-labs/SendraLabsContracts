@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { MarketNeutral } from "../src/core/bundles/executors/MarketNeutral.sol";
-import { MarketNeutralLib } from "../src/lib/MarketNeutral/MarketNeutralLib.sol";
+import { PairTrading } from "../src/core/bundles/executors/PairTrading.sol";
+import { PairTradingLib } from "../src/lib/PairTrading/PairTradingLib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { AddressProvider } from "../src/core/config/AddressProvider.sol";
@@ -11,14 +11,14 @@ import { ClosePositionCallbacks } from "../src/core/bundles/executors/callbacks/
 contract NewMarketNeutralTester {
     using SafeERC20 for IERC20;
     
-    MarketNeutral public marketNeutral;
+    PairTrading public pairTrading;
     AddressProvider public addressProvider;
     ClosePositionCallbacks public closePositionCallbacks;
 
     address public immutable deployer;
 
-    constructor(address _marketNeutral) {
-        marketNeutral = MarketNeutral(_marketNeutral);
+    constructor(address _pairTrading) {
+        pairTrading = PairTrading(_pairTrading);
         deployer = msg.sender;
     }
 
@@ -27,16 +27,16 @@ contract NewMarketNeutralTester {
         _;
     }
 
-    function setMarketNeutral(address _marketNeutral) external {
-        marketNeutral = MarketNeutral(_marketNeutral);
+    function setMarketNeutral(address _pairTrading) external {
+        pairTrading = PairTrading(_pairTrading);
     }
 
     function setContractsAddressProvAndMarkNeu(address _addressProvider) external {
         addressProvider = AddressProvider(_addressProvider);
-        marketNeutral = MarketNeutral(addressProvider.getAddress("MarketNeutral"));
+        pairTrading = PairTrading(addressProvider.getAddress("PairTrading"));
     }
 
-    // Test openEtherMarketNeutral
+    // Test openEtherPairTrading
     function testOpenEtherMarketNeutral(
         string memory marketLong,
         string memory marketShort,
@@ -46,7 +46,7 @@ contract NewMarketNeutralTester {
         uint256 executionFee,
         uint256 slippageBps
     ) external payable {
-        MarketNeutralLib.EtherMarketNeutralInput memory input = MarketNeutralLib.EtherMarketNeutralInput({
+        PairTradingLib.EtherPairTradingInput memory input = PairTradingLib.EtherPairTradingInput({
             marketLong: marketLong,
             marketShort: marketShort,
             totalEthAmount: totalEthAmount,
@@ -56,7 +56,7 @@ contract NewMarketNeutralTester {
             slippageBps: slippageBps
         });
         
-        marketNeutral.openEtherMarketNeutral{value: msg.value}(input);
+        pairTrading.openEtherPairTrading{value: msg.value}(input);
     }
 
     // Test openPositionWithEther (one side)
@@ -70,7 +70,7 @@ contract NewMarketNeutralTester {
         bool isLong,
         address receiver
     ) external payable {
-        MarketNeutralLib.EtherOneSideTradeInput memory input = MarketNeutralLib.EtherOneSideTradeInput({
+        PairTradingLib.EtherOneSideTradeInput memory input = PairTradingLib.EtherOneSideTradeInput({
             ethAmount: ethAmount,
             sizeDeltaUsd: sizeDeltaUsd,
             acceptablePrice: acceptablePrice,
@@ -81,10 +81,10 @@ contract NewMarketNeutralTester {
             receiver: receiver
         });
         
-        marketNeutral.openPositionWithEther{value: msg.value}(input);
+        pairTrading.openPositionWithEther{value: msg.value}(input);
     }
 
-    // Test openUSDCMarketNeutral
+    // Test openUSDCPairTrading
     function testOpenUSDCMarketNeutral(
         string memory marketLong,
         string memory marketShort,
@@ -96,8 +96,8 @@ contract NewMarketNeutralTester {
     ) external payable {
         address usdc = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
         IERC20(usdc).transferFrom(msg.sender, address(this), totalUsdcAmount);
-        IERC20(usdc).approve(address(marketNeutral), totalUsdcAmount);
-        MarketNeutralLib.UsdcMarketNeutralInput memory input = MarketNeutralLib.UsdcMarketNeutralInput({
+        IERC20(usdc).approve(address(pairTrading), totalUsdcAmount);
+        PairTradingLib.UsdcPairTradingInput memory input = PairTradingLib.UsdcPairTradingInput({
             marketLong: marketLong,
             marketShort: marketShort,
             totalUsdcAmount: totalUsdcAmount,
@@ -109,7 +109,7 @@ contract NewMarketNeutralTester {
         
         // msg.value debe ser executionFee * 2 (uno para cada lado)
         require(msg.value >= executionFee * 2, "Insufficient msg.value");
-        marketNeutral.openUSDCMarketNeutral{value: msg.value}(input);
+        pairTrading.openUSDCPairTrading{value: msg.value}(input);
     }
 
     // Test openPositionWithUSDC (one side)
@@ -123,7 +123,7 @@ contract NewMarketNeutralTester {
         bool isLong,
         address receiver
     ) external payable {
-        MarketNeutralLib.UsdcOneSideTradeInput memory input = MarketNeutralLib.UsdcOneSideTradeInput({
+        PairTradingLib.UsdcOneSideTradeInput memory input = PairTradingLib.UsdcOneSideTradeInput({
             usdcAmount: usdcAmount,
             sizeDeltaUsd: sizeDeltaUsd,
             acceptablePrice: acceptablePrice,
@@ -134,25 +134,25 @@ contract NewMarketNeutralTester {
             receiver: receiver
         });
         
-        marketNeutral.openPositionWithUSDC{value: msg.value}(input);
+        pairTrading.openPositionWithUSDC{value: msg.value}(input);
     }
 
-    // Test closeMarketNeutral
+    // Test closePairTrading
     function testCloseMarketNeutral(
         uint256 positionId,
         uint256 executionFee,
         uint256 slippageBps
     ) external payable {
-        MarketNeutralLib.CloseMarketNeutralInput memory input = MarketNeutralLib.CloseMarketNeutralInput({
+        PairTradingLib.ClosePairTradingInput memory input = PairTradingLib.ClosePairTradingInput({
             positionId: positionId,
             executionFee: executionFee,
             slippageBps: slippageBps
         });
         
-        marketNeutral.closeMarketNeutral{value: msg.value}(input);
+        pairTrading.closePairTrading{value: msg.value}(input);
     }
 
-    // Test closeSideMarketNeutral
+    // Test closeSidePairTrading
     function testCloseSideMarketNeutral(
         uint256 positionId,
         uint256 executionFee,
@@ -160,7 +160,7 @@ contract NewMarketNeutralTester {
         uint256 value,
         bool isLongSide
     ) external payable {
-        MarketNeutralLib.CloseSideMarketNeutralInput memory input = MarketNeutralLib.CloseSideMarketNeutralInput({
+        PairTradingLib.CloseSidePairTradingInput memory input = PairTradingLib.CloseSidePairTradingInput({
             positionId: positionId,
             executionFee: executionFee,
             slippageBps: slippageBps,
@@ -168,17 +168,17 @@ contract NewMarketNeutralTester {
             isLongSide: isLongSide
         });
         
-        marketNeutral.closeSideMarketNeutral{value: msg.value}(input);
+        pairTrading.closeSidePairTrading{value: msg.value}(input);
     }
 
     // Helper: Calculate leverage
     function calculateLeverage(uint256 collateralAmount, uint256 sizeDeltaUsd) external view returns (uint256) {
-        return marketNeutral.calculateLeverage(collateralAmount, sizeDeltaUsd);
+        return pairTrading.calculateLeverage(collateralAmount, sizeDeltaUsd);
     }
 
     // Helper: Calculate collateral for leverage
     function calculateCollateralForLeverage(uint256 sizeDeltaUsd, uint256 leverage) external view returns (uint256) {
-        return marketNeutral.calculateCollateralForLeverage(sizeDeltaUsd, leverage);
+        return pairTrading.calculateCollateralForLeverage(sizeDeltaUsd, leverage);
     }
 
     // Helper: Calculate position key
@@ -188,7 +188,7 @@ contract NewMarketNeutralTester {
         address collateralToken,
         bool isLong
     ) external view returns (bytes32) {
-        return marketNeutral.calculatePositionKey(account, market, collateralToken, isLong);
+        return pairTrading.calculatePositionKey(account, market, collateralToken, isLong);
     }
 
     // Withdraw tokens (only deployer)

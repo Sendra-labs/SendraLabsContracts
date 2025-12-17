@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
 
-import {Script} from "forge-std/Script.sol";
+import {Script, console} from "forge-std/Script.sol";
 import { AddressProvider } from "../src/core/config/AddressProvider.sol";
 import { Roles } from "../src/security/Roles.sol";
-import { MarketNeutral } from "../src/core/bundles/executors/MarketNeutral.sol";
+import { PairTrading } from "../src/core/bundles/executors/PairTrading.sol";
 import { ProtocolStorage } from "../src/core/ProtocolStorage.sol";
 import { GMXMarketsRegistry } from "../src/core/config/gmxMarkets.sol";
 import { GMXPrices } from "../src/periphery/utilsGMX/GMXPrices.sol";
 import { ProxyFactory } from "../src/core/bundles/executors/ProxyFactory.sol";
 import { ProxyManager } from "../src/core/bundles/storage/ProxyManager.sol";
-import { MarketNeutralStorage } from "../src/core/bundles/storage/MarketNeutralStorage.sol";
+import { PairTradingStorage } from "../src/core/bundles/storage/PairTradingStorage.sol";
 import { ClosePositionCallbacks } from "../src/core/bundles/executors/callbacks/ClosePositionCallbacks.sol";
-import { MarketNeutralReader } from "../src/core/bundles/readers/marketNeutralReader.sol";
+import { PairTradingReader } from "../src/core/bundles/readers/pairTradingReader.sol";
 import { MainReader } from "../src/core/MainReader.sol";
 import { PositionInitializer } from "../src/core/bundles/executors/PositionInitializer.sol";
 import { ProxyAccessControl } from "../src/core/bundles/security/proxyAccessControl.sol";
@@ -23,15 +23,15 @@ contract Deploy is Script {
 
     AddressProvider public addressProvider;
     Roles public roles;
-    MarketNeutral public marketNeutral;
+    PairTrading public pairTrading;
     ProtocolStorage public protocolStorage;
     GMXMarketsRegistry public gmxMarketsRegistry;
     GMXPrices public gmxPrices;
     ProxyFactory public proxyFactory;
     ProxyManager public proxyManager;
-    MarketNeutralStorage public marketNeutralStorage;
+    PairTradingStorage public pairTradingStorage;
     ClosePositionCallbacks public closePositionCallbacks;
-    MarketNeutralReader public marketNeutralReader;
+    PairTradingReader public pairTradingReader;
     MainReader public mainReader;
     PositionInitializer public positionInitializer;
     ProxyAccessControl public proxyAccessControl;
@@ -68,10 +68,10 @@ contract Deploy is Script {
         protocolStorage = new ProtocolStorage(address(roles));
         gmxMarketsRegistry = new GMXMarketsRegistry(address(roles));
         scriptSetAddresses(address(gmxMarketsRegistry), "GMXMarkets");
-        marketNeutral = new MarketNeutral(address(addressProvider));
-        marketNeutralStorage = new MarketNeutralStorage(address(addressProvider));
+        pairTrading = new PairTrading(address(addressProvider));
+        pairTradingStorage = new PairTradingStorage(address(addressProvider));
         closePositionCallbacks = new ClosePositionCallbacks(address(addressProvider));
-        marketNeutralReader = new MarketNeutralReader(address(addressProvider));
+        pairTradingReader = new PairTradingReader(address(addressProvider));
         proxyFactory = new ProxyFactory(address(addressProvider));
         gmxPrices = new GMXPrices(address(addressProvider));
         proxyManager = new ProxyManager(address(addressProvider));
@@ -80,7 +80,7 @@ contract Deploy is Script {
         
         scriptSetAddresses(address(protocolStorage), "ProtocolStorage");
         scriptSetAddresses(address(gmxPrices), "GMXPrices");
-        scriptSetAddresses(address(marketNeutralReader), "MarketNeutralReader");
+        scriptSetAddresses(address(pairTradingReader), "PairTradingReader");
         scriptSetAddresses(address(proxyAccessControl), "ProxyAccessControl");
         scriptSetAddresses(address(positionInitializer), "PositionInitializer");
         
@@ -89,15 +89,15 @@ contract Deploy is Script {
         console.log("--------------------------------");
         console.log("Roles -------------> ", address(roles));
         console.log("AddressProvider ---> ", address(addressProvider));
-        console.log("MarketNeutral -----> ", address(marketNeutral));
+        console.log("PairTrading -------> ", address(pairTrading));
         console.log("ProtocolStorage ---> ", address(protocolStorage));
         console.log("GMXMarketsRegistry -> ", address(gmxMarketsRegistry));
         console.log("GMXPrices --------> ", address(gmxPrices));
         console.log("ProxyFactory -----> ", address(proxyFactory));
         console.log("ProxyManager -----> ", address(proxyManager));
-        console.log("MarketNeutralStorage -> ", address(marketNeutralStorage));
+        console.log("PairTradingStorage -> ", address(pairTradingStorage));
         console.log("ClosePositionCallbacks -> ", address(closePositionCallbacks));
-        console.log("MarketNeutralReader -> ", address(marketNeutralReader));
+        console.log("PairTradingReader -> ", address(pairTradingReader));
         console.log("MainReader --------> ", address(mainReader));
         console.log("PositionInitializer -> ", address(positionInitializer));
         console.log("ProxyAccessControl -> ", address(proxyAccessControl));
@@ -105,16 +105,16 @@ contract Deploy is Script {
         
         Contracts[] memory contracts = new Contracts[](14);
         contracts[0] = Contracts("Roles", address(roles), false);
-        contracts[1] = Contracts("MarketNeutral", address(marketNeutral), true);
+        contracts[1] = Contracts("PairTrading", address(pairTrading), true);
         contracts[2] = Contracts("ProtocolStorage", address(protocolStorage), false);
         contracts[3] = Contracts("AddressProvider", address(addressProvider), false);
         contracts[4] = Contracts("GMXMarkets", address(gmxMarketsRegistry), false);
         contracts[5] = Contracts("GMXPrices", address(gmxPrices), false);
         contracts[6] = Contracts("ProxyFactory", address(proxyFactory), false);
         contracts[7] = Contracts("ProxyManager", address(proxyManager), true);
-        contracts[8] = Contracts("MarketNeutralStorage", address(marketNeutralStorage), false);
+        contracts[8] = Contracts("PairTradingStorage", address(pairTradingStorage), false);
         contracts[9] = Contracts("ClosePositionCallbacks", address(closePositionCallbacks), true);
-        contracts[10] = Contracts("MarketNeutralReader", address(marketNeutralReader), false);
+        contracts[10] = Contracts("PairTradingReader", address(pairTradingReader), false);
         contracts[11] = Contracts("MainReader", address(mainReader), false);
         contracts[12] = Contracts("PositionInitializer", address(positionInitializer), true);
         contracts[13] = Contracts("ProxyAccessControl", address(proxyAccessControl), false);

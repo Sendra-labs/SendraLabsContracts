@@ -1,4 +1,4 @@
-## 🏗️ Arquitectura V2
+## Arquitectura V2
 
 ```mermaid
 graph TD

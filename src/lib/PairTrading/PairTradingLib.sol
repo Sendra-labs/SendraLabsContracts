@@ -1,9 +1,9 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-library MarketNeutralLib {
+library PairTradingLib {
 
-    struct EtherMarketNeutralInput {
+    struct EtherPairTradingInput {
         string marketLong;
         string marketShort;
         uint256 totalEthAmount;
@@ -13,7 +13,7 @@ library MarketNeutralLib {
         uint256 slippageBps;
     }
 
-    struct UsdcMarketNeutralInput {
+    struct UsdcPairTradingInput {
         string marketLong;
         string marketShort;
         uint256 totalUsdcAmount;
@@ -45,13 +45,13 @@ library MarketNeutralLib {
         address receiver;
     }
 
-    struct CloseMarketNeutralInput {
+    struct ClosePairTradingInput {
         uint256 positionId;
         uint256 executionFee;
         uint256 slippageBps;
     }
 
-    struct CloseSideMarketNeutralInput {
+    struct CloseSidePairTradingInput {
         uint256 positionId;
         uint256 executionFee;
         uint256 slippageBps;

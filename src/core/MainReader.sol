@@ -1,3 +1,26 @@
+/*
+________________________________________________________________
+
+  █████████                          █████                    
+ ███▒▒▒▒▒███                        ▒▒███                     
+▒███    ▒▒▒   ██████  ████████    ███████  ████████   ██████  
+▒▒█████████  ███▒▒███▒▒███▒▒███  ███▒▒███ ▒▒███▒▒███ ▒▒▒▒▒███ 
+ ▒▒▒▒▒▒▒▒███▒███████  ▒███ ▒███ ▒███ ▒███  ▒███ ▒▒▒   ███████ 
+ ███    ▒███▒███▒▒▒   ▒███ ▒███ ▒███ ▒███  ▒███      ███▒▒███ 
+▒▒█████████ ▒▒██████  ████ █████▒▒████████ █████    ▒▒████████
+ ▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒  ▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒      ▒▒▒▒▒▒▒▒                                        
+                                                              
+ █████                 █████                                  
+▒▒███                 ▒▒███                                   
+ ▒███         ██████   ▒███████   █████                       
+ ▒███        ▒▒▒▒▒███  ▒███▒▒███ ███▒▒                        
+ ▒███         ███████  ▒███ ▒███▒▒█████                       
+ ▒███      █ ███▒▒███  ▒███ ▒███ ▒▒▒▒███                      
+ ███████████▒▒████████ ████████  ██████                       
+▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒                                                                                                                                                    
+________________________________________________________________
+*/
+
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
@@ -6,22 +29,22 @@ import { ProtocolLib } from "../lib/Protocol.lib.sol";
 import { AddressProvider } from "./config/AddressProvider.sol";
 import { GMXMarketsRegistry } from "./config/gmxMarkets.sol";
 import { GMXPrices } from "../periphery/utilsGMX/GMXPrices.sol";
-import { MarketNeutralReader } from "./bundles/readers/marketNeutralReader.sol";
-import { MarketNeutralProxy } from "./bundles/executors/proxy.sol";
+import { PairTradingReader } from "./bundles/readers/pairTradingReader.sol";
+import { PairTradingProxy } from "./bundles/executors/proxy.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract MainReader {
 
     ProtocolStorage public immutable protocolStorage;
     AddressProvider public immutable addressProvider;
-    MarketNeutralReader public immutable marketNeutralReader;
+    PairTradingReader public immutable pairTradingReader;
     GMXPrices public immutable gmxPrices;
     GMXMarketsRegistry public immutable gmxMarkets;
 
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
         protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        marketNeutralReader = MarketNeutralReader(addressProvider.getAddress("MarketNeutralReader"));
+        pairTradingReader = PairTradingReader(addressProvider.getAddress("PairTradingReader"));
         gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
         gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
     }
@@ -44,7 +67,7 @@ contract MainReader {
         
         for(uint256 i = 1; i <= user.totalPositions; i++) {
             ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
-            if(position.positionType == 0) { // MarketNeutral = 0
+            if(position.positionType == 0) { // PairTrading = 0
                 bytes[] memory positionData = position.positionData;
                 uint256 initialUsdValue = abi.decode(positionData[8], (uint256));
                 totalVolume += initialUsdValue;
@@ -72,7 +95,7 @@ contract MainReader {
         );
     }
     
-    struct MarketNeutralPosition {
+    struct PairTradingPosition {
         uint256 positionId;
         int256 pnlRealTime;
         uint256 sizeRealTime;
@@ -112,26 +135,26 @@ contract MainReader {
 
     
 */
-    function getMarketNeutralPositionsData(address _user) public view returns (MarketNeutralPosition[] memory) {
+    function getPairTradingPositionsData(address _user) public view returns (PairTradingPosition[] memory) {
         ProtocolLib.UserInfoRead memory user = protocolStorage.getUser(_user);
         
-        // First pass: count MarketNeutral positions
-        uint256 marketNeutralCount = 0;
+        // First pass: count PairTrading positions
+        uint256 pairTradingCount = 0;
         for(uint256 i = 1; i <= user.totalPositions; i++) {
             ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
-            if(position.positionType == 0) { // MarketNeutral = 0
-                marketNeutralCount++;
+            if(position.positionType == 0) { // PairTrading = 0
+                pairTradingCount++;
             }
         }
         
         // Create array with correct size
-        MarketNeutralPosition[] memory marketNeutralPosition = new MarketNeutralPosition[](marketNeutralCount);
+        PairTradingPosition[] memory pairTradingPositions = new PairTradingPosition[](pairTradingCount);
         uint256 index = 0;
         
         // Second pass: populate array
         for(uint256 i = 1; i <= user.totalPositions; i++) {
             ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
-            if(position.positionType == 0) { // MarketNeutral = 0
+            if(position.positionType == 0) { // PairTrading = 0
                 bytes[] memory positionData = position.positionData;
                 uint256 closeDate = abi.decode(positionData[10], (uint256));
                 bool isActive = closeDate == 0;
@@ -144,8 +167,8 @@ contract MainReader {
                 // For active positions, calculate real-time PNL
                 // For closed positions, use stored PNL and size = 0
                 if (isActive) {
-                    (longPnl, shortPnl, totalPnl) = marketNeutralReader.getMarketNeutralRealTimePnL(_user, position.id);
-                    sizeRealTime = marketNeutralReader.getMarketNeutralTotalSize(_user, position.id);
+                    (longPnl, shortPnl, totalPnl) = pairTradingReader.getPairTradingRealTimePnL(_user, position.id);
+                    sizeRealTime = pairTradingReader.getPairTradingTotalSize(_user, position.id);
                 } else {
                     // For closed positions, use stored PNL and size = 0
                     totalPnl = position.pnl;
@@ -154,7 +177,7 @@ contract MainReader {
                     sizeRealTime = 0;
                 }
                 
-                marketNeutralPosition[index] = MarketNeutralPosition(
+                pairTradingPositions[index] = PairTradingPosition(
                     position.id,
                     totalPnl,
                     sizeRealTime,
@@ -176,18 +199,18 @@ contract MainReader {
                 index++;
             }
         }
-        return marketNeutralPosition;
+        return pairTradingPositions;
     }
 
-    function getMarketNeutralPositionDataById(address _user, uint256 _positionId) public view returns (MarketNeutralPosition memory) {
+    function getPairTradingPositionDataById(address _user, uint256 _positionId) public view returns (PairTradingPosition memory) {
         ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, _positionId);
-        (int256 longPnl, int256 shortPnl, int256 totalPnl) = marketNeutralReader.getMarketNeutralRealTimePnL(_user, _positionId);
+        (int256 longPnl, int256 shortPnl, int256 totalPnl) = pairTradingReader.getPairTradingRealTimePnL(_user, _positionId);
         uint256 closeDate = abi.decode(position.positionData[10], (uint256));
         bool isActive = closeDate == 0;
-        return MarketNeutralPosition(
+        return PairTradingPosition(
             position.id,
             totalPnl,
-            marketNeutralReader.getMarketNeutralTotalSize(_user, _positionId),
+            pairTradingReader.getPairTradingTotalSize(_user, _positionId),
             abi.decode(position.positionData[0], (uint256)),
             abi.decode(position.positionData[1], (uint256)),
             abi.decode(position.positionData[8], (uint256)),
@@ -229,23 +252,23 @@ contract MainReader {
         return IERC20(addressProvider.getAddress("USDC")).balanceOf(_user);
     }
 
-    function getMarketNeutralPositionsDataSimple(address _user) public view returns (MarketNeutralPosition[] memory) {
+    function getPairTradingPositionsDataSimple(address _user) public view returns (PairTradingPosition[] memory) {
         ProtocolLib.UserInfoRead memory user = protocolStorage.getUser(_user);
         
-        uint256 marketNeutralCount = 0;
+        uint256 pairTradingCount = 0;
         for(uint256 i = 1; i <= user.totalPositions; i++) {
             ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
-            if(position.positionType == 0) { // MarketNeutral = 0
-                marketNeutralCount++;
+            if(position.positionType == 0) { // PairTrading = 0
+                pairTradingCount++;
             }
         }
         
-        MarketNeutralPosition[] memory marketNeutralPosition = new MarketNeutralPosition[](marketNeutralCount);
+        PairTradingPosition[] memory pairTradingPositions = new PairTradingPosition[](pairTradingCount);
         uint256 index = 0;
         
         for(uint256 i = 1; i <= user.totalPositions; i++) {
             ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
-            if(position.positionType == 0) { // MarketNeutral = 0
+            if(position.positionType == 0) { // PairTrading = 0
                 bytes[] memory positionData = position.positionData;
                 uint256 closeDate = abi.decode(positionData[10], (uint256));
                 bool isActive = closeDate == 0;
@@ -268,7 +291,7 @@ contract MainReader {
                     sizeRealTime = 0;
                 }
                 
-                marketNeutralPosition[index] = MarketNeutralPosition(
+                pairTradingPositions[index] = PairTradingPosition(
                     position.id,
                     totalPnl,
                     sizeRealTime,
@@ -290,20 +313,20 @@ contract MainReader {
                 index++;
             }
         }
-        return marketNeutralPosition;
+        return pairTradingPositions;
     }
 
     function isProxyNeeded(address _user, string calldata _marketLong, string calldata _marketShort) public view returns (bool, address) {
-        MarketNeutralPosition[] memory marketNeutralPositions = getMarketNeutralPositionsDataSimple(_user);
-        for(uint256 i = 0; i < marketNeutralPositions.length; i++) {
-            if(marketNeutralPositions[i].isActive) {
-                address proxy = marketNeutralPositions[i].proxy;
+        PairTradingPosition[] memory pairTradingPositions = getPairTradingPositionsDataSimple(_user);
+        for(uint256 i = 0; i < pairTradingPositions.length; i++) {
+            if(pairTradingPositions[i].isActive) {
+                address proxy = pairTradingPositions[i].proxy;
                 // Skip if proxy is address(0) (shouldn't happen, but safety check)
                 if(proxy == address(0)) continue;
                 
-                bool isMarketBeingUsed = MarketNeutralProxy(proxy).isMarketBeingUsed(_marketLong, _marketShort);
+                bool isMarketBeingUsed = PairTradingProxy(proxy).isMarketBeingUsed(_marketLong, _marketShort);
                 if(!isMarketBeingUsed) {
-                    return (false, marketNeutralPositions[i].proxy); // user is owner of a proxy that is not being used for this markets
+                    return (false, pairTradingPositions[i].proxy); // user is owner of a proxy that is not being used for this markets
                     // retunrs "false, proxy is not needed, user is owner and can use this adress"
                 }
             }
@@ -311,9 +334,3 @@ contract MainReader {
         return (true, address(0)); // user needs to claim or deploy a new proxy
     }
 }
-
-/*
-front end calls isProxyNeeded
-if false, front end calls proxy to open marketNeutral position
-if true, front end calls proxyManager initializeProxy 
-*/

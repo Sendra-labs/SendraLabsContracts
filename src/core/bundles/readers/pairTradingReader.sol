@@ -1,10 +1,33 @@
+/*
+________________________________________________________________
+
+  █████████                          █████                    
+ ███▒▒▒▒▒███                        ▒▒███                     
+▒███    ▒▒▒   ██████  ████████    ███████  ████████   ██████  
+▒▒█████████  ███▒▒███▒▒███▒▒███  ███▒▒███ ▒▒███▒▒███ ▒▒▒▒▒███ 
+ ▒▒▒▒▒▒▒▒███▒███████  ▒███ ▒███ ▒███ ▒███  ▒███ ▒▒▒   ███████ 
+ ███    ▒███▒███▒▒▒   ▒███ ▒███ ▒███ ▒███  ▒███      ███▒▒███ 
+▒▒█████████ ▒▒██████  ████ █████▒▒████████ █████    ▒▒████████
+ ▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒  ▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒      ▒▒▒▒▒▒▒▒                                        
+                                                              
+ █████                 █████                                  
+▒▒███                 ▒▒███                                   
+ ▒███         ██████   ▒███████   █████                       
+ ▒███        ▒▒▒▒▒███  ▒███▒▒███ ███▒▒                        
+ ▒███         ███████  ▒███ ▒███▒▒█████                       
+ ▒███      █ ███▒▒███  ▒███ ▒███ ▒▒▒▒███                      
+ ███████████▒▒████████ ████████  ██████                       
+▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒                                                                                                                                                    
+________________________________________________________________
+*/
+
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
 import { AddressProvider } from "../../config/AddressProvider.sol";
 import { ProtocolStorage } from "../../ProtocolStorage.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
-import { MarketNeutralLib } from "../../../lib/MarketNeutral/MarketNeutralLib.sol";
+import { PairTradingLib } from "../../../lib/PairTrading/PairTradingLib.sol";
 import { IReader } from "../../../interfaces/GMX/IReader.sol";
 import { GMXPrices } from "../../../periphery/utilsGMX/GMXPrices.sol";
 import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -12,11 +35,11 @@ import { IERC20Metadata } from "@openzeppelin/contracts/token/ERC20/extensions/I
 // GMX Types imports
 
 /**
- * @title MarketNeutralReader
+ * @title PairTradingReader
  * @notice Reader contract for Market Neutral positions
  * @dev Provides functions to read position data from GMX and calculate real-time metrics
  */
-contract MarketNeutralReader {
+contract PairTradingReader {
     
     AddressProvider public immutable addressProvider;
     
@@ -105,7 +128,7 @@ contract MarketNeutralReader {
      * @param positionId Position ID in ProtocolStorage
      * @return position ProtocolLib.Position struct
      */
-    function getMarketNeutralPosition(
+    function getPairTradingPosition(
         address user,
         uint256 positionId
     ) public view returns (ProtocolLib.Position memory position) {
@@ -120,11 +143,11 @@ contract MarketNeutralReader {
      * @return longKey Long position key
      * @return shortKey Short position key
      */
-    function getMarketNeutralPositionKeys(
+    function getPairTradingPositionKeys(
         address user,
         uint256 positionId
     ) public view returns (bytes32 longKey, bytes32 shortKey) {
-        ProtocolLib.Position memory position = getMarketNeutralPosition(user, positionId);
+        ProtocolLib.Position memory position = getPairTradingPosition(user, positionId);
         
         longKey = abi.decode(position.positionData[15], (bytes32));
         shortKey = abi.decode(position.positionData[16], (bytes32));
@@ -139,11 +162,11 @@ contract MarketNeutralReader {
      * @return marketLong Long market address
      * @return marketShort Short market address
      */
-    function getMarketNeutralMarkets(
+    function getPairTradingMarkets(
         address user,
         uint256 positionId
     ) public view returns (address marketLong, address marketShort) {
-        ProtocolLib.Position memory position = getMarketNeutralPosition(user, positionId);
+        ProtocolLib.Position memory position = getPairTradingPosition(user, positionId);
         
         marketLong = abi.decode(position.positionData[2], (address));
         marketShort = abi.decode(position.positionData[3], (address));
@@ -158,14 +181,14 @@ contract MarketNeutralReader {
      * @return longPosition Long position data from GMX
      * @return shortPosition Short position data from GMX
      */
-    function getMarketNeutralBasicInfo(
+    function getPairTradingBasicInfo(
         address user,
         uint256 positionId
     ) public view returns (
         IReader.Position memory longPosition,
         IReader.Position memory shortPosition
     ) {
-        (bytes32 longKey, bytes32 shortKey) = getMarketNeutralPositionKeys(user, positionId);
+        (bytes32 longKey, bytes32 shortKey) = getPairTradingPositionKeys(user, positionId);
         
         longPosition = getPositionFromGMX(longKey);
         shortPosition = getPositionFromGMX(shortKey);
@@ -184,7 +207,7 @@ contract MarketNeutralReader {
         uint256 positionId
     ) public view returns (bool _bothSidesExist) {
         (IReader.Position memory longPosition, IReader.Position memory shortPosition) = 
-            getMarketNeutralBasicInfo(user, positionId);
+            getPairTradingBasicInfo(user, positionId);
             
         return (longPosition.sizeInUsd > 0 && shortPosition.sizeInUsd > 0);
     }
@@ -195,12 +218,12 @@ contract MarketNeutralReader {
      * @param positionId Position ID in ProtocolStorage
      * @return totalSize Total size in USD (long + short)
      */
-    function getMarketNeutralTotalSize(
+    function getPairTradingTotalSize(
         address user,
         uint256 positionId
     ) public view returns (uint256 totalSize) {
         (IReader.Position memory longPosition, IReader.Position memory shortPosition) = 
-            getMarketNeutralBasicInfo(user, positionId);
+            getPairTradingBasicInfo(user, positionId);
             
         return longPosition.sizeInUsd + shortPosition.sizeInUsd;
     }
@@ -212,12 +235,12 @@ contract MarketNeutralReader {
      * @return totalCollateral Total collateral amount
      * @dev Note: This returns raw amounts, not converted to USD
      */
-    function getMarketNeutralTotalCollateral(
+    function getPairTradingTotalCollateral(
         address user,
         uint256 positionId
     ) public view returns (uint256 totalCollateral) {
             (IReader.Position memory longPosition, IReader.Position memory shortPosition) = 
-            getMarketNeutralBasicInfo(user, positionId);
+            getPairTradingBasicInfo(user, positionId);
             
         return longPosition.collateralAmount + shortPosition.collateralAmount;
     }
@@ -296,7 +319,7 @@ contract MarketNeutralReader {
      * @return shortPnl PNL of short position in USD (30 decimals)
      * @return totalPnl Total PNL (longPnl + shortPnl)
      */
-    function getMarketNeutralRealTimePnL(
+    function getPairTradingRealTimePnL(
         address user,
         uint256 positionId
     ) public view returns (
@@ -304,8 +327,8 @@ contract MarketNeutralReader {
         int256 shortPnl,
         int256 totalPnl
     ) {
-        (bytes32 longKey, bytes32 shortKey) = getMarketNeutralPositionKeys(user, positionId);
-        (address marketLong, address marketShort) = getMarketNeutralMarkets(user, positionId);
+        (bytes32 longKey, bytes32 shortKey) = getPairTradingPositionKeys(user, positionId);
+        (address marketLong, address marketShort) = getPairTradingMarkets(user, positionId);
         
         // Get real-time position info for both sides
         IReader.PositionInfo memory longInfo = getPositionInfoFromGMX(longKey, marketLong);
@@ -327,7 +350,7 @@ contract MarketNeutralReader {
      * @return totalPnl Total PNL (long + short)
      * @return totalFees Total fees (long + short)
      */
-    function getMarketNeutralFullInfo(
+    function getPairTradingFullInfo(
         address user,
         uint256 positionId
     ) public view returns (
@@ -336,8 +359,8 @@ contract MarketNeutralReader {
         int256 totalPnl,
         uint256 totalFees
     ) {
-        (bytes32 longKey, bytes32 shortKey) = getMarketNeutralPositionKeys(user, positionId);
-        (address marketLong, address marketShort) = getMarketNeutralMarkets(user, positionId);
+        (bytes32 longKey, bytes32 shortKey) = getPairTradingPositionKeys(user, positionId);
+        (address marketLong, address marketShort) = getPairTradingMarkets(user, positionId);
         
         // Get complete position info for both sides
         longInfo = getPositionInfoFromGMX(longKey, marketLong);

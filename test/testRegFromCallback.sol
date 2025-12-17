@@ -2,9 +2,9 @@
 pragma solidity 0.8.28;
 
 import { MainReader } from "../src/core/MainReader.sol";
-import { MarketNeutralStorage } from "../src/core/bundles/storage/MarketNeutralStorage.sol";
+import { PairTradingStorage } from "../src/core/bundles/storage/PairTradingStorage.sol";
 import { AddressProvider } from "../src/core/config/AddressProvider.sol";
-import { MarketNeutralLib } from "../src/lib/MarketNeutral/MarketNeutralLib.sol";
+import { PairTradingLib } from "../src/lib/PairTrading/PairTradingLib.sol";
 
 contract RegFromCallback {
     AddressProvider public addressProvider;
@@ -12,8 +12,8 @@ contract RegFromCallback {
         addressProvider = AddressProvider(_addressProvider);
     }
     function regFromCallback() public {
-        MarketNeutralStorage marketNeutralStorage = MarketNeutralStorage(addressProvider.getAddress("MarketNeutralStorage"));
-        MarketNeutralLib.RawExecutionData memory executionData = MarketNeutralLib.RawExecutionData({
+        PairTradingStorage pairTradingStorage = PairTradingStorage(addressProvider.getAddress("PairTradingStorage"));
+        PairTradingLib.RawExecutionData memory executionData = PairTradingLib.RawExecutionData({
             positionId: 1,
             receiver: 0x8DE959Dc78ed8948851af6a5453c01fD8AEDA8E0,
             outputToken: 0x8DE959Dc78ed8948851af6a5453c01fD8AEDA8E0,
@@ -25,6 +25,6 @@ contract RegFromCallback {
             processed: false,
             timestamp: block.timestamp
         });
-        marketNeutralStorage.storeRawExecutionData(0x6d5f7ffadce6f5623998e9cca880960e17c5fa1904146392e188962aa9d38f03, executionData);
+        pairTradingStorage.storeRawExecutionData(0x6d5f7ffadce6f5623998e9cca880960e17c5fa1904146392e188962aa9d38f03, executionData);
     }
 }
