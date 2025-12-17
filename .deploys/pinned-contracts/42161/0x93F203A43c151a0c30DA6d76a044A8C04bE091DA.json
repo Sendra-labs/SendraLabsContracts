@@ -1,0 +1,26 @@
+{
+  "name": "SetAvailable",
+  "address": "0x93F203A43c151a0c30DA6d76a044A8C04bE091DA",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "uint256[]",
+          "name": "_ids",
+          "type": "uint256[]"
+        },
+        {
+          "internalType": "address",
+          "name": "manager",
+          "type": "address"
+        }
+      ],
+      "name": "set",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "filePath": " - connect to localhost - /src/core/bundles/storage/ProxyManager.sol",
+  "pinnedAt": 1765902302743
+}

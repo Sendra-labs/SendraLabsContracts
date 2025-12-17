@@ -69,7 +69,7 @@ contract Deploy is Script {
 
         scriptSetAddresses(0x63492B775e30a9E6b4b4761c12605EB9d071d5e9, "OrderHandlerGMX");
         scriptSetAddresses(0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5, "OrderVaultGMX");
-        scriptSetAddresses(0x87d66368cD08a7Ca42252f5ab44B2fb6d1Fb8d15, "ExchangeRouterGMX");
+        scriptSetAddresses(0x1C3fa76e6E1088bCE750f23a5BFcffa1efEF6A41, "ExchangeRouterGMX");
         scriptSetAddresses(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8, "GMXDataStore");
         scriptSetAddresses(0xaf88d065e77c8cC2239327C5EDb3A432268e5831, "USDC");
         scriptSetAddresses(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1, "WETH");
