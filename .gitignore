@@ -1,6 +1,7 @@
 # Compiler files
 cache/
 out/
+artifacts/
 
 # Ignores development broadcast logs
 !/broadcast
@@ -10,5 +11,35 @@ out/
 # Docs
 docs/
 
-# Dotenv file
+# Dotenv files
 .env
+.env.*
+.env.local
+.env.*.local
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Testing & Coverage
+coverage/
+*.lcov
+
+# Logs
+*.log
+npm-debug.log*
+
+# Dependencies (si usas npm)
+node_modules/
+
+# Temporary files
+*.tmp
+*.temp

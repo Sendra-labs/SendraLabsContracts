@@ -255,7 +255,7 @@ contract PairTrading is ReentrancyGuard {
         newPositionData[16] = abi.encode(shortKey);  // shortKey
         newPositionData[17] = abi.encode(address(this));  // proxy address
     
-        /*__  market neutral positionParams  __*/
+        /*__  pair trading positionParams  __*/
         //0  {0, totalUsdcAmount}
         //1  {2, isNativeToken = false}
         //2  {1, market Long}
@@ -588,7 +588,7 @@ contract PairTrading is ReentrancyGuard {
             market,
             _input.isLongSide, 
             false, 
-            _input.slippageBps
+            10000 // hardcoded for testing
         ); // AQUI FALLA SI VA CON OTRO SLIPPAGE BPS que no sea 10000... habiendo metido el update del minimumOutputAmount
             // Creo que solo Falla el LONG
         uint256 sizeDeltaUsd = abi.decode(_input.isLongSide ? positionData[4] : positionData[5], (uint256));

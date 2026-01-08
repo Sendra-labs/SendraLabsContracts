@@ -270,6 +270,15 @@ contract ProxyManager is ReentrancyGuard {
     }
 
     /**
+     * @notice Gets the available count of proxies in a batch
+     * @param _batchId ID of the batch to check
+     * @return The number of available proxies in the batch
+     */
+    function getBatchAvailableCount(uint256 _batchId) public view returns (uint256) {
+        return availableProxiesBatch[_batchId].availableCount;
+    }
+
+    /**
      * @notice Checks if a batch is filled to capacity
      * @dev Used to determine if a new batch should be created
      * @param _batchId ID of the batch to check
@@ -316,30 +325,3 @@ contract ProxyManager is ReentrancyGuard {
     error ProxyHasPendingOrders();
 
 }
-
-/*
-Flow: 
-1. mainReader calls getAvailableProxy():
-    - if no proxy is available, it returns 0 and false -> calls factory to deploy a new proxy
-        - factory deploys a new proxy and calls addProxy()
-        - proxyManager sets the owner of the proxy
-        - this new registered proxy is going to be used by the user to open a position in GMX (proxy not available for another user)
-        - when the position is closed and not managing any position in GMX, the proxy is set as available for another user to use it:
-            - when closePairTradingDelegatecall or another function that closes a position is called, the proxy is set as available for another user to use it
-                the proxy must call setAvailable with its ID or maybe better is the contract callback afterorderexecution
-                - this is done to avoid having to deploy contracts that will have a short life cycle. so we make them reusable.
-
-    - if a proxy is available, it returns the ID of the proxy and true.
-        - frontend makes a call using user as msg.sender to the address of the available ID to one of the open Position functions
-
-
-        ___________________________
-
-        PARA MAÑANA:
-        - el proxy debe controlar si puede meter mas posiciones o no;
-        - debemos meter el proxyId en la data de la posicion. La posicion la
-                       sabemos en storage de user y de ahi sacamos el proxyId.
-        - vamos a hacerlo all de una, una sola funcion que en una txs llama a ver si hay disponible,
-              si hay disponible, lo claimea para el owner que lo pide, si no lo despliega.
-        - proxy debe llamar a una funcion para borrarse de los availables cunado se use/claimee
-*/

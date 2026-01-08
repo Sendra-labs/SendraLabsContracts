@@ -175,6 +175,25 @@
 				"inputs": [
 					{
 						"internalType": "uint256",
+						"name": "_batchId",
+						"type": "uint256"
+					}
+				],
+				"name": "getBatchAvailableCount",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [
+					{
+						"internalType": "uint256",
 						"name": "_proxyId",
 						"type": "uint256"
 					}
@@ -293,6 +312,7 @@
 			}
 		],
 		"devdoc": {
+			"details": "This contract implements a proxy pool system to minimize gas costs by reusing proxy contracts.      Proxies are pooled when they become available (no active positions) and can be claimed by      new users. If no proxies are available, new ones are deployed through ProxyFactory.       Key features:      - Proxy deployment and registration      - Proxy pooling and availability management      - Batch-based proxy tracking for gas efficiency      - Owner management and access control       Flow:      1. User requests a proxy via initializeProxy()      2. System checks for available proxies in batches      3. If available: proxy is claimed and owner is set      4. If not available: new proxy is deployed      5. When position closes: proxy is marked as available for reuse",
 			"errors": {
 				"ReentrancyGuardReentrantCall()": [
 					{
@@ -300,13 +320,159 @@
 					}
 				]
 			},
+			"events": {
+				"ProxyClaimed(address,uint256)": {
+					"params": {
+						"proxyId": "The ID of the claimed proxy",
+						"user": "Address of the user claiming the proxy"
+					}
+				},
+				"ProxyDeployed(address,address,uint256)": {
+					"params": {
+						"owner": "Address of the owner assigned to the proxy",
+						"proxy": "Address of the deployed proxy contract",
+						"proxyId": "The unique ID assigned to the proxy"
+					}
+				}
+			},
 			"kind": "dev",
-			"methods": {},
+			"methods": {
+				"constructor": {
+					"params": {
+						"_addressProvider": "Address of the AddressProvider contract"
+					}
+				},
+				"getAvailableProxy()": {
+					"details": "Searches through all batches (newest first) to find an available proxy.      Returns the last proxy in the first batch with available proxies (LIFO). Returns (0, 0, address(0), false) if no proxies are available,      indicating that initializeProxy should deploy a new one",
+					"returns": {
+						"_0": "proxyId ID of the available proxy (0 if none available)",
+						"_1": "batchId ID of the batch containing the proxy (0 if none available)",
+						"_2": "proxyAddress Address of the proxy contract (address(0) if none available)",
+						"_3": "isAvailable true if a proxy is available, false if new proxy must be deployed "
+					}
+				},
+				"getBatchAvailableCount(uint256)": {
+					"params": {
+						"_batchId": "ID of the batch to check"
+					},
+					"returns": {
+						"_0": "The number of available proxies in the batch"
+					}
+				},
+				"getOwner(uint256)": {
+					"params": {
+						"_proxyId": "ID of the proxy"
+					},
+					"returns": {
+						"_0": "Address of the owner (address(0) if proxy is available)"
+					}
+				},
+				"initializeProxy(address)": {
+					"details": "Main entry point for obtaining a proxy. Checks for available proxies first,      and if none are available, deploys a new one. Implements reentrancy protection. Flow:      1. Calls getAvailableProxy() to check for available proxies      2. If available: claims it and sets owner      3. If not available: deploys new proxy via ProxyFactory",
+					"params": {
+						"_owner": "Address of the user who will own the proxy"
+					},
+					"returns": {
+						"_proxyAddress": "Address of the proxy assigned to the user "
+					}
+				},
+				"isbatchFilled(uint256)": {
+					"details": "Used to determine if a new batch should be created",
+					"params": {
+						"_batchId": "ID of the batch to check"
+					},
+					"returns": {
+						"_0": "true if the batch has reached MAX_BATCH_SIZE, false otherwise"
+					}
+				},
+				"setAvailable(uint256)": {
+					"custom:require": "Only callable by protocol contractsProxy must have an owner and be available (no active positions) ",
+					"details": "Called by ClosePositionCallbacks when all positions are closed.      Adds proxy to an available batch (or creates new batch if all are full).      Sets owner to address(0) to mark as available. Batch logic:      - Searches for first non-full batch      - If found: adds proxy to that batch      - If all batches full: creates new batch with this proxy",
+					"params": {
+						"_proxyId": "ID of the proxy to mark as available "
+					}
+				}
+			},
+			"title": "ProxyManager",
 			"version": 1
 		},
 		"userdoc": {
+			"errors": {
+				"InvalidProxyId()": [
+					{
+						"notice": "Thrown when proxy ID validation fails during batch operations"
+					}
+				],
+				"ProxyHasPendingOrders()": [
+					{
+						"notice": "Thrown when attempting to perform an operation on a proxy with pending orders"
+					}
+				],
+				"ProxyNotAvailable()": [
+					{
+						"notice": "Thrown when attempting to claim a proxy that is not available (already has an owner)"
+					}
+				],
+				"SenderNotAllowed()": [
+					{
+						"notice": "Thrown when a function is called by an unauthorized address (not a protocol contract)"
+					}
+				]
+			},
+			"events": {
+				"ProxyClaimed(address,uint256)": {
+					"notice": "Emitted when a user claims an available proxy"
+				},
+				"ProxyDeployed(address,address,uint256)": {
+					"notice": "Emitted when a new proxy is deployed"
+				}
+			},
 			"kind": "user",
-			"methods": {},
+			"methods": {
+				"MAX_BATCH_SIZE()": {
+					"notice": "Maximum number of proxies per batch (for gas efficiency)"
+				},
+				"addressProvider()": {
+					"notice": "Address provider that stores all protocol addresses"
+				},
+				"availableProxiesBatch(uint256)": {
+					"notice": "Mapping from batch ID to Batch struct containing available proxies"
+				},
+				"batchId()": {
+					"notice": "Current batch ID (increments as batches fill up)"
+				},
+				"constructor": {
+					"notice": "Constructs the ProxyManager contract"
+				},
+				"getAvailableProxy()": {
+					"notice": "Gets the first available proxy from any batch"
+				},
+				"getBatchAvailableCount(uint256)": {
+					"notice": "Gets the available count of proxies in a batch"
+				},
+				"getOwner(uint256)": {
+					"notice": "Gets the current owner of a proxy"
+				},
+				"initializeProxy(address)": {
+					"notice": "Initializes a proxy for a user (deploys new or claims available)"
+				},
+				"isbatchFilled(uint256)": {
+					"notice": "Checks if a batch is filled to capacity"
+				},
+				"proxies(uint256)": {
+					"notice": "Mapping from proxy ID to Proxy struct"
+				},
+				"proxyCount()": {
+					"notice": "Total number of proxies ever deployed (increments, never decreases)"
+				},
+				"roles()": {
+					"notice": "Roles contract for access control verification"
+				},
+				"setAvailable(uint256)": {
+					"notice": "Marks a proxy as available for reuse when it has no active positions"
+				}
+			},
+			"notice": "Manages the lifecycle of PairTradingProxy instances for efficient resource usage",
 			"version": 1
 		}
 	},
@@ -451,76 +617,76 @@
 				"dweb:/ipfs/QmNzfQPGidisZaS7eSyJxKEt6dXhEsxp1eYfDGf9RkAHds"
 			]
 		},
-		"src/core/bundles/executors/MarketNeutral.sol": {
-			"keccak256": "0xff6a9a1c678a5600a8da2635b8f4fdd91052e8abe53bf33241df444ddbbf355b",
+		"src/core/bundles/executors/PairTrading.sol": {
+			"keccak256": "0x8122c70f081a4bff8bda1bfe7fb41b15e7ff6ce813194c307cb9d6712e916458",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://1e3449b2ad3b3b290e7838ef8becd2918108b2393117ccdf192c9a4f08846b9a",
-				"dweb:/ipfs/QmRTWunXR51LZ1EMyeWNTV1sNMoTymdRnJPKGo2WndSqaR"
+				"bzz-raw://ed572e9e6ce8a21e17a91f0c435c906ec7a86c67c5cda2f3b763753570e83e63",
+				"dweb:/ipfs/QmfPs642zfBTjLgqrChp3tQLZeYWKU7Sdud1kh7WmMCHCD"
 			]
 		},
 		"src/core/bundles/executors/PositionInitializer.sol": {
-			"keccak256": "0x7b8f9b09985f3c9484130267e8ba26321d5aee59af1821f1406b46c9aa5abc9e",
+			"keccak256": "0x2b1a196d88cf76636558e31251a97bb463486f2271b859289932e50a9ba480d8",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://a9f7d8bc658ffbb3b62b4dd50b0905f94b9babe8443d657bc98025fdad75428f",
-				"dweb:/ipfs/QmSjLGG2P6t9h6Hx6HFC2TLDiQetqaXxTngNTGDBL9jTid"
+				"bzz-raw://2ce7cc50bb4cc0941a38ac73fc34c2ace98396213ba7e7878e7748df614d56f8",
+				"dweb:/ipfs/QmPfpbUMRHGEXNhMMQfNMR3VnCbn63KiUsAWzjE1zLd13w"
 			]
 		},
 		"src/core/bundles/executors/ProxyFactory.sol": {
-			"keccak256": "0x9991fce1150fed34a5a43f0fa597c0e61d91ad9870fc30776973f43448b9b970",
+			"keccak256": "0xe89a89e207443ff45a8a2d53d3bbcf5aad703c4a0f653c91ecdaebd04c14b12e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://5cf0661194305c0243d58f4eaaa736bc7c011cdb9c9d27fc5f9b8a4681b633a1",
-				"dweb:/ipfs/QmYEso1GQCj58XSXMqVMhNuNCdmsuVkgkM7MPFG7eEpKBL"
+				"bzz-raw://4caa08518601b34d7e47654948255e42bdb93a4ff011f1c673a917a454b741e0",
+				"dweb:/ipfs/QmXkpEbZpLghpUfCVPCZB4b4S36j5oajycVmNz1B87vNPB"
 			]
 		},
 		"src/core/bundles/executors/proxy.sol": {
-			"keccak256": "0x6e9aa4baa9cb56fb0816baa453aa7c3e438ee4b8f4ab5a9ec40679c340a42d75",
+			"keccak256": "0x4a8cbe1ec1698b05b64bad5de1c9ec311b1b65520088c6727b221656638f7b8e",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://080c413f97c69620e52cc3232b93927b443a753eb6a97c125b640572f1810f19",
-				"dweb:/ipfs/QmZi8XEUPbtBXKLYuczZ12AVvpMSf19ubZaa4afw62LYFa"
+				"bzz-raw://6f288d46f811ad9c4b08b673efc7c4b61b9275ea95851cf3f9dfeb489911f7c4",
+				"dweb:/ipfs/QmNPvG56cMbVjnb9dYDER4TRQwxVA7BLpEzaA3K8jKQb3F"
 			]
 		},
 		"src/core/bundles/security/proxyAccessControl.sol": {
-			"keccak256": "0x72ec0dc798ea7f15f970a5f86782faf706a2b9da10638074a4ca139c73013b29",
+			"keccak256": "0x55954b73c92acdb6383e39e5ac33dc7a265bc5ac77bb31c8aaa159532437c177",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://256aacf2a75a9b178d02b33d181e31e94ec8b61bc2057a2ba7119809e6e80fae",
-				"dweb:/ipfs/QmTGR9SwJ4CWkKyKDy9KEpLrt3fLnpwgDYkwQwY7SQhTe9"
+				"bzz-raw://4016d6953308ea4884bb084ead0f084d9bc601cd7336458762c08b62275602d3",
+				"dweb:/ipfs/QmbWPg54p7n9wb575nnd3yccWwMLHzGiKtz6eHAXL2vQe9"
 			]
 		},
-		"src/core/bundles/storage/MarketNeutralStorage.sol": {
-			"keccak256": "0x07d98a52125504c2e261da788744e8c4bdbc72d6504cd02e227bfaf3bfa5b926",
+		"src/core/bundles/storage/PairTradingStorage.sol": {
+			"keccak256": "0x9e411047f140c89fb40503467c2c944c5d6f354c62c2116867a47cd57c8695fa",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://9014266400d21642a0944af8e3c05875974ead5d45f88218245648d5ace94ff9",
-				"dweb:/ipfs/QmdHPd3Bb5uAbYoMsLRCqiwwGirrkvwatP9dmim12xtuxC"
+				"bzz-raw://4c9cc2ac6219c4b88f55abd8ab4d700e90f8660167713a2a24886c9c11ef0177",
+				"dweb:/ipfs/QmXx3Kvardf4W7QSAqF6V6Uk6SuaSZCqkUYjR5vdMwfRh3"
 			]
 		},
 		"src/core/bundles/storage/ProxyManager.sol": {
-			"keccak256": "0xc06ef21899dbae48cdb92500d7ff2c0875110a798a1b8a2e11082bee6af7becc",
+			"keccak256": "0x720ad75a91fd3f8b50bdc96416ced986123dc1d2fc8edfa5c83100c9cee2c239",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://a1a35e02e7fe66faa032ba1027a882ed079b29f54e4664afe0c581996bda8b91",
-				"dweb:/ipfs/Qmf9YH3rwS5uBgXtrinct8tbRiByXCdzbPeit8HWPRdoTT"
+				"bzz-raw://070486489667cd149595cb52d3d2485a7274fcc39f97a5060aa1d20c60d1c955",
+				"dweb:/ipfs/QmT1HbQ9aVBRx1tR1S8qYrSt9rLGCpLYRRzB84k7GwCsg5"
 			]
 		},
 		"src/core/config/AddressProvider.sol": {
-			"keccak256": "0x8bfb8b5d36ef0965ee0f8df4c13c8b73904941bbb66c72a60ccc2f7d9868707a",
+			"keccak256": "0xacfc0d6e900776c8ada9da24bb7f7bdb57a1fdcde07fda1e345521fd3bff0f5f",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://0f756274a5944b5717eb803f93b79618031f8f6e187d8e31b28823d3e67e2cc3",
-				"dweb:/ipfs/QmeMwNVFk6zafR1tPpJrXBRCJHaHdF5kncS9WuBYvTTmcF"
+				"bzz-raw://4d5308bd3c381961a5c779ccb758664ce5e2770add024cc9598b834c14cd660a",
+				"dweb:/ipfs/QmSMuD1PcRhXmZa9pzKZTUxoRKst8gcwdutLNJ73MLXkQo"
 			]
 		},
 		"src/core/config/gmxMarkets.sol": {
-			"keccak256": "0x836a187ed4cd5b99af505e24e7f55b087c797bcb4f0121ba0094bfb360094b65",
+			"keccak256": "0x7181c3575575cb00e906a75a86cf177d8195278d7911b4ea03879c17e30a51ab",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://209ac94f2ed4564a363bdff5c65f7357a48051b47eb49d06d25ee03ed2020c6f",
-				"dweb:/ipfs/QmTabDwXYkhMLb1broP8xvJmc69YvqYHsv41QmmB8tmqc5"
+				"bzz-raw://1088813819c20bb5b0d1cd34061d4a0328b7cc61590f68b8d895ef7a70c44fd5",
+				"dweb:/ipfs/Qma74MTU5C4pUces4v29U3SBS5NKmRvEbhs34yHF3jXx9A"
 			]
 		},
 		"src/interfaces/GMX/IExchangeRouter.sol": {
@@ -579,12 +745,12 @@
 				"dweb:/ipfs/QmSFQzHnaWvByoVJYVUxjNsiCAHqacggib6sduJMmK9QPM"
 			]
 		},
-		"src/lib/MarketNeutral/MarketNeutralLib.sol": {
-			"keccak256": "0x813fad43a33b3893ca18d9b7c1d87aa04e1f91fe7c63a7b1a23a74b359021e71",
+		"src/lib/PairTrading/PairTradingLib.sol": {
+			"keccak256": "0xc90fbe206e2a3eb5d01299809fdfc79059663a2474d5a8c11dc98ff5ab9fbb26",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://ab9ff8a20baf0be352922bd89d89fa59d029bb1bfbac4effd9a515470d9dbcd7",
-				"dweb:/ipfs/QmZAae5R9bk7BTomxdxmnnWeHvs9vn41Swnw4j9NmwR85q"
+				"bzz-raw://d4770330266986cd0fa62d6de6985d45bbeb3078420e8621bd2d3f342bb3a7df",
+				"dweb:/ipfs/QmURBTAeKej9qKwzPnJvomReyDMnE91rLd8yaVQywUmdiy"
 			]
 		},
 		"src/lib/Prices.lib.sol": {
@@ -620,11 +786,11 @@
 			]
 		},
 		"src/security/Roles.sol": {
-			"keccak256": "0x4ffa09bf2c2d66449603088e1b0dd03e6bbc3c14532c8a0580fb7b6a867bc0c4",
+			"keccak256": "0x302391e73a698c2ad69b10326eed6b9af8af7d0e7373b59d02cf05aef7c9ce38",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://85343dc69a533acfa25b4d34763910094d417e3fba2cfa58b7c29e3de986c836",
-				"dweb:/ipfs/QmPN3eGnEzKTXSXwgXoAKV2JChXCg18TRPxy8nqU9zLERM"
+				"bzz-raw://a13906634d23665ee231d071e013e74fa9b0e5cddcade1f1149789060d3ef5ae",
+				"dweb:/ipfs/QmXT7JJTzquAJu8rZfF7gKcjoxbAfmjesuD9hxhpRsZytV"
 			]
 		}
 	},

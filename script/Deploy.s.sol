@@ -63,7 +63,7 @@ contract Deploy is Script {
         scriptSetAddresses(0xaf88d065e77c8cC2239327C5EDb3A432268e5831, "USDC");
         scriptSetAddresses(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1, "WETH");
         scriptSetAddresses(0xe6fab3F0c7199b0d34d7FbE83394fc0e0D06e99d, "ReferralStorageGMX");
-        scriptSetAddresses(0xf60becbba223EEA9495Da3f606753867eC10d139, "ReaderGMX");
+        scriptSetAddresses(0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789, "ReaderGMX");
 
         protocolStorage = new ProtocolStorage(address(roles));
         gmxMarketsRegistry = new GMXMarketsRegistry(address(roles));
