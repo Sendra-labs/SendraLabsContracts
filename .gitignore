@@ -3,6 +3,11 @@ cache/
 out/
 artifacts/
 
+# Foundry specific
+.deploys/
+.deps/
+.states/
+
 # Ignores development broadcast logs
 !/broadcast
 /broadcast/*/31337/
