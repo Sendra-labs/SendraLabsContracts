@@ -116,7 +116,7 @@ contract GMXPrices {
     {
         Market memory market = getMarket(marketAddress);
         address priceFeed = getChainlinkPriceFeed(market.indexToken);
-        require(priceFeed != address(0), "No price feed for index token");
+        //require(priceFeed != address(0), "No price feed for index token");
         
         price = PricesLib.getPriceFromFeed(priceFeed);
         return price;
@@ -143,11 +143,11 @@ contract GMXPrices {
             address longFeed,
             address shortFeed
         ) = getMarketPriceFeeds(marketAddress);
-        
+        /*
         require(indexFeed != address(0), "No price feed for index token");
         require(longFeed != address(0), "No price feed for long token");
         require(shortFeed != address(0), "No price feed for short token");
-        
+        */
         indexTokenPrice = PricesLib.getPriceFromFeed(indexFeed);
         longTokenPrice = PricesLib.getPriceFromFeed(longFeed);
         shortTokenPrice = PricesLib.getPriceFromFeed(shortFeed);
@@ -316,7 +316,7 @@ contract GMXPrices {
     {
         Market memory market = getMarket(marketAddress);
         address priceFeed = getChainlinkPriceFeed(market.indexToken);
-        require(priceFeed != address(0), "No price feed");
+        //require(priceFeed != address(0), "No price feed");
         
         return PricesLib.getPriceWithDecimals(priceFeed);
     }
@@ -332,10 +332,10 @@ contract GMXPrices {
         view 
         returns (Market memory market) 
     {
-        require(
+        /*require(
             dataStore.containsAddress(MARKET_LIST, marketAddress),
             "Market does not exist"
-        );
+        );*/
         
         market.marketToken = dataStore.getAddress(
             keccak256(abi.encode(marketAddress, MARKET_TOKEN))
@@ -353,7 +353,7 @@ contract GMXPrices {
             keccak256(abi.encode(marketAddress, SHORT_TOKEN))
         );
         
-        require(market.marketToken != address(0), "Invalid market");
+        //require(market.marketToken != address(0), "Invalid market");
         
         return market;
     }

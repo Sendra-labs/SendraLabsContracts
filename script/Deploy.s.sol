@@ -4,26 +4,41 @@ pragma solidity ^0.8.13;
 import {Script, console} from "forge-std/Script.sol";
 import { AddressProvider } from "../src/core/config/AddressProvider.sol";
 import { Roles } from "../src/security/Roles.sol";
-import { MarketNeutral } from "../src/core/bundles/executors/MarketNeutral.sol";
+import { PairTrading } from "../src/core/bundles/executors/PairTrading.sol";
 import { ProtocolStorage } from "../src/core/ProtocolStorage.sol";
 import { GMXMarketsRegistry } from "../src/core/config/gmxMarkets.sol";
 import { GMXPrices } from "../src/periphery/utilsGMX/GMXPrices.sol";
-import { UpgradeableLib } from "../src/core/UpgradeableLib.sol";
+import { ProxyFactory } from "../src/core/bundles/executors/ProxyFactory.sol";
+import { ProxyManager } from "../src/core/bundles/storage/ProxyManager.sol";
+import { PairTradingStorage } from "../src/core/bundles/storage/PairTradingStorage.sol";
+import { ClosePositionCallbacks } from "../src/core/bundles/executors/callbacks/ClosePositionCallbacks.sol";
+import { PairTradingReader } from "../src/core/bundles/readers/pairTradingReader.sol";
+import { MainReader } from "../src/core/MainReader.sol";
+import { PositionInitializer } from "../src/core/bundles/executors/PositionInitializer.sol";
+import { ProxyAccessControl } from "../src/core/bundles/security/proxyAccessControl.sol";
 
 contract Deploy is Script {
-/*
+
+    uint256 public ADMIN1_PRIVATE_KEY = vm.envUint("ADMIN1_PRIVATE_KEY");
+
     AddressProvider public addressProvider;
     Roles public roles;
-    MarketNeutral public marketNeutral;
-    BundlesRouter public bundlesRouter;
+    PairTrading public pairTrading;
     ProtocolStorage public protocolStorage;
     GMXMarketsRegistry public gmxMarketsRegistry;
     GMXPrices public gmxPrices;
-    UpgradeableLib public upgradeableLib;
+    ProxyFactory public proxyFactory;
+    ProxyManager public proxyManager;
+    PairTradingStorage public pairTradingStorage;
+    ClosePositionCallbacks public closePositionCallbacks;
+    PairTradingReader public pairTradingReader;
+    MainReader public mainReader;
+    PositionInitializer public positionInitializer;
+    ProxyAccessControl public proxyAccessControl;
 
-    address public constant ADMIN1 = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; // CHANGE THIS
-    address public constant ADMIN2 = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; // CHANGE THIS
-    address public constant ADMIN3 = 0x70d95587d40A2caf56bd97485aB3Eec10Bee6336; // CHANGE THIS
+    address public constant ADMIN1 = 0x7F4C831de10684f85867899708cB49FfbF4983B9;
+    address public constant ADMIN2 = 0xdD8f39262841F9425ed9180D0D989312E41EbEEc;
+    address public constant ADMIN3 = 0xD023851C8AC8ceC385988e7E5af84b1A6D1f9079;
 
     struct Contracts {
         string name;
@@ -32,38 +47,78 @@ contract Deploy is Script {
     }
 
     function setUp() public {}
-
+    
     function run() public {
-        vm.startBroadcast();
-        
+        vm.startBroadcast(ADMIN1_PRIVATE_KEY);
+
         roles = new Roles(ADMIN1, ADMIN2, ADMIN3);
         addressProvider = new AddressProvider(address(roles));
-        marketNeutral = new MarketNeutral(address(addressProvider));
-        bundlesRouter = new BundlesRouter(address(addressProvider));
+        
+        scriptSetAddresses(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8, "GMXDataStore");
+        scriptSetAddresses(address(roles), "Roles");
+        scriptSetAddresses(0x63492B775e30a9E6b4b4761c12605EB9d071d5e9, "OrderHandlerGMX");
+        scriptSetAddresses(0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5, "OrderVaultGMX");
+        scriptSetAddresses(0x1C3fa76e6E1088bCE750f23a5BFcffa1efEF6A41, "ExchangeRouterGMX");
+        scriptSetAddresses(0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6, "RouterGMX");
+        scriptSetAddresses(0xaf88d065e77c8cC2239327C5EDb3A432268e5831, "USDC");
+        scriptSetAddresses(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1, "WETH");
+        scriptSetAddresses(0xe6fab3F0c7199b0d34d7FbE83394fc0e0D06e99d, "ReferralStorageGMX");
+        scriptSetAddresses(0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789, "ReaderGMX");
+
         protocolStorage = new ProtocolStorage(address(roles));
         gmxMarketsRegistry = new GMXMarketsRegistry(address(roles));
+        scriptSetAddresses(address(gmxMarketsRegistry), "GMXMarkets");
+        pairTrading = new PairTrading(address(addressProvider));
+        pairTradingStorage = new PairTradingStorage(address(addressProvider));
+        closePositionCallbacks = new ClosePositionCallbacks(address(addressProvider));
+        pairTradingReader = new PairTradingReader(address(addressProvider));
+        proxyFactory = new ProxyFactory(address(addressProvider));
         gmxPrices = new GMXPrices(address(addressProvider));
-        upgradeableLib = new UpgradeableLib(address(roles));
+        proxyManager = new ProxyManager(address(addressProvider));
+        proxyAccessControl = new ProxyAccessControl(address(roles));
+        positionInitializer = new PositionInitializer(address(addressProvider));
+        
+        scriptSetAddresses(address(protocolStorage), "ProtocolStorage");
+        scriptSetAddresses(address(gmxPrices), "GMXPrices");
+        scriptSetAddresses(address(pairTradingReader), "PairTradingReader");
+        scriptSetAddresses(address(proxyAccessControl), "ProxyAccessControl");
+        scriptSetAddresses(address(positionInitializer), "PositionInitializer");
+        
+        mainReader = new MainReader(address(addressProvider));
 
         console.log("--------------------------------");
         console.log("Roles -------------> ", address(roles));
         console.log("AddressProvider ---> ", address(addressProvider));
-        console.log("MarketNeutral -----> ", address(marketNeutral));
-        console.log("BundlesRouter -----> ", address(bundlesRouter));
+        console.log("PairTrading -------> ", address(pairTrading));
         console.log("ProtocolStorage ---> ", address(protocolStorage));
         console.log("GMXMarketsRegistry -> ", address(gmxMarketsRegistry));
         console.log("GMXPrices --------> ", address(gmxPrices));
-        console.log("UpgradeableLib ----> ", address(upgradeableLib));
+        console.log("ProxyFactory -----> ", address(proxyFactory));
+        console.log("ProxyManager -----> ", address(proxyManager));
+        console.log("PairTradingStorage -> ", address(pairTradingStorage));
+        console.log("ClosePositionCallbacks -> ", address(closePositionCallbacks));
+        console.log("PairTradingReader -> ", address(pairTradingReader));
+        console.log("MainReader --------> ", address(mainReader));
+        console.log("PositionInitializer -> ", address(positionInitializer));
+        console.log("ProxyAccessControl -> ", address(proxyAccessControl));
         console.log("--------------------------------");
         
-        Contracts[] memory contracts = new Contracts[](6);
-        contracts[0] = Contracts("BundlesRouter", address(bundlesRouter), true);
-        contracts[1] = Contracts("MarketNeutral", address(marketNeutral), true);
+        Contracts[] memory contracts = new Contracts[](14);
+        contracts[0] = Contracts("Roles", address(roles), false);
+        contracts[1] = Contracts("PairTrading", address(pairTrading), true);
         contracts[2] = Contracts("ProtocolStorage", address(protocolStorage), false);
         contracts[3] = Contracts("AddressProvider", address(addressProvider), false);
-        contracts[4] = Contracts("GMXMarketsRegistry", address(gmxMarketsRegistry), false);
+        contracts[4] = Contracts("GMXMarkets", address(gmxMarketsRegistry), false);
         contracts[5] = Contracts("GMXPrices", address(gmxPrices), false);
-
+        contracts[6] = Contracts("ProxyFactory", address(proxyFactory), false);
+        contracts[7] = Contracts("ProxyManager", address(proxyManager), true);
+        contracts[8] = Contracts("PairTradingStorage", address(pairTradingStorage), false);
+        contracts[9] = Contracts("ClosePositionCallbacks", address(closePositionCallbacks), true);
+        contracts[10] = Contracts("PairTradingReader", address(pairTradingReader), false);
+        contracts[11] = Contracts("MainReader", address(mainReader), false);
+        contracts[12] = Contracts("PositionInitializer", address(positionInitializer), true);
+        contracts[13] = Contracts("ProxyAccessControl", address(proxyAccessControl), false);
+            
         scriptManager(contracts);
 
         vm.stopBroadcast();
@@ -79,20 +134,10 @@ contract Deploy is Script {
     }
 
     function scriptAllowContract(address _contract, string memory _name) public {
-        vm.startBroadcast(ADMIN1_PRIVATE_KEY);
         roles.allowContract(_contract, _name);
-        vm.stopBroadcast();
-
-        vm.startBroadcast(ADMIN2_PRIVATE_KEY);
-        roles.allowContract(_contract, _name);
-        vm.stopBroadcast();
     }
-
+    
     function scriptSetAddresses(address _address, string memory _name) public {
-        vm.startBroadcast(ADMIN1_PRIVATE_KEY);
         addressProvider.setAddress(_name, _address);
-        vm.stopBroadcast();
     }
-    */
-
 }
