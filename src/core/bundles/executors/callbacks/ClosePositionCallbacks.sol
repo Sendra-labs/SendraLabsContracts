@@ -259,9 +259,6 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         return (orderMarket == marketLong);
     }
 
-    error InvalidSender();
-    error AlreadyProcessed();
-
     /**
      * @notice Processes execution data and transfers funds to the user
      * @dev Updates position state, calculates PNL, and transfers output tokens
@@ -452,5 +449,8 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
             emit EmergencyWithdraw(msg.sender, weth, to, amount, reason, block.timestamp);
         }
     }
+
+    error InvalidSender();
+    error AlreadyProcessed();
 
 }
