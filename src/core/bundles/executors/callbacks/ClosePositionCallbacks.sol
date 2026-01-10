@@ -259,6 +259,9 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         return (orderMarket == marketLong);
     }
 
+    error InvalidSender();
+    error AlreadyProcessed();
+
     /**
      * @notice Processes execution data and transfers funds to the user
      * @dev Updates position state, calculates PNL, and transfers output tokens
@@ -267,10 +270,9 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
      * @param _pairTradingStorage Address of PairTradingStorage contract
      */
     function processAndTransfer(bytes32 key, address _pairTradingStorage) external {
-        require(msg.sender == address(this), "Internal only");
+        if(msg.sender != address(this)) revert InvalidSender();
         PairTradingLib.RawExecutionData memory data = PairTradingStorage(_pairTradingStorage).getRawExecutionData(key);
-        require(data.positionId != 0, "No data for this key");
-        require(!data.processed, "Already processed");
+        if(data.processed) revert AlreadyProcessed();
         
         ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
         ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(data.receiver, data.positionId);
