@@ -205,6 +205,14 @@ contract PairTradingProxy is ReentrancyGuard {
         require(success, "Delegatecall failed");
     }
 
+    function customFunctionDelegatecall(address _target, bytes memory _data) public onlyOwner nonReentrant {
+        address positionInitializer = addressProvider.getAddress("PositionInitializer");
+        address pairTradingStorage = addressProvider.getAddress("PairTradingStorage");
+        if(_target == positionInitializer || _target == pairTradingStorage) revert TragetNotAllowed();
+        (bool success,) = _target.delegatecall(_data);
+        require(success, "Delegatecall failed");
+    }
+
     /**
      * @notice Validates and adds markets to the tracking array
      * @dev Checks if either market is already in use by this proxy before adding them.
@@ -297,5 +305,8 @@ contract PairTradingProxy is ReentrancyGuard {
     
     /// @notice Thrown when attempting to use a market that is already in use by this proxy
     error MarketAlreadyExists();
+
+    /// @notice Thrown when attempting to call a target that is not allowed
+    error TragetNotAllowed();
 
 }
