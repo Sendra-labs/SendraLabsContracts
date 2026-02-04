@@ -238,16 +238,6 @@ contract PairTradingProxy is ReentrancyGuard {
     function getId() public view returns (uint256) {
         return id;
     }
-
-    /**
-     * @notice Checks if this proxy is available (not currently managing any positions)
-     * @dev A proxy is available when the markets array is empty, meaning no active positions
-     * 
-     * @return true if no markets are tracked (proxy is available), false otherwise
-     */
-    function isAvailable() public view returns (bool) {
-        return markets.length == 0;
-    }
     
     /// @notice Thrown when a function is called by an address that is not the proxy owner
     error NotOwner();
