@@ -606,9 +606,14 @@ contract PairTrading is ReentrancyGuard {
         uint256 minOutputAmount = getMinOutputAmount(market, position, gmxPrices, _input.slippageBps, isLong);
 
         uint256 callbackGasLimit = 1250000; // 1.25M gas
-        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
-        address[] memory swapPath = getSwapPath(market, collateralToken, gmxMarkets, false);
         address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
+
+    
+        address[] memory decreaseSwapPath;
+        if (isLong) {
+            decreaseSwapPath = new address[](1);
+            decreaseSwapPath[0] = market;
+        }
 
         IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
             addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
@@ -617,8 +622,8 @@ contract PairTrading is ReentrancyGuard {
                 callbackContract: callbackContract,
                 uiFeeReceiver: address(0),
                 market: market,
-                initialCollateralToken: swapPath.length > 0 ? swapPath[0] : collateralToken, 
-                swapPath: swapPath
+                initialCollateralToken: collateralToken,
+                swapPath: decreaseSwapPath
             }),
             numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
                 sizeDeltaUsd: sizeDeltaUsd,
