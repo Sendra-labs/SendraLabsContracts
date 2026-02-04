@@ -164,6 +164,9 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         bool rescued
     );
 
+    event MarketDeleted(bool isLong, uint256 positionId);
+    event MarketDeletionFailed(bool isLong, uint256 positionId);
+
     /**
      * @notice Callback function called by GMX OrderHandler after order execution
      * @dev Processes the executed order, updates position state, and transfers funds to the user
@@ -214,8 +217,13 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         try this.calculateIsLongSide(pendingOrder.receiver, pendingOrder.positionId, orderMarket) returns (bool isLong) {
             PairTradingLib.RawExecutionData memory data = pairTradingStorage.getRawExecutionData(key);
             data.isLongSide = isLong;
-            pairTradingStorage.storeRawExecutionData(key, data);
+            pairTradingStorage.storeRawExecutionData(key, data); // we can store just the isLongSide... no need to store the whole data, create a new function for that.
             isLongSideCalculated = true;
+            try ProxyManager(addressProvider.getAddress("ProxyManager")).deleteMarket(isLong, pendingOrder.positionId, proxyId, pendingOrder.receiver) {
+                emit MarketDeleted(isLong, pendingOrder.positionId);
+            } catch {
+                emit MarketDeletionFailed(isLong, pendingOrder.positionId);
+            }
         } catch {
             emit IsLongSideCalculationFailed(key, pendingOrder.positionId);
         }

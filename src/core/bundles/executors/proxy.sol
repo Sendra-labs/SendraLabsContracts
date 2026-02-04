@@ -168,7 +168,6 @@ contract PairTradingProxy is ReentrancyGuard {
      * @custom:revert "Delegatecall failed" If the delegatecall to PairTrading fails
      */
     function closePairTradingDelegatecall(PairTradingLib.ClosePairTradingInput calldata _input) public payable onlyOwner nonReentrant {
-        deleteMarket(_input.positionId);
         (bool success,) = pairTrading.delegatecall(
             abi.encodeCall(
                 PairTrading.closePairTrading,
@@ -195,7 +194,6 @@ contract PairTradingProxy is ReentrancyGuard {
      * @custom:revert "Delegatecall failed" If the delegatecall to PairTrading fails
      */
     function closeSidePairTradingDelegatecall(PairTradingLib.CloseSidePairTradingInput calldata _input) public payable onlyOwner nonReentrant {
-        deleteMarket(_input.positionId);
         (bool success,) = pairTrading.delegatecall(
             abi.encodeCall(
                 PairTrading.closeSidePairTrading,
@@ -204,7 +202,6 @@ contract PairTradingProxy is ReentrancyGuard {
         );
         require(success, "Delegatecall failed");
     }
-
     
     // create a whitelist instead of a blacklist... a contract with allowed addresses.
     function customFunctionDelegatecall(address _target, bytes memory _data) public onlyOwner nonReentrant {
@@ -234,62 +231,7 @@ contract PairTradingProxy is ReentrancyGuard {
      * @custom:revert MarketAlreadyExists If either marketLong or marketShort is already in the markets array
      */
     function manageMarkets(string calldata _marketLong, string calldata _marketShort) internal {
-        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
-        address marketLong = gmxMarkets.getMarket(_marketLong);
-        address marketShort = gmxMarkets.getMarket(_marketShort);
-        for(uint256 i = 0; i < markets.length; i++) {
-            if (
-                markets[i] == marketLong || 
-                markets[i] == marketShort
-            ) {
-                revert MarketAlreadyExists();
-            }
-        }
-        markets.push(marketLong);
-        markets.push(marketShort);
-    }
-
-    /**
-     * @notice Removes markets from tracking when a position is closed
-     * @dev Retrieves the position data, extracts market addresses, and removes them
-     *      from the markets array. Uses swap-and-pop pattern for efficient deletion.
-     * 
-     * @param _positionId ID of the position being closed
-     */
-    function deleteMarket(uint256 _positionId) internal {
-        ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        address owner = ProxyManager(addressProvider.getAddress("ProxyManager")).getOwner(id);
-        ProtocolLib.Position memory position = protocolStorage.getUserPositionById(owner, _positionId);
-        address marketLong = abi.decode(position.positionData[2], (address));
-        address marketShort = abi.decode(position.positionData[3], (address));
-        for(uint256 i = markets.length; i > 0; i--) {
-            uint256 index = i - 1;
-            if (markets[index] == marketLong || markets[index] == marketShort) {
-                markets[index] = markets[markets.length - 1];
-                markets.pop();
-            }
-        }
-    }
-
-    /**
-     * @notice Checks if the specified markets are currently being used by this proxy
-     * @dev Used to verify market availability before opening new positions
-     * 
-     * @param _marketLong Market identifier for the long position
-     * @param _marketShort Market identifier for the short position
-     * 
-     * @return true if either market is currently in use, false otherwise
-     */
-    function isMarketBeingUsed(string calldata _marketLong, string calldata _marketShort) public view returns (bool) {
-        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
-        address marketLong = gmxMarkets.getMarket(_marketLong);
-        address marketShort = gmxMarkets.getMarket(_marketShort);
-        for(uint256 i = 0; i < markets.length; i++) {
-            if (markets[i] == marketLong || markets[i] == marketShort) {
-                return true; // market is being used
-            }
-        }
-        return false; // market is not being used
+        ProxyManager(addressProvider.getAddress("ProxyManager")).manageMarkets(_marketLong, _marketShort, id);
     }
 
     /**
@@ -313,8 +255,6 @@ contract PairTradingProxy is ReentrancyGuard {
     /// @notice Thrown when a function is called by an address that is not the proxy owner
     error NotOwner();
     
-    /// @notice Thrown when attempting to use a market that is already in use by this proxy
-    error MarketAlreadyExists();
 
     /// @notice Thrown when attempting to call a target that is not allowed
     error TragetNotAllowed();
