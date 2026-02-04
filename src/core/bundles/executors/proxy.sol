@@ -206,7 +206,7 @@ contract PairTradingProxy is ReentrancyGuard {
     }
 
     
-    // crear whitelist en vez de blacklist... un contrato con address permitidas.
+    // create a whitelist instead of a blacklist... a contract with allowed addresses.
     function customFunctionDelegatecall(address _target, bytes memory _data) public onlyOwner nonReentrant {
         address positionInitializer = addressProvider.getAddress("PositionInitializer");
         address pairTradingStorage = addressProvider.getAddress("PairTradingStorage");
