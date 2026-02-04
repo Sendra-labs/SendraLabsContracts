@@ -79,9 +79,6 @@ contract PairTradingProxy is ReentrancyGuard {
         _;
     }
 
-    /// @notice Internal array tracking which markets are currently being used by this proxy
-    address[] internal markets;
-
     /**
      * @notice Updates the PairTrading implementation address
      * @dev Allows the proxy owner to update the implementation contract address,

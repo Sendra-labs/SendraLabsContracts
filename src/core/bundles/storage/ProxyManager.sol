@@ -122,6 +122,10 @@ contract ProxyManager is ReentrancyGuard {
     /// @notice Mapping from batch ID to Batch struct containing available proxies
     mapping(uint256 => Batch) public availableProxiesBatch;
 
+    /// @notice Markets in use per proxy (long + short addresses). Cleared when position closes.
+    mapping(uint256 => address[]) public proxyMarkets;
+
+
     // Events
 
     /**
@@ -246,7 +250,7 @@ contract ProxyManager is ReentrancyGuard {
      */
     function setAvailable(uint256 _proxyId) public onlyProtocol {
         bool isAdded = false;
-        bool isAvailable = PairTradingProxy(proxies[_proxyId].proxy).isAvailable();
+        bool isAvailable = isAvailable(_proxyId);
         if(getOwner(_proxyId) != address(0)) {
             if(isAvailable) {
                 for(uint256 i = 0; i < batchId + 1; i++) {
@@ -267,9 +271,6 @@ contract ProxyManager is ReentrancyGuard {
             }
         }
     }
-
-    /// @notice Markets in use per proxy (long + short addresses). Cleared when position closes.
-    mapping(uint256 => address[]) public proxyMarkets;
 
     /**
      * @notice Validates and adds markets to the tracking array
@@ -320,6 +321,10 @@ contract ProxyManager is ReentrancyGuard {
             }
         }
         revert MarketNotFound();
+    }
+
+    function isAvailable(uint256 _proxyId) public view returns (bool) {
+        return proxyMarkets[_proxyId].length == 0;
     }
 
     /**
