@@ -205,12 +205,22 @@ contract PairTradingProxy is ReentrancyGuard {
         require(success, "Delegatecall failed");
     }
 
+    
+    // crear whitelist en vez de blacklist... un contrato con address permitidas.
     function customFunctionDelegatecall(address _target, bytes memory _data) public onlyOwner nonReentrant {
         address positionInitializer = addressProvider.getAddress("PositionInitializer");
         address pairTradingStorage = addressProvider.getAddress("PairTradingStorage");
         if(_target == positionInitializer || _target == pairTradingStorage) revert TragetNotAllowed();
         (bool success,) = _target.delegatecall(_data);
         require(success, "Delegatecall failed");
+    }
+
+    function customFunction(address _target, bytes memory _data) public onlyOwner nonReentrant {
+        address positionInitializer = addressProvider.getAddress("PositionInitializer");
+        address pairTradingStorage = addressProvider.getAddress("PairTradingStorage");
+        if(_target == positionInitializer || _target == pairTradingStorage) revert TragetNotAllowed();
+        (bool success,) = _target.call(_data);
+        require(success, "Call failed");
     }
 
     /**
