@@ -157,11 +157,11 @@ contract ProxyManager is ReentrancyGuard {
      *      3. If not available: deploys new proxy via ProxyFactory
      */
     function initializeProxy(address _owner) public nonReentrant returns (address _proxyAddress) {
-        (uint256 _proxyId, uint256 _batchId, address proxyAddress, bool isAvailable) = getAvailableProxy();  
-        if(!isAvailable) {
+        (uint256 _proxyId, uint256 _batchId, address proxyAddress, bool _isAvailable) = getAvailableProxy();  
+        if(!_isAvailable) {
             _proxyAddress = deployProxy(_owner);
             return (_proxyAddress);
-        } else if (isAvailable) { 
+        } else if (_isAvailable) { 
             claimAvailableProxy(_proxyId, _batchId, _owner);
             return (proxyAddress);
         }
@@ -250,9 +250,9 @@ contract ProxyManager is ReentrancyGuard {
      */
     function setAvailable(uint256 _proxyId) public onlyProtocol {
         bool isAdded = false;
-        bool isAvailable = isAvailable(_proxyId);
+        bool _isAvailable = isAvailable(_proxyId);
         if(getOwner(_proxyId) != address(0)) {
-            if(isAvailable) {
+            if(_isAvailable) {
                 for(uint256 i = 0; i < batchId + 1; i++) {
                     if(!isbatchFilled(i)) {
                         availableProxiesBatch[i].availableCount++;
