@@ -199,6 +199,16 @@ contract PairTradingProxy is ReentrancyGuard {
         );
         require(success, "Delegatecall failed");
     }
+
+    function setStopLossSidePairTradingDelegatecall(PairTradingLib.CloseSidePairTradingInputWithStopLoss calldata _input) public payable onlyOwner nonReentrant {
+        (bool success,) = pairTrading.delegatecall(
+            abi.encodeCall(
+                PairTrading.closeSidePairTradingWithStopLoss,
+                (_input)
+            )
+        );
+        require(success, "Delegatecall failed");
+    }
     
     // create a whitelist instead of a blacklist... a contract with allowed addresses.
     function customFunctionDelegatecall(address _target, bytes memory _data) public onlyOwner nonReentrant {
