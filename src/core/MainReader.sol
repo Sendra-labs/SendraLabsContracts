@@ -32,6 +32,7 @@ import { GMXPrices } from "../periphery/utilsGMX/GMXPrices.sol";
 import { PairTradingReader } from "./bundles/readers/pairTradingReader.sol";
 import { PairTradingProxy } from "./bundles/executors/proxy.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { ProxyManager } from "./bundles/storage/ProxyManager.sol";
 
 contract MainReader {
 
@@ -324,7 +325,7 @@ contract MainReader {
                 // Skip if proxy is address(0) (shouldn't happen, but safety check)
                 if(proxy == address(0)) continue;
                 
-                bool isMarketBeingUsed = PairTradingProxy(proxy).isMarketBeingUsed(_marketLong, _marketShort);
+                bool isMarketBeingUsed = ProxyManager(addressProvider.getAddress("ProxyManager")).isMarketBeingUsed(_marketLong, _marketShort, PairTradingProxy(proxy).getId());
                 if(!isMarketBeingUsed) {
                     return (false, pairTradingPositions[i].proxy); // user is owner of a proxy that is not being used for this markets
                     // retunrs "false, proxy is not needed, user is owner and can use this adress"

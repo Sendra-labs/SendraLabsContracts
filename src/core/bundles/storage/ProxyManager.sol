@@ -31,6 +31,9 @@ import { ProxyFactory } from "../executors/ProxyFactory.sol";
 import { PairTradingProxy } from "../executors/proxy.sol";
 import { ProxyAccessControl } from "../security/proxyAccessControl.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import { GMXMarketsRegistry } from "../../../core/config/gmxMarkets.sol";
+import { ProtocolStorage } from "../../ProtocolStorage.sol";
+import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 
 /**
  * @title ProxyManager
@@ -79,6 +82,11 @@ contract ProxyManager is ReentrancyGuard {
         _;
     }
 
+    modifier onlyProxy(address _proxy) {
+        if(!ProxyAccessControl(addressProvider.getAddress("ProxyAccessControl")).isProtocolProxy(_proxy)) revert SenderNotAllowed();
+        _;
+    }
+
     /**
      * @notice Structure representing a proxy and its owner
      * @param owner Address of the current owner (address(0) if available)
@@ -114,6 +122,10 @@ contract ProxyManager is ReentrancyGuard {
     /// @notice Mapping from batch ID to Batch struct containing available proxies
     mapping(uint256 => Batch) public availableProxiesBatch;
 
+    /// @notice Markets in use per proxy (long + short addresses). Cleared when position closes.
+    mapping(uint256 => address[]) public proxyMarkets;
+
+
     // Events
 
     /**
@@ -145,11 +157,11 @@ contract ProxyManager is ReentrancyGuard {
      *      3. If not available: deploys new proxy via ProxyFactory
      */
     function initializeProxy(address _owner) public nonReentrant returns (address _proxyAddress) {
-        (uint256 _proxyId, uint256 _batchId, address proxyAddress, bool isAvailable) = getAvailableProxy();  
-        if(!isAvailable) {
+        (uint256 _proxyId, uint256 _batchId, address proxyAddress, bool _isAvailable) = getAvailableProxy();  
+        if(!_isAvailable) {
             _proxyAddress = deployProxy(_owner);
             return (_proxyAddress);
-        } else if (isAvailable) { 
+        } else if (_isAvailable) { 
             claimAvailableProxy(_proxyId, _batchId, _owner);
             return (proxyAddress);
         }
@@ -238,9 +250,9 @@ contract ProxyManager is ReentrancyGuard {
      */
     function setAvailable(uint256 _proxyId) public onlyProtocol {
         bool isAdded = false;
-        bool isAvailable = PairTradingProxy(proxies[_proxyId].proxy).isAvailable();
+        bool _isAvailable = isAvailable(_proxyId);
         if(getOwner(_proxyId) != address(0)) {
-            if(isAvailable) {
+            if(_isAvailable) {
                 for(uint256 i = 0; i < batchId + 1; i++) {
                     if(!isbatchFilled(i)) {
                         availableProxiesBatch[i].availableCount++;
@@ -259,6 +271,83 @@ contract ProxyManager is ReentrancyGuard {
             }
         }
     }
+
+    /**
+     * @notice Validates and adds markets to the tracking array
+     * @dev Checks if either market is already in use by this proxy before adding them.
+     *      Prevents conflicts by ensuring only one position per market pair per proxy.
+     * 
+     * @param _marketLong Market identifier for the long position
+     * @param _marketShort Market identifier for the short position
+     * 
+     * @custom:revert MarketAlreadyExists If either marketLong or marketShort is already in the markets array
+     */
+    function manageMarkets(string calldata _marketLong, string calldata _marketShort, uint256 _proxyId) external onlyProxy(msg.sender) {
+        address proxy = proxies[_proxyId].proxy;
+        if(proxy != msg.sender) revert SenderNotAllowed();
+        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
+        address marketLong = gmxMarkets.getMarket(_marketLong);
+        address marketShort = gmxMarkets.getMarket(_marketShort);
+        for(uint256 i = 0; i < proxyMarkets[_proxyId].length; i++) {
+            if (
+                proxyMarkets[_proxyId][i] == marketLong || 
+                proxyMarkets[_proxyId][i] == marketShort
+            ) {
+                revert MarketAlreadyExists();
+            }
+        }
+        proxyMarkets[_proxyId].push(marketLong);
+        proxyMarkets[_proxyId].push(marketShort);
+    }
+
+    /**
+     * @notice Removes one market (long or short) from a proxy's list when a position side is closed.
+     * @dev Uses swap-and-pop for O(1) removal. Only removes first occurrence; call once per callback (one side).
+     * @param _isLong true = remove long market (positionData[2]), false = short (positionData[3])
+     * @param _positionId Position ID to read market from
+     * @param _proxyId Proxy ID whose proxyMarkets to update
+     * @param _owner Position owner (receiver) to load position from ProtocolStorage
+     */
+    function deleteMarket(bool _isLong, uint256 _positionId, uint256 _proxyId, address _owner) external onlyProtocol {
+        ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_owner, _positionId);
+        address market = _isLong ? abi.decode(position.positionData[2], (address)) : abi.decode(position.positionData[3], (address));
+        for(uint256 i = proxyMarkets[_proxyId].length; i > 0; i--) {
+            uint256 index = i - 1;
+            if (proxyMarkets[_proxyId][index] == market) {
+                proxyMarkets[_proxyId][index] = proxyMarkets[_proxyId][proxyMarkets[_proxyId].length - 1];
+                proxyMarkets[_proxyId].pop();
+                return;
+            }
+        }
+        revert MarketNotFound();
+    }
+
+    function isAvailable(uint256 _proxyId) public view returns (bool) {
+        return proxyMarkets[_proxyId].length == 0;
+    }
+
+    /**
+     * @notice Checks if the specified markets are currently being used by this proxy
+     * @dev Used to verify market availability before opening new positions
+     * 
+     * @param _marketLong Market identifier for the long position
+     * @param _marketShort Market identifier for the short position
+     * 
+     * @return true if either market is currently in use, false otherwise
+     */
+    function isMarketBeingUsed(string calldata _marketLong, string calldata _marketShort, uint256 _proxyId) public view returns (bool) {
+        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
+        address marketLong = gmxMarkets.getMarket(_marketLong);
+        address marketShort = gmxMarkets.getMarket(_marketShort);
+        for(uint256 i = 0; i < proxyMarkets[_proxyId].length; i++) {
+            if (proxyMarkets[_proxyId][i] == marketLong || proxyMarkets[_proxyId][i] == marketShort) {
+                return true; // market is being used
+            }
+        }
+        return false; // market is not being used
+    }
+
 
     /**
      * @notice Gets the current owner of a proxy
@@ -323,5 +412,11 @@ contract ProxyManager is ReentrancyGuard {
     
     /// @notice Thrown when attempting to perform an operation on a proxy with pending orders
     error ProxyHasPendingOrders();
+    
+    /// @notice Thrown when attempting to remove a market that is not in use
+    error MarketNotFound();
+
+    /// @notice Thrown when attempting to use a market that is already in use by this proxy
+    error MarketAlreadyExists();
 
 }

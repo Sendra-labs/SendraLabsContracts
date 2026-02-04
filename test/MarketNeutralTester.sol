@@ -213,4 +213,10 @@ contract NewMarketNeutralTester {
         address tokenAddress = bytes32(keccak256(bytes(token))) == bytes32(keccak256(bytes("ETH"))) ? address(0) : addressProvider.getAddress(token);
         ClosePositionCallbacks(addressCallback).emergencyWithdraw(tokenAddress, msg.sender, amount, "Rescue from callback");
     }
+
+    function rescueFromCallbackAddress(address tokenAddress, uint256 amount) external onlyDeployer {
+        address payable addressCallback = payable(addressProvider.getAddress("ClosePositionCallbacks"));
+        ClosePositionCallbacks(addressCallback).emergencyWithdraw(tokenAddress, msg.sender, amount, "Rescue from callback");
+    }
+
 }
