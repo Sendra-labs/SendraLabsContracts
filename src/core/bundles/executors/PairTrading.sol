@@ -656,6 +656,101 @@ contract PairTrading is ReentrancyGuard {
 
         emit PositionClosed(receiver, market, sizeDeltaUsd, isLong); 
     }
+
+    /**
+     * @notice Submits a stop-loss decrease order for one side (long or short) of a pair position.
+     * @dev Order executes when oracle price crosses triggerPrice: long when price <= triggerPrice, short when price >= triggerPrice.
+     * @param _input positionId, executionFee, slippageBps, value, triggerPrice (GMX format, 30 decimals), isLongSide
+     * @custom:require msg.value >= executionFee
+     */
+    function closeSidePairTradingWithStopLoss( PairTradingLib.CloseSidePairTradingInputWithStopLoss memory _input ) public payable {
+
+        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        address weth = addressProvider.getAddress("WETH");
+        address usdc = addressProvider.getAddress("USDC");
+        address orderVault = addressProvider.getAddress("OrderVaultGMX");
+        address exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
+        
+        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(msg.sender,_input.positionId);
+        if(!position.isActive) {
+            revert PositionNotActive();
+        }
+        bytes[] memory positionData = position.positionData;
+
+        address market = abi.decode(_input.isLongSide ? positionData[2] : positionData[3], (address));
+        GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
+        (uint256 _acceptablePrice, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(
+            market,
+            _input.isLongSide, 
+            false, 
+            10000 // hardcoded for testing
+        ); // AQUI FALLA SI VA CON OTRO SLIPPAGE BPS que no sea 10000... habiendo metido el update del minimumOutputAmount
+            // Creo que solo Falla el LONG
+        uint256 sizeDeltaUsd = abi.decode(_input.isLongSide ? positionData[4] : positionData[5], (uint256));
+        uint256 acceptablePrice = _acceptablePrice;      
+        uint256 executionFee = _input.executionFee;  
+        address receiver = msg.sender;
+        bool isLong = _input.isLongSide;
+        uint256 positionId = _input.positionId;
+        
+        // isNativeToken from positionData[1]
+        // if true → WETH, if false → USDC
+        bool isNativeToken = abi.decode(position.positionData[1], (bool));
+        address collateralToken = isNativeToken ? weth : usdc;
+
+        uint256 minOutputAmount = getMinAmountForStopLoss(position, _input.triggerPrice, _input.slippageBps, isLong);
+
+        uint256 callbackGasLimit = 1250000; // 1.25M gas
+        address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
+
+    
+        address[] memory decreaseSwapPath;
+        if (isLong) {
+            decreaseSwapPath = new address[](1);
+            decreaseSwapPath[0] = market;
+        }
+
+        IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
+            addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
+                receiver:  callbackContract,
+                cancellationReceiver: receiver,
+                callbackContract: callbackContract,
+                uiFeeReceiver: address(0),
+                market: market,
+                initialCollateralToken: collateralToken,
+                swapPath: decreaseSwapPath
+            }),
+            numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
+                sizeDeltaUsd: sizeDeltaUsd,
+                initialCollateralDeltaAmount: 0,
+                triggerPrice: _input.triggerPrice,
+                acceptablePrice: acceptablePrice,
+                executionFee: executionFee,
+                callbackGasLimit: callbackGasLimit, 
+                minOutputAmount: minOutputAmount,
+                validFromTime: 0
+            }),
+            orderType: Order.OrderType.StopLossDecrease,
+            decreasePositionSwapType: Order.DecreasePositionSwapType.NoSwap,
+            isLong: isLong,
+            shouldUnwrapNativeToken: false,
+            autoCancel: false,
+            referralCode: bytes32(0),
+            dataList: new bytes32[](0)
+        });
+
+        IExchangeRouter exchangeRouterInstance = IExchangeRouter(exchangeRouter);
+
+        exchangeRouterInstance.sendWnt{value: executionFee}(orderVault, executionFee);
+        
+        bytes32 key = exchangeRouterInstance.createOrder(orderParams);
+
+        PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).updatePendingOrder(key, PairTradingLib.PendingOrder(receiver, address(this), positionId, true));
+        
+        PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).addUserPendingOrderKey(receiver, key);
+
+        emit PositionClosed(receiver, market, sizeDeltaUsd, isLong); 
+    }
     
     // read Functions
 
@@ -703,7 +798,44 @@ contract PairTrading is ReentrancyGuard {
         uint256 minOutputAmount = minUsdcAmount;
         
         return minOutputAmount;
-    }   
+    }
+
+    /**
+     * @notice Minimum output amount when closing at a given trigger price (e.g. stop loss).
+     * @dev Same logic as getMinOutputAmount but uses triggerPrice instead of current market price.
+     *      triggerPrice must be in GMX format (30 decimals); it is normalized to 8 decimals to match initialPrice.
+     *
+     * @param position The position data (initialPrice and initial USDC value)
+     * @param triggerPrice Execution price in GMX format (30 decimals)
+     * @param _slippageBps Slippage in basis points (10000 = use default 200 bps)
+     * @param isLong Whether this is for a long (true) or short (false) position
+     * @return minOutputAmount Minimum acceptable output in USDC (6 decimals)
+     */
+    function getMinAmountForStopLoss(
+        ProtocolLib.Position memory position,
+        uint256 triggerPrice,
+        uint256 _slippageBps,
+        bool isLong
+    ) public pure returns (uint256) {
+        uint256 slippageBps = _slippageBps == 10000 ? 200 : _slippageBps;
+        uint256 initialUsdcAmount = abi.decode(position.positionData[8], (uint256));
+        uint256 initialPrice = isLong
+            ? abi.decode(position.positionData[6], (uint256))
+            : abi.decode(position.positionData[7], (uint256));
+        // GMX trigger price is 30 decimals; initialPrice is 8 decimals (Chainlink)
+        uint256 executionPrice8 = triggerPrice / 1e22;
+        if (!isLong && executionPrice8 >= initialPrice * 2) {
+            return 0;
+        }
+        uint256 usdcAtTrigger;
+        if (isLong) {
+            usdcAtTrigger = (initialUsdcAmount * executionPrice8) / initialPrice;
+        } else {
+            usdcAtTrigger = (initialUsdcAmount * initialPrice) / executionPrice8;
+        }
+        uint256 minUsdcAmount = (usdcAtTrigger * (10000 - slippageBps)) / 10000;
+        return minUsdcAmount;
+    }
 
     /**
      * @notice Calculates the position key using keccak256(abi.encode(account, market, collateralToken, isLong))
