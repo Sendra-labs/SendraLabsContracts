@@ -59,6 +59,15 @@ library PairTradingLib {
         bool isLongSide;
     }
 
+    struct CloseSidePairTradingInputWithStopLoss {
+        uint256 positionId;
+        uint256 executionFee;
+        uint256 slippageBps;
+        uint256 value;
+        uint256 triggerPrice;
+        bool isLongSide;
+    }
+
     struct RawExecutionData {
         uint256 positionId;
         address receiver;
