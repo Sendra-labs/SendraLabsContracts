@@ -199,6 +199,13 @@ contract PairTradingProxy is ReentrancyGuard {
         );
         require(success, "Delegatecall failed");
     }
+    function setStopLoss(
+        PairTradingLib.CloseSidePairTradingInputWithStopLoss calldata _inputLong, 
+        PairTradingLib.CloseSidePairTradingInputWithStopLoss calldata _inputShort
+    ) public payable onlyOwner nonReentrant {
+        setStopLossSidePairTradingDelegatecall(_inputLong);
+        setStopLossSidePairTradingDelegatecall(_inputShort);
+    }
 
     function setStopLossSidePairTradingDelegatecall(PairTradingLib.CloseSidePairTradingInputWithStopLoss calldata _input) public payable onlyOwner nonReentrant {
         (bool success,) = pairTrading.delegatecall(
