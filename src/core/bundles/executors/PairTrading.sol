@@ -45,6 +45,8 @@ import { PairTradingStorage } from "../storage/PairTradingStorage.sol";
 import { IWETH } from "../../../interfaces/IWETH.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 import { PositionInitializer } from "./PositionInitializer.sol";
+import { PositionManager } from "./PositionManager.sol";
+import { ProxyManager } from "../storage/ProxyManager.sol";
 
 /**
  * @title PairTrading
@@ -230,7 +232,7 @@ contract PairTrading is ReentrancyGuard {
         (uint256 aceptablePriceLong, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketLong), true, true, _input.slippageBps);
         (uint256 aceptablePriceShort, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketShort), false, true, _input.slippageBps);
         
-        bytes[] memory newPositionData = new bytes[](18);
+        bytes[] memory newPositionData = new bytes[](20);
         newPositionData[0] = abi.encode(_input.totalUsdcAmount);
         newPositionData[1] = abi.encode(false); // isNativeToken = false if is USDC
         newPositionData[2] = abi.encode(gmxMarkets.getMarket(_input.marketLong));
@@ -245,7 +247,7 @@ contract PairTrading is ReentrancyGuard {
         newPositionData[11] = abi.encode(uint256(0));  // finalUsdValue
         newPositionData[12] = abi.encode(uint256(0));  // finalPriceTokenLong
         newPositionData[13] = abi.encode(uint256(0));  // finalPriceTokenShort
-        newPositionData[14] = abi.encode(int256(0));  // PNL  we can Delete This One
+        newPositionData[14] = abi.encode(int256(0));  // PNL we can Delete This One
 
         address usdc = addressProvider.getAddress("USDC");
         bytes32 longKey = calculatePositionKey(address(this), gmxMarkets.getMarket(_input.marketLong), usdc, true);
@@ -254,7 +256,9 @@ contract PairTrading is ReentrancyGuard {
         newPositionData[15] = abi.encode(longKey);   // longKey
         newPositionData[16] = abi.encode(shortKey);  // shortKey
         newPositionData[17] = abi.encode(address(this));  // proxy address
-    
+        newPositionData[18] = abi.encode(uint256(0));  // stopLossLong
+        newPositionData[19] = abi.encode(uint256(0));  // stopLossShort
+
         /*__  pair trading positionParams  __*/
         //0  {0, totalUsdcAmount}
         //1  {2, isNativeToken = false}
@@ -547,7 +551,7 @@ contract PairTrading is ReentrancyGuard {
      * 
      * @custom:emit PositionClosed Emitted twice, once for each closed position (long and short)
      */
-    function closePairTrading(PairTradingLib.ClosePairTradingInput calldata _input) public payable {
+    function closePairTrading(PairTradingLib.ClosePairTradingInput memory _input) public payable {
         uint256 _value = msg.value / 2;
         PairTradingLib.CloseSidePairTradingInput memory longSideInput = PairTradingLib.CloseSidePairTradingInput({
             positionId: _input.positionId,
@@ -581,6 +585,10 @@ contract PairTrading is ReentrancyGuard {
             revert PositionNotActive();
         }
         bytes[] memory positionData = position.positionData;
+
+        if (isPendingOrder(positionData, _input.isLongSide)) {
+            revert OrderAlreadyExists();
+        }
 
         address market = abi.decode(_input.isLongSide ? positionData[2] : positionData[3], (address));
         GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
@@ -657,14 +665,23 @@ contract PairTrading is ReentrancyGuard {
         emit PositionClosed(receiver, market, sizeDeltaUsd, isLong); 
     }
 
+    function isPendingOrder(bytes[] memory positionData, bool isLong) public pure returns (bool) {
+        if (abi.decode(positionData[18], (uint256)) != 0 && isLong) {
+            return true;
+        } else if (abi.decode(positionData[19], (uint256)) != 0 && !isLong) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     /**
      * @notice Submits a stop-loss decrease order for one side (long or short) of a pair position.
      * @dev Order executes when oracle price crosses triggerPrice: long when price <= triggerPrice, short when price >= triggerPrice.
      * @param _input positionId, executionFee, slippageBps, value, triggerPrice (GMX format, 30 decimals), isLongSide
      * @custom:require msg.value >= executionFee
      */
-    function closeSidePairTradingWithStopLoss( PairTradingLib.CloseSidePairTradingInputWithStopLoss memory _input ) public payable {
-
+    function closeSidePairTradingWithStopLoss( PairTradingLib.CloseSidePairTradingInputWithStopLoss memory _input) public payable {
         ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
         address weth = addressProvider.getAddress("WETH");
         address usdc = addressProvider.getAddress("USDC");
@@ -676,6 +693,10 @@ contract PairTrading is ReentrancyGuard {
             revert PositionNotActive();
         }
         bytes[] memory positionData = position.positionData;
+
+        if (isPendingOrder(positionData, _input.isLongSide)) {
+            revert OrderAlreadyExists();
+        }
 
         address market = abi.decode(_input.isLongSide ? positionData[2] : positionData[3], (address));
         GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
@@ -745,12 +766,54 @@ contract PairTrading is ReentrancyGuard {
         
         bytes32 key = exchangeRouterInstance.createOrder(orderParams);
 
+        // stop Loss
+        if(isLong) {
+            updatePositionData(positionId, 18, abi.encode(_input.triggerPrice));
+        } else {
+            updatePositionData(positionId, 19, abi.encode(_input.triggerPrice));
+        }
+
         PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).updatePendingOrder(key, PairTradingLib.PendingOrder(receiver, address(this), positionId, true));
         
         PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).addUserPendingOrderKey(receiver, key);
 
         emit PositionClosed(receiver, market, sizeDeltaUsd, isLong); 
     }
+
+    function updatePositionData(uint256 _positionId, uint256 _positionField, bytes memory _value) internal {
+        PositionManager(addressProvider.getAddress("PositionManager")).managePosition(_positionId, _positionField, _value, msg.sender);
+    }
+
+    function manualClosePairTradingPositionWithStopLoss(PairTradingLib.ManualCloseStopLossPairTradingInput calldata _input, uint256 _proxyId) public payable {
+        
+        if (_input.keyLongStopLoss != bytes32(0)) {
+            cancelOrder(_input.keyLongStopLoss, _proxyId);
+        }
+        if (_input.keyShortStopLoss != bytes32(0)) {
+            cancelOrder(_input.keyShortStopLoss, _proxyId);
+        }
+
+        closePairTrading(PairTradingLib.ClosePairTradingInput({
+            positionId: _input.positionId,
+            executionFee: _input.executionFee,
+            slippageBps: _input.slippageBps
+        }));
+
+    }
+
+    
+    function cancelOrder(bytes32 _key, uint256 _proxyId) public {
+        PairTradingLib.PendingOrder memory pendingOrder = PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).getPendingOrder(_key);
+        address proxy = pendingOrder.proxy;
+        address owner = ProxyManager(addressProvider.getAddress("ProxyManager")).getOwner(_proxyId);
+        if (msg.sender != owner) revert NotOwner();
+        if (proxy != address(this)) revert NotOwner();
+        IExchangeRouter exchangeRouterInstance = IExchangeRouter(addressProvider.getAddress("ExchangeRouterGMX"));
+        exchangeRouterInstance.cancelOrder(_key);
+        PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).removeUserPendingOrderKey(pendingOrder.receiver, _key);
+        emit OrderCancelled(pendingOrder.receiver, _key);
+    }
+
     
     // read Functions
 
@@ -928,6 +991,12 @@ contract PairTrading is ReentrancyGuard {
         bool isLong
     );
 
+    /**
+     * @notice Emitted when an order is cancelled
+     * @param receiver Address that will receive the returned funds
+     * @param key The key of the cancelled order
+     */
+    event OrderCancelled(address indexed receiver, bytes32 indexed key);
 
     /// @notice Thrown when the caller is not authorized (not a protocol contract)
     error SenderNotAllowed();
@@ -943,4 +1012,10 @@ contract PairTrading is ReentrancyGuard {
     
     /// @notice Thrown when attempting to operate on an inactive position
     error PositionNotActive();
+
+    /// @notice Thrown when a stop loss order already exists for this position side
+    error OrderAlreadyExists();
+
+    /// @notice Thrown when the caller is not the owner of the proxy
+    error NotOwner();
 }

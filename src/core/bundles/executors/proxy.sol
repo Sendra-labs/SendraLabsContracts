@@ -199,12 +199,25 @@ contract PairTradingProxy is ReentrancyGuard {
         );
         require(success, "Delegatecall failed");
     }
+    
     function setStopLoss(
         PairTradingLib.CloseSidePairTradingInputWithStopLoss calldata _inputLong, 
         PairTradingLib.CloseSidePairTradingInputWithStopLoss calldata _inputShort
     ) public payable onlyOwner nonReentrant {
-        setStopLossSidePairTradingDelegatecall(_inputLong);
-        setStopLossSidePairTradingDelegatecall(_inputShort);
+        (bool success,) = pairTrading.delegatecall(
+            abi.encodeCall(
+                PairTrading.closeSidePairTradingWithStopLoss,
+                (_inputLong)
+            )
+        );
+        require(success, "Delegatecall failed");
+        (bool successShort,) = pairTrading.delegatecall(
+            abi.encodeCall(
+                PairTrading.closeSidePairTradingWithStopLoss,
+                (_inputShort)
+            )
+        );
+        require(successShort, "Delegatecall failed");
     }
 
     function setStopLossSidePairTradingDelegatecall(PairTradingLib.CloseSidePairTradingInputWithStopLoss calldata _input) public payable onlyOwner nonReentrant {
@@ -233,6 +246,36 @@ contract PairTradingProxy is ReentrancyGuard {
         (bool success,) = _target.call(_data);
         require(success, "Call failed");
     }
+
+    function manualClosePairTradingPositionWithStopLossDelegatecall(PairTradingLib.ManualCloseStopLossPairTradingInput calldata _input) public payable onlyOwner nonReentrant {
+        (bool success,) = pairTrading.delegatecall(
+            abi.encodeCall(
+                PairTrading.manualClosePairTradingPositionWithStopLoss,
+                (_input, id)
+            )
+        );
+        require(success, "Delegatecall failed");
+    }
+
+    function cancelOrder(bytes32 _key) public onlyOwner nonReentrant {
+        (bool success,) = pairTrading.delegatecall(
+            abi.encodeCall(
+                PairTrading.cancelOrder,
+                (_key, id)
+            )
+        );
+        require(success, "Delegatecall failed");
+    }
+
+    function updateStopLoss(bytes32 _key, PairTradingLib.CloseSidePairTradingInputWithStopLoss calldata _input) public onlyOwner nonReentrant {
+        cancelOrder(_key);
+        (bool success,) = pairTrading.delegatecall(
+            abi.encodeCall(
+                PairTrading.closeSidePairTradingWithStopLoss,
+                (_input)
+            )
+        );
+        require(success, "Delegatecall failed");    }
 
     /**
      * @notice Validates and adds markets to the tracking array
