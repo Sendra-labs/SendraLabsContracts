@@ -51,6 +51,14 @@ library PairTradingLib {
         uint256 slippageBps;
     }
 
+    struct ManualCloseStopLossPairTradingInput {
+        uint256 positionId;
+        uint256 executionFee;
+        uint256 slippageBps;
+        bytes32 keyLongStopLoss;
+        bytes32 keyShortStopLoss;
+    }
+
     struct CloseSidePairTradingInput {
         uint256 positionId;
         uint256 executionFee;

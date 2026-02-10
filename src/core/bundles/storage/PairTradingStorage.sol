@@ -134,6 +134,7 @@ contract PairTradingStorage {
         userPendingOrderKeys[_user].push(_key);
     }
 
+
     /**
      * @notice Helper function to remove a value from an array using swap-and-pop
      * @dev Efficiently removes an element by swapping with the last element and popping
@@ -188,6 +189,16 @@ contract PairTradingStorage {
      */
     function getPendingOrder(bytes32 _key) public view returns(PairTradingLib.PendingOrder memory) {
         return pendingOrders[_key];
+    }
+
+    function isPendingOrder(address _user, bytes32 _key) public view returns (bool) {
+        bytes32[] storage keys = userPendingOrderKeys[_user];
+        for (uint256 i = 0; i < keys.length; i++) {
+            if (keys[i] == _key) {
+                return true;
+            }
+        }
+        return false;
     }
     
     /**

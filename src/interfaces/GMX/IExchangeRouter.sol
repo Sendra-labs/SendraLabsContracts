@@ -8,4 +8,5 @@ interface IExchangeRouter {
     function sendWnt(address receiver, uint256 amount) external payable;
     function sendTokens(address token, address receiver, uint256 amount) external payable;
     function multicall(bytes[] calldata data) external payable;
+    function cancelOrder(bytes32 key) external;
 }
