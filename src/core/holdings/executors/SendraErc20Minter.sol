@@ -51,6 +51,10 @@ contract SendraErc20Minter {
         SendraToken(sendraTokens[token]).mint(to, amount);
     }
 
+    function burnSendraToken(address token, address from, uint256 amount) public onlyProtocol {
+        SendraToken(sendraTokens[token]).burn(from, amount);
+    }
+
     function getSendraToken(address token) public view returns (address) {
         return sendraTokens[token];
     }

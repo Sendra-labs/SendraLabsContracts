@@ -81,7 +81,8 @@ contract UniExecutor is ReentrancyGuard {
 
         _amountOut = swapRouter.exactInput(params);
         address user = SecureAccount(msg.sender).owner();
-        SendraErc20Minter(addressProvider.getAddress("SendraErc20Minter")).mintSendraToken(_token, user, _amountOut);
+        if(isBuy) SendraErc20Minter(addressProvider.getAddress("SendraErc20Minter")).mintSendraToken(_token, user, _amountOut);
+        if(!isBuy) SendraErc20Minter(addressProvider.getAddress("SendraErc20Minter")).burnSendraToken(_token, user, _amountIn);
         uint256 price = ChainLinkPrices(addressProvider.getAddress("UtilsPrices")).getPrice(_token);
         
         HoldingsStorage holdingsStorage = HoldingsStorage(addressProvider.getAddress("HoldingsStorage"));
