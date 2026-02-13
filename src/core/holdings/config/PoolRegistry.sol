@@ -2,7 +2,7 @@
 pragma solidity 0.8.28;
 
 import { Roles } from "../../../security/Roles.sol";
-import { AddressProvider } from "../../../utils/AddressProvider.sol";
+import { AddressProvider } from "../../config/AddressProvider.sol";
 
 contract PoolRegistry {
 
@@ -14,8 +14,8 @@ contract PoolRegistry {
         roles = Roles(addressProvider.getAddress("Roles"));
         addSwapData(
             0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f, 
-            abi.encodePacked(0xaf88d065e77c8cC2239327C5EDb3A432268e5831, 500, 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f), 
-            abi.encodePacked(0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f, 500, 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9, 500, 0xaf88d065e77c8cC2239327C5EDb3A432268e5831)
+            abi.encodePacked(0xaf88d065e77c8cC2239327C5EDb3A432268e5831, uint24(500), 0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f), 
+            abi.encodePacked(0x2f2a2543B76A4166549F7aaB2e75Bef0aefC5B0f, uint24(500), 0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9, uint24(500), 0xaf88d065e77c8cC2239327C5EDb3A432268e5831)
         ); // WBTC
     }
 
@@ -32,7 +32,7 @@ contract PoolRegistry {
 
     mapping(address => SwapData) public swapData;
 
-    function addSwapData(address _token, bytes _buyPath, bytes _sellPath) public onlyAdmin {
+    function addSwapData(address _token, bytes memory _buyPath, bytes memory _sellPath) public onlyAdmin {
         swapData[_token] = SwapData({
             buyPath: _buyPath,
             sellPath: _sellPath
