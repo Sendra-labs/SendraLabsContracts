@@ -14,11 +14,13 @@ library UniswapLib {
 
     struct SwapInstruction {
         Protocol protocol;
-        PoolKey poolKey;
         address tokenIn;
         address tokenOut;
         uint256 amountIn;
         uint256 amountOut;
+        address poolOrPair; // v2 or v3
+        uint24 fee; // v3
+        PoolKey poolKey; // v4
         
     }
 
@@ -26,7 +28,7 @@ library UniswapLib {
         address tokenIn;
         address tokenOut;
         SwapInstruction[] swapInstructions;
-        uint256 amountIn;
+        uint256 amountIn0;
         address to;
     }
 

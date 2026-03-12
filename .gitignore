@@ -42,9 +42,10 @@ coverage/
 *.log
 npm-debug.log*
 
-# Dependencies (si usas npm)
 node_modules/
 
 # Temporary files
 *.tmp
 *.temp
+
+.cursorignore

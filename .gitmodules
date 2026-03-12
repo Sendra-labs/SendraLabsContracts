@@ -7,3 +7,9 @@
 [submodule "lib/gmx-synthetics"]
 	path = lib/gmx-synthetics
 	url = https://github.com/gmx-io/gmx-synthetics
+[submodule ".deps/npm/v4-core"]
+	path = .deps/npm/v4-core
+	url = https://github.com/Uniswap/v4-core
+[submodule ".deps/npm/universal-router"]
+	path = .deps/npm/universal-router
+	url = https://github.com/Uniswap/universal-router
