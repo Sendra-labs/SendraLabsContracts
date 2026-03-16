@@ -36,10 +36,11 @@ library UniswapLib {
         Protocol protocol;
         address token0;
         address token1;
+        address recipient;
         uint256 amount0;
         uint256 amount1;
-        uint256 tickLower;
-        uint256 tickUpper;
+        int24 tickLower;
+        int24 tickUpper;
         uint24 fee;
     }
 
@@ -47,6 +48,7 @@ library UniswapLib {
         SwapInput swapInput0;
         SwapInput swapInput1;
         ProvideLiquidityInput provideLiquidityInput;
+        bool isSendraRecipient;
     }
 
 }

@@ -24,7 +24,7 @@ contract SwapRouter is ReentrancyGuard {
     }
 
     function executeSwap(UniswapLib.SwapInput calldata _input) public {
-        IERC20(_input.tokenIn).approve(universalRouter, _input.amountIn);
+        IERC20(_input.tokenIn).approve(universalRouter, _input.amountIn0);
         (bytes memory commands, bytes[] memory inputs) = UniswapParamsEncoderLib.createParams(_input);
         UniversalRouter(universalRouter).execute(commands, inputs);
     }

@@ -20,7 +20,7 @@ contract LiquidityOrchestrator {
         UniswapLib.SwapInput memory swapInput0 = _input.swapInput0;
         UniswapLib.SwapInput memory swapInput1 = _input.swapInput1;
         UniswapLib.ProvideLiquidityInput memory provideLiquidityInput = _input.provideLiquidityInput;
-        
+
         if(provideLiquidityInput.protocol == UniswapLib.Protocol.UniswapV3){
             
             IERC20(swapInput0.tokenIn).transferFrom(msg.sender, address(swapRouter), swapInput0.amountIn0);
@@ -35,8 +35,9 @@ contract LiquidityOrchestrator {
 
             liquidityManager.addLiquidityV3(provideLiquidityInput);
 
-        } else if(_input.protocol == UniswapLib.Protocol.UniswapV4){
+        } else if(provideLiquidityInput.protocol == UniswapLib.Protocol.UniswapV4){
             //TODO: Implement UniswapV4
         }
     }
+    
 }

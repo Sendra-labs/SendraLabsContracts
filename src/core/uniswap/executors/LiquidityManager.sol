@@ -4,6 +4,7 @@ pragma solidity 0.8.28;
 import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
+import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 
 contract LiquidityManager {
 
@@ -18,12 +19,12 @@ contract LiquidityManager {
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams(
                 {
                     token0 : _input.token0,
-                    token1 : token1,
+                    token1 : _input.token1,
                     fee : _input.fee,
                     tickLower: _input.tickLower,
                     tickUpper: _input.tickUpper,
                     amount0Desired: _input.amount0,
-                    amount1Desired: amount1,
+                    amount1Desired: _input.amount1,
                     amount0Min: 0,
                     amount1Min: 0,
                     recipient: _input.recipient,
