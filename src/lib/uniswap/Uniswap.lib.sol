@@ -32,4 +32,21 @@ library UniswapLib {
         address to;
     }
 
+    struct ProvideLiquidityInput {
+        Protocol protocol;
+        address token0;
+        address token1;
+        uint256 amount0;
+        uint256 amount1;
+        uint256 tickLower;
+        uint256 tickUpper;
+        uint24 fee;
+    }
+
+    struct ExecuteProvideLiquidityInput {
+        SwapInput swapInput0;
+        SwapInput swapInput1;
+        ProvideLiquidityInput provideLiquidityInput;
+    }
+
 }
