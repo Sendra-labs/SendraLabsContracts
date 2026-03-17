@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { PoolKey } from "@uniswap/v4-core/src/types/PoolKey.sol";
-import { Currency } from "@uniswap/v4-core/src/types/Currency.sol";
+import { PoolKey } from "@uniswap/v4-core/types/PoolKey.sol";
+import { Currency } from "@uniswap/v4-core/types/Currency.sol";
 
 library UniswapLib {
 

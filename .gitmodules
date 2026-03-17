@@ -13,3 +13,6 @@
 [submodule ".deps/npm/universal-router"]
 	path = .deps/npm/universal-router
 	url = https://github.com/Uniswap/universal-router
+[submodule ".deps/npm/v2-core"]
+	path = .deps/npm/v2-core
+	url = https://github.com/Uniswap/v2-core

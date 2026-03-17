@@ -15,7 +15,7 @@ contract SwapRouter is ReentrancyGuard {
 
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
-        universalRouter = UniversalRouter(addressProvider.getAddress("UniversalRouter"));
+        universalRouter = UniversalRouter(payable(addressProvider.getAddress("UniversalRouter")));
     }
 
     function atomicSwap(UniswapLib.SwapInput calldata _input1, UniswapLib.SwapInput calldata _input2) public {
@@ -24,7 +24,7 @@ contract SwapRouter is ReentrancyGuard {
     }
 
     function executeSwap(UniswapLib.SwapInput calldata _input) public {
-        IERC20(_input.tokenIn).approve(universalRouter, _input.amountIn0);
+        IERC20(_input.tokenIn).approve(address(universalRouter), _input.amountIn0);
         (bytes memory commands, bytes[] memory inputs) = UniswapParamsEncoderLib.createParams(_input, address(this));
         UniversalRouter(universalRouter).execute(commands, inputs);
     }

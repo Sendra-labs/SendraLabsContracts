@@ -9,8 +9,11 @@ remappings = [
     "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
     "forge-std/=lib/forge-std/src/",
     "prb-math/=.deps/npm/prb-math/",
-    "@uniswap/v4-core/=lib/v4-core/src/",
-    "@uniswap/universal-router/=lib/universal-router/contracts/"
+    "@uniswap/v2-core/=.deps/npm/v2-core/",
+    "@uniswap/v3-core/=.deps/npm/v3-core/",
+    "@uniswap/v3-periphery/=.deps/npm/v3-periphery/",
+    "@uniswap/v4-core/=.deps/npm/v4-core/src/",
+    "@uniswap/universal-router/=.deps/npm/universal-router/contracts/"
 ]
 
 [profile.default.metadata]

@@ -5,13 +5,17 @@ import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
+import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
+import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 
 contract LiquidityManager {
 
     INonfungiblePositionManager public immutable positionManager;
+    ProtocolStorage public immutable protocolStorage;
 
-    constructor(address _positionManager) {
+    constructor(address _positionManager, address _protocolStorage) {
         positionManager = INonfungiblePositionManager(_positionManager);
+        protocolStorage = ProtocolStorage(_protocolStorage);
     }
 
     function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public {
@@ -36,22 +40,22 @@ contract LiquidityManager {
 
     }
 
-    function removeLiquidityV3(address _user, uint256 positionId, uint256 tokenId, uint256 liquidity) public returns (uint256 amount0, uint256 amount1) {
+    function removeLiquidityV3(address _user, uint256 positionId, uint256 tokenId, uint128 liquidity) public returns (uint256 amount0, uint256 amount1) {
 
         ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, positionId);
-        uint160 sqrtCurrentPrice = ;
-        (uint256 amount0, uint256 amount1) = LiquidityAmounts.getAmountsForLiquidity(
+        uint160 sqrtCurrentPrice = 10000;
+        (uint256 _amount0, uint256 _amount1) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtCurrentPrice,
-            TickMath.getSqrtRatioAtTick(position.tickLower),
-            TickMath.getSqrtRatioAtTick(position.tickUpper),
+            TickMath.getSqrtRatioAtTick(int24(abi.decode(position.positionData[0], (int24)))), // CHECK
+            TickMath.getSqrtRatioAtTick(int24(abi.decode(position.positionData[1], (int24)))),
             liquidity
         );
         INonfungiblePositionManager.DecreaseLiquidityParams memory params =  INonfungiblePositionManager.DecreaseLiquidityParams( 
             {
                 tokenId : tokenId,
                 liquidity: liquidity,
-                amount0Min : (amount0*99)/100, //1% Slippage
-                amount1Min : (amount1*99)/100,
+                amount0Min : (_amount0*99)/100, //1% Slippage
+                amount1Min : (_amount1*99)/100,
                 deadline : block.timestamp + 20
             }
         );

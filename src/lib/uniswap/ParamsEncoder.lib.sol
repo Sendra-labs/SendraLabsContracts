@@ -2,12 +2,12 @@
 pragma solidity 0.8.28;
 
 import { UniswapLib } from "./Uniswap.lib.sol";
-import { Currency } from "@uniswap/v4-core/src/types/Currency.sol";
+import { Currency } from "@uniswap/v4-core/types/Currency.sol";
 
 library UniswapParamsEncoderLib {
 
     function createParams(UniswapLib.SwapInput calldata params, address intermediateRecipient) external pure returns (bytes memory, bytes[] memory) {
-        bytes commands = new bytes(params.swapInstructions.length);
+        bytes memory commands = new bytes(params.swapInstructions.length);
         for(uint8 i = 0; i < params.swapInstructions.length; i++){
             if(params.swapInstructions[i].protocol == UniswapLib.Protocol.UniswapV2){
                 commands[i] = bytes1(0x08);
@@ -47,7 +47,7 @@ library UniswapParamsEncoderLib {
                 bytes[] memory v4Params = new bytes[](3);
                 bool zeroForOne = params.swapInstructions[i].tokenIn == address(uint160(Currency.unwrap(params.swapInstructions[i].poolKey.currency0)));
                 v4Params[0] = abi.encode(
-                    Currency.wrap(uint160(uint256(params.swapInstructions[i].tokenIn))), 
+                    Currency.wrap(params.swapInstructions[i].tokenIn), 
                     recipient, 
                     uint128(params.swapInstructions[i].amountIn)
                 );
@@ -59,9 +59,7 @@ library UniswapParamsEncoderLib {
                     ""
                 );
                 v4Params[2] = abi.encode(
-                    Currency.wrap(
-                        uint160(uint256(params.swapInstructions[i].tokenOut))
-                    ), 
+                    Currency.wrap(params.swapInstructions[i].tokenOut), 
                     recipient, 
                     uint128(params.swapInstructions[i].amountOut));
 
