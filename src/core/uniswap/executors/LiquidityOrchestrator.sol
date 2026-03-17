@@ -23,13 +23,26 @@ contract LiquidityOrchestrator {
 
         if(provideLiquidityInput.protocol == UniswapLib.Protocol.UniswapV3){
             
-            IERC20(swapInput0.tokenIn).transferFrom(msg.sender, address(swapRouter), swapInput0.amountIn0);
-            IERC20(swapInput1.tokenIn).transferFrom(msg.sender, address(swapRouter), swapInput1.amountIn0);
+            bool isSwapNeeded0 = swapInput0.tokenIn != swapInput0.tokenOut;
+            bool isSwapNeeded1 = swapInput1.tokenIn != swapInput1.tokenOut;
+
+            IERC20(swapInput0.tokenIn).transferFrom(
+                msg.sender, 
+                isSwapNeeded0 ? address(swapRouter) : address(liquidityManager), 
+                swapInput0.amountIn0
+            );
+
+            IERC20(swapInput1.tokenIn).transferFrom(
+                msg.sender, 
+                isSwapNeeded1 ? address(swapRouter) : address(liquidityManager), 
+                swapInput1.amountIn0
+            );
             
             swapInput0.to = address(liquidityManager);
             swapInput1.to = address(liquidityManager);
 
-            swapRouter.atomicSwap(swapInput0, swapInput1);
+            if(isSwapNeeded0) swapRouter.executeSwap(swapInput0);
+            if(isSwapNeeded1) swapRouter.executeSwap(swapInput1);
 
             provideLiquidityInput.recipient = _input.isSendraRecipient ? address(this) : msg.sender;
 

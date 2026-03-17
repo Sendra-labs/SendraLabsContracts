@@ -6,7 +6,7 @@ import { Currency } from "@uniswap/v4-core/types/Currency.sol";
 
 library UniswapParamsEncoderLib {
 
-    function createParams(UniswapLib.SwapInput calldata params, address intermediateRecipient) external pure returns (bytes memory, bytes[] memory) {
+    function createParams(UniswapLib.SwapInput memory params, address intermediateRecipient) internal pure returns (bytes memory, bytes[] memory) {
         bytes memory commands = new bytes(params.swapInstructions.length);
         for(uint8 i = 0; i < params.swapInstructions.length; i++){
             if(params.swapInstructions[i].protocol == UniswapLib.Protocol.UniswapV2){

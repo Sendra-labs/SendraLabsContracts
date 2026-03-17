@@ -7,6 +7,7 @@ import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract LiquidityManager {
 
@@ -19,6 +20,9 @@ contract LiquidityManager {
     }
 
     function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public {
+        
+        IERC20(_input.token0).approve(address(positionManager), _input.amount0);
+        IERC20(_input.token1).approve(address(positionManager), _input.amount1);
 
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams(
                 {
@@ -63,7 +67,24 @@ contract LiquidityManager {
 
     }
 
-    function collectFeesV3(address token0, address token1) public returns (uint256 amount0, uint256 amount1) {}
+    struct CollectParams {
+        uint128 x;
+    }
+
+    function collectFeesV3(CollectParams calldata _input) public returns (uint256 amount0, uint256 amount1) {
+        positionManager.transferFrom(msg.sender, address(this), 0/*uniId*/);
+        positionManager.approve(address(positionManager), 0/*uniId*/);
+        INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams(
+            0,//uniId,
+            msg.sender,
+            type(uint128).max,
+            type(uint128).max
+        );
+        (uint256 _amount0, uint256 _amount1) = positionManager.collect{ value : 0 }(params);
+        //IERC20(data.getPairData(pairId).tokenA).transfer(msg.sender, _amount0);
+        //IERC20(data.getPairData(pairId).tokenB).transfer(msg.sender, _amount1);
+        return(amount0, amount1);
+    }
 
     
 }
