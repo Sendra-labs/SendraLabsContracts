@@ -6,7 +6,7 @@ import { Currency } from "@uniswap/v4-core/src/types/Currency.sol";
 
 library UniswapParamsEncoderLib {
 
-    function createParams(UniswapLib.SwapInput calldata params) external pure returns (bytes memory, bytes[] memory) {
+    function createParams(UniswapLib.SwapInput calldata params, address intermediateRecipient) external pure returns (bytes memory, bytes[] memory) {
         bytes commands = new bytes(params.swapInstructions.length);
         for(uint8 i = 0; i < params.swapInstructions.length; i++){
             if(params.swapInstructions[i].protocol == UniswapLib.Protocol.UniswapV2){
@@ -17,11 +17,18 @@ library UniswapParamsEncoderLib {
                 commands[i] = bytes1(0x10);
             }
         }
+
         bytes[] memory inputs = new bytes[](params.swapInstructions.length);
+
         for(uint8 i = 0; i < params.swapInstructions.length; i++){
+            
+            address recipient = params.swapInstructions[i].tokenOut == params.tokenOut
+                ? params.to
+                : intermediateRecipient;
+
             if(params.swapInstructions[i].protocol == UniswapLib.Protocol.UniswapV2){
                 inputs[i] = abi.encode(
-                    params.to,
+                    recipient,
                     params.swapInstructions[i].amountIn,
                     params.swapInstructions[i].amountOut,
                     [params.swapInstructions[i].tokenIn, params.swapInstructions[i].tokenOut],
@@ -29,7 +36,7 @@ library UniswapParamsEncoderLib {
                 );
             } else if(params.swapInstructions[i].protocol == UniswapLib.Protocol.UniswapV3){
                 inputs[i] = abi.encode(
-                    params.to,
+                    recipient,
                     params.swapInstructions[i].amountIn,
                     params.swapInstructions[i].amountOut,
                     abi.encodePacked(params.swapInstructions[i].tokenIn, params.swapInstructions[i].fee, params.swapInstructions[i].tokenOut),
@@ -41,7 +48,7 @@ library UniswapParamsEncoderLib {
                 bool zeroForOne = params.swapInstructions[i].tokenIn == address(uint160(Currency.unwrap(params.swapInstructions[i].poolKey.currency0)));
                 v4Params[0] = abi.encode(
                     Currency.wrap(uint160(uint256(params.swapInstructions[i].tokenIn))), 
-                    params.to, 
+                    recipient, 
                     uint128(params.swapInstructions[i].amountIn)
                 );
                 v4Params[1] = abi.encode(
@@ -55,7 +62,7 @@ library UniswapParamsEncoderLib {
                     Currency.wrap(
                         uint160(uint256(params.swapInstructions[i].tokenOut))
                     ), 
-                    params.to, 
+                    recipient, 
                     uint128(params.swapInstructions[i].amountOut));
 
                 inputs[i] = abi.encode(actions, v4Params);

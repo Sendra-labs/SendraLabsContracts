@@ -16,7 +16,7 @@ contract LiquidityOrchestrator {
         swapRouter = SwapRouter(_swapRouter);
     }
 
-    function ProvideLiquidity(UniswapLib.ExecuteProvideLiquidityInput calldata _input) public {
+    function provideLiquidity(UniswapLib.ExecuteProvideLiquidityInput calldata _input) public {
         UniswapLib.SwapInput memory swapInput0 = _input.swapInput0;
         UniswapLib.SwapInput memory swapInput1 = _input.swapInput1;
         UniswapLib.ProvideLiquidityInput memory provideLiquidityInput = _input.provideLiquidityInput;
@@ -39,5 +39,5 @@ contract LiquidityOrchestrator {
             //TODO: Implement UniswapV4
         }
     }
-    
+
 }
