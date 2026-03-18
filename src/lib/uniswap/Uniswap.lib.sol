@@ -37,6 +37,7 @@ library UniswapLib {
         address token0; 
         address token1;
         address recipient;
+        address user;
         uint256 amount0; 
         uint256 amount1;
         int24 tickLower;
@@ -51,4 +52,28 @@ library UniswapLib {
         bool isSendraRecipient;
     }
 
+    struct CollectParams {
+        uint128 uniId;
+        uint256 positionId; // Sendra
+        bool isWithdraw; // is just (false) collecting fees or is (true) withdrawing liquidity + fees
+        address user;
+    }
+
+    struct WithdrawLiquidityInput {
+        uint128 uniId;
+        uint256 positionId; // Sendra
+        address user;
+    }
+
+    struct ExecuteWithdrawLiquidityAndCollectFees {
+        WithdrawLiquidityInput withdrawLiquidityInput;
+        SwapInput swapInput0;
+        SwapInput swapInput1;
+    }
+
+    struct ExecuteCollectFeesOnly {
+        CollectParams collectParams;
+        SwapInput swapInput0;
+        SwapInput swapInput1;
+    }
 }

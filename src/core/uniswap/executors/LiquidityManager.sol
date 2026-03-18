@@ -17,10 +17,10 @@ contract LiquidityManager {
     ProtocolStorage public immutable protocolStorage;
     IUniswapV3Factory public immutable factory;
 
-    constructor(address _positionManager, address _protocolStorage, address _factory) {
+    constructor(address _positionManager, address _protocolStorage) {
         positionManager = INonfungiblePositionManager(_positionManager);
         protocolStorage = ProtocolStorage(_protocolStorage);
-        factory = IUniswapV3Factory(_factory);
+        factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     }
 
     function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public {
@@ -48,47 +48,53 @@ contract LiquidityManager {
 
     }
 
-    function withdrawLiquidityV3(address _user, uint256 positionId, uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
+    function withdrawLiquidityV3(UniswapLib.WithdrawLiquidityInput calldata _input) public {
+        
+        positionManager.transferFrom(msg.sender, address(this), _input.uniId);
 
-        ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, positionId);
-        address pool = IUniswapV3Factory(factory).getPool(token0, token1, fee);
+        ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_input.user, _input.positionId);
+        
+        address pool = factory.getPool(token0, token1, fee); // get from position storage
         (uint160 sqrtCurrentPrice,,,,,, ) = IUniswapV3Pool(pool).slot0();
-        (,, , , , , , uint128 liquidity, , , ,) = positionManager.positions(tokenId);
+        (,, , , , , , uint128 liquidity, , , ,) = positionManager.positions(_input.uniId);
+        
         (uint256 _amount0, uint256 _amount1) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtCurrentPrice,
             TickMath.getSqrtRatioAtTick(int24(abi.decode(position.positionData[0], (int24)))), // CHECK
             TickMath.getSqrtRatioAtTick(int24(abi.decode(position.positionData[1], (int24)))),
             liquidity
         );
+        
         INonfungiblePositionManager.DecreaseLiquidityParams memory params =  INonfungiblePositionManager.DecreaseLiquidityParams( 
             {
-                tokenId : tokenId,
+                tokenId : _input.uniId,
                 liquidity: liquidity,
                 amount0Min : (_amount0*99)/100, //1% Slippage
                 amount1Min : (_amount1*99)/100,
                 deadline : block.timestamp + 60
             }
         );
+        
         positionManager.decreaseLiquidity{ value : 0 }(params);
 
+        positionManager.transferFrom(address(this), msg.sender, _input.uniId);
     }
 
-    struct CollectParams {
-        uint128 x;
-    }
+    function collectV3(UniswapLib.CollectParams calldata _input) public returns (uint256 amount0, uint256 amount1) {
+      
+        positionManager.transferFrom(msg.sender, address(this), _input.uniId);
 
-    function collectFeesV3(CollectParams calldata _input) public returns (uint256 amount0, uint256 amount1) {
-        positionManager.transferFrom(msg.sender, address(this), 0/*uniId*/);
-        positionManager.approve(address(positionManager), 0/*uniId*/);
         INonfungiblePositionManager.CollectParams memory params = INonfungiblePositionManager.CollectParams(
-            0,//uniId,
+            _input.uniId,
             msg.sender,
             type(uint128).max,
             type(uint128).max
         );
-        (uint256 _amount0, uint256 _amount1) = positionManager.collect{ value : 0 }(params);
-        //IERC20(data.getPairData(pairId).tokenA).transfer(msg.sender, _amount0);
-        //IERC20(data.getPairData(pairId).tokenB).transfer(msg.sender, _amount1);
+       
+        (amount0, amount1) = positionManager.collect{ value : 0 }(params);
+
+        positionManager.transferFrom(address(this), msg.sender, _input.uniId);
+
         return(amount0, amount1);
     }
 
