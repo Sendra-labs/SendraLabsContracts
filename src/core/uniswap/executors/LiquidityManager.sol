@@ -8,15 +8,19 @@ import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { IUniswapV3Factory } from "@uniswap/v3-periphery/contracts/interfaces/IUniswapV3Factory.sol";
+import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 
 contract LiquidityManager {
 
     INonfungiblePositionManager public immutable positionManager;
     ProtocolStorage public immutable protocolStorage;
+    IUniswapV3Factory public immutable factory;
 
-    constructor(address _positionManager, address _protocolStorage) {
+    constructor(address _positionManager, address _protocolStorage, address _factory) {
         positionManager = INonfungiblePositionManager(_positionManager);
         protocolStorage = ProtocolStorage(_protocolStorage);
+        factory = IUniswapV3Factory(_factory);
     }
 
     function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public {
@@ -33,8 +37,8 @@ contract LiquidityManager {
                     tickUpper: _input.tickUpper,
                     amount0Desired: _input.amount0,
                     amount1Desired: _input.amount1,
-                    amount0Min: _input.amount0 * 99 / 100, // 1% slippage
-                    amount1Min: _input.amount1 * 99 / 100, // 1% slippage
+                    amount0Min: (_input.amount0 * 99) / 100, // 1% slippage
+                    amount1Min: (_input.amount1 * 99) / 100, // 1% slippage
                     recipient: _input.recipient,
                     deadline: block.timestamp + 60
                 }
@@ -44,10 +48,12 @@ contract LiquidityManager {
 
     }
 
-    function removeLiquidityV3(address _user, uint256 positionId, uint256 tokenId, uint128 liquidity) public returns (uint256 amount0, uint256 amount1) {
+    function withdrawLiquidityV3(address _user, uint256 positionId, uint256 tokenId) public returns (uint256 amount0, uint256 amount1) {
 
         ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, positionId);
-        uint160 sqrtCurrentPrice = 10000;
+        address pool = IUniswapV3Factory(factory).getPool(token0, token1, fee);
+        (uint160 sqrtCurrentPrice,,,,,, ) = IUniswapV3Pool(pool).slot0();
+        (,, , , , , , uint128 liquidity, , , ,) = positionManager.positions(tokenId);
         (uint256 _amount0, uint256 _amount1) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtCurrentPrice,
             TickMath.getSqrtRatioAtTick(int24(abi.decode(position.positionData[0], (int24)))), // CHECK
@@ -60,7 +66,7 @@ contract LiquidityManager {
                 liquidity: liquidity,
                 amount0Min : (_amount0*99)/100, //1% Slippage
                 amount1Min : (_amount1*99)/100,
-                deadline : block.timestamp + 20
+                deadline : block.timestamp + 60
             }
         );
         positionManager.decreaseLiquidity{ value : 0 }(params);
