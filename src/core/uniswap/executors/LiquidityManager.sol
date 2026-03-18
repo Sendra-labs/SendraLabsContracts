@@ -33,8 +33,8 @@ contract LiquidityManager {
                     tickUpper: _input.tickUpper,
                     amount0Desired: _input.amount0,
                     amount1Desired: _input.amount1,
-                    amount0Min: 0,
-                    amount1Min: 0,
+                    amount0Min: _input.amount0 * 99 / 100, // 1% slippage
+                    amount1Min: _input.amount1 * 99 / 100, // 1% slippage
                     recipient: _input.recipient,
                     deadline: block.timestamp + 60
                 }

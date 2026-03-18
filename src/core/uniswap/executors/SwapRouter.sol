@@ -7,7 +7,6 @@ import { UniversalRouter } from "@uniswap/universal-router/UniversalRouter.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { UniswapParamsEncoderLib } from "../../../lib/uniswap/ParamsEncoder.lib.sol";
 
-/// @notice Permit2 - misma dirección en todas las chains
 interface IPermit2 {
     function approve(address token, address spender, uint160 amount, uint48 expiration) external;
 }
