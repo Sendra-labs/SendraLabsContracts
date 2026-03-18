@@ -8,19 +8,22 @@ import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { IUniswapV3Factory } from "@uniswap/v3-periphery/contracts/interfaces/IUniswapV3Factory.sol";
+import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
+import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 
 contract LiquidityManager {
 
+    AddressProvider public immutable addressProvider;
     INonfungiblePositionManager public immutable positionManager;
     ProtocolStorage public immutable protocolStorage;
     IUniswapV3Factory public immutable factory;
 
-    constructor(address _positionManager, address _protocolStorage) {
-        positionManager = INonfungiblePositionManager(_positionManager);
-        protocolStorage = ProtocolStorage(_protocolStorage);
-        factory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
+    constructor(address _addressProvider) {
+        addressProvider = AddressProvider(_addressProvider);
+        positionManager = INonfungiblePositionManager(addressProvider.getAddress("PositionManager"));
+        protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        factory = IUniswapV3Factory(addressProvider.getAddress("UniswapV3Factory"));
     }
 
     function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public {

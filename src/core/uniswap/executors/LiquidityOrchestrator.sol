@@ -6,17 +6,20 @@ import { SwapRouter } from "./SwapRouter.sol";
 import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
+import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 
 contract LiquidityOrchestrator {
 
+    AddressProvider public immutable addressProvider;
     LiquidityManager public immutable liquidityManager;
     SwapRouter public immutable swapRouter;
     INonfungiblePositionManager public immutable positionManager;
 
-    constructor(address _liquidityManager, address _swapRouter) {
-        liquidityManager = LiquidityManager(_liquidityManager);
-        swapRouter = SwapRouter(_swapRouter);
-        positionManager = liquidityManager.positionManager();
+    constructor(address _addressProvider) {
+        addressProvider = AddressProvider(_addressProvider);
+        liquidityManager = LiquidityManager(addressProvider.getAddress("LiquidityManager"));
+        swapRouter = SwapRouter(addressProvider.getAddress("SwapRouter"));
+        positionManager = INonfungiblePositionManager(addressProvider.getAddress("PositionManager"));
     }
 
     function provideLiquidity(UniswapLib.ExecuteProvideLiquidityInput calldata _input) public {
