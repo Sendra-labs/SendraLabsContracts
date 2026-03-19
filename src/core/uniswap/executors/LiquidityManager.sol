@@ -7,6 +7,7 @@ import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { PositionInitializer } from "../../bundles/executors/PositionInitializer.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -21,7 +22,7 @@ contract LiquidityManager {
 
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
-        positionManager = INonfungiblePositionManager(addressProvider.getAddress("PositionManager"));
+        positionManager = INonfungiblePositionManager(addressProvider.getAddress("UniswapNFTPositionManager"));
         protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
         factory = IUniswapV3Factory(addressProvider.getAddress("UniswapV3Factory"));
     }
@@ -47,8 +48,22 @@ contract LiquidityManager {
                 }
             );
 
-            (uint256 tokenId,,,) = positionManager.mint{ value : 0 }(params);
+        (uint256 tokenId,,,) = positionManager.mint{ value : 0 }(params);
 
+        bytes[] memory positionData = new bytes[](10);
+        positionData[0] = abi.encode(_input.token0);
+        positionData[1] = abi.encode(_input.token1);
+        positionData[2] = abi.encode(block.timestamp);
+        positionData[3] = abi.encode(_input.fee);
+        positionData[4] = abi.encode(_input.tickLower);
+        positionData[5] = abi.encode(_input.tickUpper);
+        positionData[6] = abi.encode(_input.amount0);
+        positionData[7] = abi.encode(_input.amount1);
+        positionData[8] = abi.encode(_input.recipient);
+        positionData[9] = abi.encode(tokenId);
+
+        PositionInitializer positionInitializer = PositionInitializer(addressProvider.getAddress("PositionInitializer"));
+        positionInitializer.initializePosition(positionData, 2, _input.recipient);
     }
 
     function withdrawLiquidityV3(UniswapLib.WithdrawLiquidityInput calldata _input) public {
@@ -57,14 +72,14 @@ contract LiquidityManager {
 
         ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_input.user, _input.positionId);
         
-        address pool = factory.getPool(token0, token1, fee); // get from position storage
+        address pool = factory.getPool(abi.decode(position.positionData[0], (address)), abi.decode(position.positionData[1], (address)), abi.decode(position.positionData[3], (uint24)));
         (uint160 sqrtCurrentPrice,,,,,, ) = IUniswapV3Pool(pool).slot0();
         (,, , , , , , uint128 liquidity, , , ,) = positionManager.positions(_input.uniId);
         
         (uint256 _amount0, uint256 _amount1) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtCurrentPrice,
-            TickMath.getSqrtRatioAtTick(int24(abi.decode(position.positionData[0], (int24)))), // CHECK
-            TickMath.getSqrtRatioAtTick(int24(abi.decode(position.positionData[1], (int24)))),
+            TickMath.getSqrtRatioAtTick(abi.decode(position.positionData[4], (int24))),
+            TickMath.getSqrtRatioAtTick(abi.decode(position.positionData[5], (int24))),
             liquidity
         );
         

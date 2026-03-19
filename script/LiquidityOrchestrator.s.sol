@@ -4,6 +4,9 @@ pragma solidity ^0.8.28;
 import { Script, console } from "forge-std/Script.sol";
 import { LiquidityManager } from "../src/core/uniswap/executors/LiquidityManager.sol";
 import { LiquidityOrchestrator } from "../src/core/uniswap/executors/LiquidityOrchestrator.sol";
+import { SwapRouter } from "../src/core/uniswap/executors/SwapRouter.sol";
+import { AddressProvider } from "../src/core/config/AddressProvider.sol";
+import { Roles } from "../src/security/Roles.sol";
 import { UniswapLib } from "../src/lib/uniswap/Uniswap.lib.sol";
 import { PoolKey } from "@uniswap/v4-core/types/PoolKey.sol";
 import { Currency } from "@uniswap/v4-core/types/Currency.sol";
@@ -24,7 +27,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  *   LIQUIDITY_ORCHESTRATOR=0x... RUN_PROVIDE_LIQUIDITY=1 forge script script/LiquidityOrchestrator.s.sol --broadcast --rpc-url arbitrum
  *
  * Env vars:
- *   ADMIN1_PRIVATE_KEY o PRIVATE_KEY  - Clave privada
+ *   ADMIN1_PRIVATE_KEY o PRIVATE_KEY  - Clave privada (admin para setAddress en AddressProvider)
  *   RUN_PROVIDE_LIQUIDITY = "1"        - Ejecutar provideLiquidity después del deploy
  *   LIQUIDITY_ORCHESTRATOR             - Si existe, solo ejecuta provideLiquidity (no despliega)
  *
@@ -32,8 +35,10 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 contract LiquidityOrchestratorScript is Script {
 
-    // --- Direcciones Arbitrum ---
-    address constant SWAP_ROUTER = 0xEca4f84d01D040Bc0A36cA44503258033133C41C;
+    address constant ADDRESS_PROVIDER = 0x73836d093005Dafeb3446c6DB10f325a52ea6f0E;
+    address constant UNIVERSAL_ROUTER = 0xA51afAFe0263b40EdaEf0Df8781eA9aa03E381a3;
+    address constant FACTORY = 0x1F98431c8aD98523631AE4a59f267346ea31F984;
+
     address constant NFT_POSITION_MANAGER = 0xC36442b4a4522E871399CD717aBDD847Ab11FE88;
     address constant USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
     address constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
@@ -78,12 +83,25 @@ contract LiquidityOrchestratorScript is Script {
     }
 
     function _deployAll(address) internal returns (address orchestratorAddr) {
-        LiquidityManager liquidityManager = new LiquidityManager(NFT_POSITION_MANAGER, address(0));
+        AddressProvider ap = AddressProvider(ADDRESS_PROVIDER);
+        ap.setAddress("UniswapNFTPositionManager", NFT_POSITION_MANAGER);
+        ap.setAddress("UniswapV3Factory", FACTORY);
+
+        LiquidityManager liquidityManager = new LiquidityManager(ADDRESS_PROVIDER);
         console.log("LiquidityManager desplegado:", address(liquidityManager));
 
-        LiquidityOrchestrator orchestrator = new LiquidityOrchestrator(address(liquidityManager), SWAP_ROUTER);
+        SwapRouter swapRouter = new SwapRouter(UNIVERSAL_ROUTER);
+        console.log("SwapRouter desplegado:", address(swapRouter));
+
+        Roles roles = Roles(ap.getAddress("Roles"));
+        roles.allowContract(address(liquidityManager), "LiquidityManager");
+        ap.setAddress("LiquidityManager", address(liquidityManager));
+        ap.setAddress("SwapRouter", address(swapRouter));
+        LiquidityOrchestrator orchestrator = new LiquidityOrchestrator(ADDRESS_PROVIDER);
         orchestratorAddr = address(orchestrator);
         console.log("LiquidityOrchestrator desplegado:", orchestratorAddr);
+
+        ap.setAddress("LiquidityOrchestrator", orchestratorAddr);
 
         return orchestratorAddr;
     }
@@ -144,6 +162,7 @@ contract LiquidityOrchestratorScript is Script {
             token0: WBTC,
             token1: WETH,
             recipient: recipient,
+            user: recipient,
             amount0: 60,
             amount1: 19157338949957,
             tickLower: TICK_LOWER,
@@ -171,9 +190,22 @@ contract LiquidityOrchestratorScript is Script {
 }
 
 /*
-forge script script/LiquidityOrchestrator.s.sol --broadcast --rpc-url arbitrum
-LIQUIDITY_ORCHESTRATOR=0x341FFBa0b350fe811E16c371383F8DaFEdD34dfE RUN_PROVIDE_LIQUIDITY=1 forge script script/LiquidityOrchestrator.s.sol --broadcast --rpc-url arbitrum
- 
- LiquidityManager desplegado: 0xfa5A660C02bE1E6bDAaE9D3a19d9c46721a44E4b
-  LiquidityOrchestrator desplegado: 0x341FFBa0b350fe811E16c371383F8DaFEdD34dfE
- */
+Ejecutar desde la raíz del proyecto (carpeta protocol, no src):
+
+cd /path/to/protocol
+
+# Deploy completo
+forge script script/LiquidityOrchestrator.s.sol:LiquidityOrchestratorScript --broadcast --rpc-url arbitrum
+
+# Solo provideLiquidity (orchestrator ya desplegado)
+LIQUIDITY_ORCHESTRATOR=0xc9085c56D807bBfd6FA7d82e74a19EE9572b2b55 RUN_PROVIDE_LIQUIDITY=1 forge script script/LiquidityOrchestrator.s.sol:LiquidityOrchestratorScript --broadcast --rpc-url arbitrum
+
+# Deploy + provideLiquidity
+RUN_PROVIDE_LIQUIDITY=1 forge script script/LiquidityOrchestrator.s.sol:LiquidityOrchestratorScript --broadcast --rpc-url arbitrum
+
+Env: ADMIN1_PRIVATE_KEY o PRIVATE_KEY en .env
+
+LiquidityManager desplegado: 0xc90B30327cE029a100DD5816f1299303C7FC11Bf
+  SwapRouter desplegado: 0x9D51C11195BD2A398D91508C5BEffe8A979FC6a7
+  LiquidityOrchestrator desplegado: 0xc9085c56D807bBfd6FA7d82e74a19EE9572b2b55
+*/

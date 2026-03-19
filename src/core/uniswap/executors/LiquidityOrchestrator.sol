@@ -19,7 +19,7 @@ contract LiquidityOrchestrator {
         addressProvider = AddressProvider(_addressProvider);
         liquidityManager = LiquidityManager(addressProvider.getAddress("LiquidityManager"));
         swapRouter = SwapRouter(addressProvider.getAddress("SwapRouter"));
-        positionManager = INonfungiblePositionManager(addressProvider.getAddress("PositionManager"));
+        positionManager = INonfungiblePositionManager(addressProvider.getAddress("UniswapNFTPositionManager"));
     }
 
     function provideLiquidity(UniswapLib.ExecuteProvideLiquidityInput calldata _input) public {
