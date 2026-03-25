@@ -99,6 +99,7 @@ contract LiquidityOrchestratorScript is Script {
         ap.setAddress("SwapRouter", address(swapRouter));
         LiquidityOrchestrator orchestrator = new LiquidityOrchestrator(ADDRESS_PROVIDER);
         orchestratorAddr = address(orchestrator);
+        roles.allowContract(address(orchestrator), "LiquidityOrchestrator");
         console.log("LiquidityOrchestrator desplegado:", orchestratorAddr);
 
         ap.setAddress("LiquidityOrchestrator", orchestratorAddr);
@@ -198,14 +199,14 @@ cd /path/to/protocol
 forge script script/LiquidityOrchestrator.s.sol:LiquidityOrchestratorScript --broadcast --rpc-url arbitrum
 
 # Solo provideLiquidity (orchestrator ya desplegado)
-LIQUIDITY_ORCHESTRATOR=0xc9085c56D807bBfd6FA7d82e74a19EE9572b2b55 RUN_PROVIDE_LIQUIDITY=1 forge script script/LiquidityOrchestrator.s.sol:LiquidityOrchestratorScript --broadcast --rpc-url arbitrum
+LIQUIDITY_ORCHESTRATOR=0x8EB347dc8960Dda7279D13859C68B909cdB8f71a RUN_PROVIDE_LIQUIDITY=1 forge script script/LiquidityOrchestrator.s.sol:LiquidityOrchestratorScript --broadcast --rpc-url arbitrum
 
 # Deploy + provideLiquidity
 RUN_PROVIDE_LIQUIDITY=1 forge script script/LiquidityOrchestrator.s.sol:LiquidityOrchestratorScript --broadcast --rpc-url arbitrum
 
 Env: ADMIN1_PRIVATE_KEY o PRIVATE_KEY en .env
 
-LiquidityManager desplegado: 0xc90B30327cE029a100DD5816f1299303C7FC11Bf
-  SwapRouter desplegado: 0x9D51C11195BD2A398D91508C5BEffe8A979FC6a7
-  LiquidityOrchestrator desplegado: 0xc9085c56D807bBfd6FA7d82e74a19EE9572b2b55
+LiquidityManager desplegado: 0x937e1d9fDf9944cD87Feb76c4e9aE2cFfcDAfC0e
+  SwapRouter desplegado: 0xaa806591B678b0d0ba07a27E4A78D75B1a9D277d
+  LiquidityOrchestrator desplegado: 0x8EB347dc8960Dda7279D13859C68B909cdB8f71a
 */

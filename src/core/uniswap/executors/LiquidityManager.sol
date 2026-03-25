@@ -7,7 +7,6 @@ import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
 import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
-import { PositionInitializer } from "../../bundles/executors/PositionInitializer.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
@@ -27,7 +26,7 @@ contract LiquidityManager {
         factory = IUniswapV3Factory(addressProvider.getAddress("UniswapV3Factory"));
     }
 
-    function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public {
+    function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public returns (uint256, uint256, uint256, uint160, address) {
         
         IERC20(_input.token0).approve(address(positionManager), _input.amount0);
         IERC20(_input.token1).approve(address(positionManager), _input.amount1);
@@ -41,32 +40,27 @@ contract LiquidityManager {
                     tickUpper: _input.tickUpper,
                     amount0Desired: _input.amount0,
                     amount1Desired: _input.amount1,
-                    amount0Min: (_input.amount0 * 99) / 100, // 1% slippage
-                    amount1Min: (_input.amount1 * 99) / 100, // 1% slippage
+                    amount0Min: (_input.amount0 * 85) / 100, // 15% slippage
+                    amount1Min: (_input.amount1 * 85) / 100,
                     recipient: _input.recipient,
                     deadline: block.timestamp + 60
                 }
             );
 
-        (uint256 tokenId,,,) = positionManager.mint{ value : 0 }(params);
+        (uint256 tokenId,, uint256 amountDeposited0, uint256 amountDeposited1) = positionManager.mint{ value : 0 }(params);
 
-        bytes[] memory positionData = new bytes[](10);
-        positionData[0] = abi.encode(_input.token0);
-        positionData[1] = abi.encode(_input.token1);
-        positionData[2] = abi.encode(block.timestamp);
-        positionData[3] = abi.encode(_input.fee);
-        positionData[4] = abi.encode(_input.tickLower);
-        positionData[5] = abi.encode(_input.tickUpper);
-        positionData[6] = abi.encode(_input.amount0);
-        positionData[7] = abi.encode(_input.amount1);
-        positionData[8] = abi.encode(_input.recipient);
-        positionData[9] = abi.encode(tokenId);
+        uint256 amountLeftToken0 = _input.amount0 - amountDeposited0;
+        uint256 amountLeftToken1 = _input.amount1 - amountDeposited1;
+        if(amountLeftToken0 > 0) IERC20(_input.token0).transfer(_input.user, amountLeftToken0);
+        if(amountLeftToken1 > 0) IERC20(_input.token1).transfer(_input.user, amountLeftToken1);
 
-        PositionInitializer positionInitializer = PositionInitializer(addressProvider.getAddress("PositionInitializer"));
-        positionInitializer.initializePosition(positionData, 2, _input.recipient);
+        address pool = factory.getPool(_input.token0, _input.token1, _input.fee);
+        (uint160 sqrtCurrentPrice,,,,,, ) = IUniswapV3Pool(pool).slot0();
+
+        return (tokenId, amountDeposited0, amountDeposited1, sqrtCurrentPrice, pool);
     }
 
-    function withdrawLiquidityV3(UniswapLib.WithdrawLiquidityInput calldata _input) public {
+    function withdrawLiquidityV3(UniswapLib.WithdrawLiquidityInput calldata _input) public returns (ProtocolLib.Position memory, uint160){
         
         positionManager.transferFrom(msg.sender, address(this), _input.uniId);
 
@@ -74,7 +68,7 @@ contract LiquidityManager {
         
         address pool = factory.getPool(abi.decode(position.positionData[0], (address)), abi.decode(position.positionData[1], (address)), abi.decode(position.positionData[3], (uint24)));
         (uint160 sqrtCurrentPrice,,,,,, ) = IUniswapV3Pool(pool).slot0();
-        (,, , , , , , uint128 liquidity, , , ,) = positionManager.positions(_input.uniId);
+        (,, , , , , , uint128 liquidity, , , uint256 feesCollectedToken0, uint256 feesCollectedToken1) = positionManager.positions(_input.uniId);
         
         (uint256 _amount0, uint256 _amount1) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtCurrentPrice,
@@ -93,9 +87,11 @@ contract LiquidityManager {
             }
         );
         
-        positionManager.decreaseLiquidity{ value : 0 }(params);
+        (uint256 amount0, uint256 amount1) = positionManager.decreaseLiquidity{ value : 0 }(params);
 
         positionManager.transferFrom(address(this), msg.sender, _input.uniId);
+
+        return (position, sqrtCurrentPrice);
     }
 
     function collectV3(UniswapLib.CollectParams calldata _input) public returns (uint256 amount0, uint256 amount1) {

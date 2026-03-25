@@ -7,6 +7,9 @@ import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
+import { PositionInitializer } from "../../bundles/executors/PositionInitializer.sol";
+import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
+import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 
 contract LiquidityOrchestrator {
 
@@ -14,12 +17,14 @@ contract LiquidityOrchestrator {
     LiquidityManager public immutable liquidityManager;
     SwapRouter public immutable swapRouter;
     INonfungiblePositionManager public immutable positionManager;
+    ProtocolStorage public immutable protocolStorage;
 
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
         liquidityManager = LiquidityManager(addressProvider.getAddress("LiquidityManager"));
         swapRouter = SwapRouter(addressProvider.getAddress("SwapRouter"));
         positionManager = INonfungiblePositionManager(addressProvider.getAddress("UniswapNFTPositionManager"));
+        protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
     }
 
     function provideLiquidity(UniswapLib.ExecuteProvideLiquidityInput calldata _input) public {
@@ -53,7 +58,33 @@ contract LiquidityOrchestrator {
             provideLiquidityInput.recipient = _input.isSendraRecipient ? address(this) : msg.sender;
             provideLiquidityInput.user = msg.sender;
 
-            liquidityManager.addLiquidityV3(provideLiquidityInput);
+            (
+                uint256 tokenId, 
+                uint256 amountDeposited0, 
+                uint256 amountDeposited1, 
+                uint160 sqrtCurrentPrice, 
+                address pool
+            ) = liquidityManager.addLiquidityV3(provideLiquidityInput);
+
+            bytes[] memory positionData = new bytes[](15);
+            positionData[0] = abi.encode(_input.provideLiquidityInput.token0);
+            positionData[1] = abi.encode(_input.provideLiquidityInput.token1);
+            positionData[2] = abi.encode(block.timestamp);
+            positionData[3] = abi.encode(_input.provideLiquidityInput.fee);
+            positionData[4] = abi.encode(_input.provideLiquidityInput.tickLower);
+            positionData[5] = abi.encode(_input.provideLiquidityInput.tickUpper);
+            positionData[6] = abi.encode(amountDeposited0);
+            positionData[7] = abi.encode(amountDeposited1);
+            positionData[8] = abi.encode(provideLiquidityInput.recipient);
+            positionData[9] = abi.encode(tokenId);
+            positionData[10] = abi.encode(sqrtCurrentPrice);
+            positionData[11] = abi.encode(pool);
+            positionData[12] = abi.encode(uint256(0)); // finalUsdValue
+            positionData[13] = abi.encode(uint256(0)); // finalPoolPrice
+            positionData[14] = abi.encode(uint256(0)); // feesCollectedUSD
+
+            PositionInitializer positionInitializer = PositionInitializer(addressProvider.getAddress("PositionInitializer"));
+            positionInitializer.initializePosition(positionData, 2, _input.provideLiquidityInput.user);
 
         } else if(provideLiquidityInput.protocol == UniswapLib.Protocol.UniswapV4){
             //TODO: Implement UniswapV4
@@ -66,6 +97,7 @@ contract LiquidityOrchestrator {
 
         positionManager.transferFrom(msg.sender, address(this), _input.collectParams.uniId);
 
+        positionManager.approve(address(liquidityManager), _input.collectParams.uniId);
         (uint256 amount0, uint256 amount1) = liquidityManager.collectV3(_input.collectParams);
 
         bool isSwapNeeded0 = _input.swapInput0.tokenIn != _input.swapInput0.tokenOut;
@@ -103,7 +135,8 @@ contract LiquidityOrchestrator {
 
         positionManager.transferFrom(msg.sender, address(this), _input.withdrawLiquidityInput.uniId);
 
-        liquidityManager.withdrawLiquidityV3(_input.withdrawLiquidityInput);
+        positionManager.approve(address(liquidityManager), _input.withdrawLiquidityInput.uniId);
+        (ProtocolLib.Position memory position, uint160 sqrtCurrentPrice) = liquidityManager.withdrawLiquidityV3(_input.withdrawLiquidityInput);
         
         UniswapLib.CollectParams memory collectParams = UniswapLib.CollectParams(
             _input.withdrawLiquidityInput.uniId,
@@ -111,7 +144,8 @@ contract LiquidityOrchestrator {
             true,
             _input.withdrawLiquidityInput.user
         );
-        
+
+        positionManager.approve(address(liquidityManager), _input.withdrawLiquidityInput.uniId);
         (uint256 amount0, uint256 amount1) = liquidityManager.collectV3(collectParams);
         
         bool isSwapNeeded0 = _input.swapInput0.tokenIn != _input.swapInput0.tokenOut;
@@ -135,13 +169,19 @@ contract LiquidityOrchestrator {
         }
 
         uint256 newBalance = IERC20(_input.swapInput0.tokenOut).balanceOf(address(this));
-        uint256 amount = newBalance - prevBalance;
-        IERC20(_input.swapInput0.tokenOut).transfer(msg.sender, amount);
+        uint256 amountUsdcReceived = newBalance - prevBalance;
+        IERC20(_input.swapInput0.tokenOut).transfer(msg.sender, amountUsdcReceived);
 
         positionManager.transferFrom(address(this), msg.sender, _input.withdrawLiquidityInput.uniId);
 
-        return amount;
-    }
+        position.isActive = false;
+        position.positionData[12] = abi.encode(amountUsdcReceived);
+        position.positionData[13] = abi.encode(sqrtCurrentPrice); // finalPoolPrice
+        protocolStorage.decreaseGlobalPositionActivePositions(msg.sender);
 
+        protocolStorage.updateUserFullPosition(msg.sender, _input.withdrawLiquidityInput.positionId, position);
+
+        return amountUsdcReceived;
+    }
 
 }

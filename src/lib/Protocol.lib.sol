@@ -52,6 +52,7 @@ contract ProtocolLib {
         // i think transactionCount it is the same as totalPositions 
         uint256 transactionCount; // will be used as positionId for each user also
         bytes[] userData;
+        
     }
 
     struct UserInfoRead {

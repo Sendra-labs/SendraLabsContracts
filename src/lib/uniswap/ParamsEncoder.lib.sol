@@ -43,26 +43,28 @@ library UniswapParamsEncoderLib {
                     true
                 );
             } else if(params.swapInstructions[i].protocol == UniswapLib.Protocol.UniswapV4){
-                bytes memory actions = abi.encodePacked(bytes1(0x0b), bytes1(0x06), bytes1(0x0e));  // SETTLE, SWAP, TAKE
+                // V4: SWAP_EXACT_IN_SINGLE (0x06), SETTLE_ALL (0x0c), TAKE_ALL (0x0f)
+                bytes memory actions = abi.encodePacked(bytes1(0x06), bytes1(0x0c), bytes1(0x0f));
                 bytes[] memory v4Params = new bytes[](3);
                 bool zeroForOne = params.swapInstructions[i].tokenIn == address(uint160(Currency.unwrap(params.swapInstructions[i].poolKey.currency0)));
                 v4Params[0] = abi.encode(
-                    Currency.wrap(params.swapInstructions[i].tokenIn), 
-                    recipient, 
-                    uint128(params.swapInstructions[i].amountIn)
+                    params.swapInstructions[i].poolKey,
+                    zeroForOne,
+                    uint128(params.swapInstructions[i].amountIn),
+                    uint128(params.swapInstructions[i].amountOut),
+                    uint256(0),
+                    bytes("")
                 );
+                // params[1]: SETTLE_ALL (Currency currency, uint256 maxAmount)
                 v4Params[1] = abi.encode(
-                    params.swapInstructions[i].poolKey, 
-                    zeroForOne, 
-                    uint128(params.swapInstructions[i].amountIn), 
-                    uint128(params.swapInstructions[i].amountOut), 
-                    ""
+                    Currency.wrap(params.swapInstructions[i].tokenIn),
+                    params.swapInstructions[i].amountIn
                 );
+                // params[2]: TAKE_ALL (Currency currency, uint256 minAmount)
                 v4Params[2] = abi.encode(
-                    Currency.wrap(params.swapInstructions[i].tokenOut), 
-                    recipient, 
-                    uint128(params.swapInstructions[i].amountOut));
-
+                    Currency.wrap(params.swapInstructions[i].tokenOut),
+                    params.swapInstructions[i].amountOut
+                );
                 inputs[i] = abi.encode(actions, v4Params);
             }
         }

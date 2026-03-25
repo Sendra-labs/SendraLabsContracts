@@ -29,7 +29,8 @@ contract SwapRouter is ReentrancyGuard {
         IERC20 tokenIn = IERC20(_input.tokenIn);
         tokenIn.approve(address(PERMIT2), _input.amountIn0);
         PERMIT2.approve(_input.tokenIn, address(universalRouter), uint160(_input.amountIn0), type(uint48).max);
-        (bytes memory commands, bytes[] memory inputs) = UniswapParamsEncoderLib.createParams(_input, address(this));
+        // intermediateRecipient: para multi-hop los tokens intermedios van al Universal Router
+        (bytes memory commands, bytes[] memory inputs) = UniswapParamsEncoderLib.createParams(_input, address(universalRouter));
         universalRouter.execute(commands, inputs);
     }
 
