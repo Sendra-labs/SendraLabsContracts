@@ -49,8 +49,8 @@ contract LiquidityManager {
 
         (uint256 tokenId,, uint256 amountDeposited0, uint256 amountDeposited1) = positionManager.mint{ value : 0 }(params);
 
-        uint256 amountLeftToken0 = _input.amount0 - amountDeposited0;
-        uint256 amountLeftToken1 = _input.amount1 - amountDeposited1;
+        uint256 amountLeftToken0 = IERC20(_input.token0).balanceOf(address(this));
+        uint256 amountLeftToken1 = IERC20(_input.token1).balanceOf(address(this));
         if(amountLeftToken0 > 0) IERC20(_input.token0).transfer(_input.user, amountLeftToken0);
         if(amountLeftToken1 > 0) IERC20(_input.token1).transfer(_input.user, amountLeftToken1);
 
