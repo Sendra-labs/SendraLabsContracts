@@ -26,7 +26,7 @@ contract LiquidityManager {
         factory = IUniswapV3Factory(addressProvider.getAddress("UniswapV3Factory"));
     }
 
-    function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public returns (uint256, uint256, uint256, uint160, address) {
+    function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public returns (uint256, uint256, uint256, uint160, address, uint256, uint256) {
         
         IERC20(_input.token0).approve(address(positionManager), _input.amount0);
         IERC20(_input.token1).approve(address(positionManager), _input.amount1);
@@ -51,13 +51,13 @@ contract LiquidityManager {
 
         uint256 amountLeftToken0 = IERC20(_input.token0).balanceOf(address(this));
         uint256 amountLeftToken1 = IERC20(_input.token1).balanceOf(address(this));
-        if(amountLeftToken0 > 0) IERC20(_input.token0).transfer(_input.user, amountLeftToken0);
-        if(amountLeftToken1 > 0) IERC20(_input.token1).transfer(_input.user, amountLeftToken1);
+        if(amountLeftToken0 > 0) IERC20(_input.token0).transfer(addressProvider.getAddress("swapRouter"), amountLeftToken0);
+        if(amountLeftToken1 > 0) IERC20(_input.token1).transfer(addressProvider.getAddress("swapRouter"), amountLeftToken1);
 
         address pool = factory.getPool(_input.token0, _input.token1, _input.fee);
         (uint160 sqrtCurrentPrice,,,,,, ) = IUniswapV3Pool(pool).slot0();
 
-        return (tokenId, amountDeposited0, amountDeposited1, sqrtCurrentPrice, pool);
+        return (tokenId, amountDeposited0, amountDeposited1, sqrtCurrentPrice, pool, amountLeftToken0, amountLeftToken1);
     }
 
     function withdrawLiquidityV3(UniswapLib.WithdrawLiquidityInput calldata _input) public returns (ProtocolLib.Position memory, uint160){

@@ -63,8 +63,13 @@ contract LiquidityOrchestrator {
                 uint256 amountDeposited0, 
                 uint256 amountDeposited1, 
                 uint160 sqrtCurrentPrice, 
-                address pool
+                address pool,
+                uint256 amountLeftToken0,
+                uint256 amountLeftToken1
             ) = liquidityManager.addLiquidityV3(provideLiquidityInput);
+
+            if (amountLeftToken0 > 0) swapRouter.executeSwap(invertSwapInput(swapInput0, amountLeftToken0));
+            if (amountLeftToken1 > 0) swapRouter.executeSwap(invertSwapInput(swapInput1, amountLeftToken1));
 
             bytes[] memory positionData = new bytes[](15);
             positionData[0] = abi.encode(_input.provideLiquidityInput.token0);
@@ -89,6 +94,41 @@ contract LiquidityOrchestrator {
         } else if(provideLiquidityInput.protocol == UniswapLib.Protocol.UniswapV4){
             //TODO: Implement UniswapV4
         }
+    }
+
+    function invertSwapInput(UniswapLib.SwapInput memory _input, uint256 _amount)
+        public
+        view
+        returns (UniswapLib.SwapInput memory)
+    {
+        uint256 len = _input.swapInstructions.length;
+
+        UniswapLib.SwapInstruction[] memory invertedInstructions = new UniswapLib.SwapInstruction[](len);
+        for (uint256 i = 0; i < len; i++) {
+            UniswapLib.SwapInstruction memory inst = _input.swapInstructions[len - 1 - i];
+
+            address hopTokenIn = inst.tokenOut;
+            address hopTokenOut = inst.tokenIn;
+
+            invertedInstructions[i] = UniswapLib.SwapInstruction({
+                protocol: inst.protocol,
+                tokenIn: hopTokenIn,
+                tokenOut: hopTokenOut,
+                amountIn: (i == 0) ? _amount : 0,
+                amountOut: 0,
+                poolOrPair: inst.poolOrPair,
+                fee: inst.fee,
+                poolKey: inst.poolKey
+            });
+        }
+
+        return UniswapLib.SwapInput({
+            tokenIn: _input.tokenOut,
+            tokenOut: _input.tokenIn,
+            swapInstructions: invertedInstructions,
+            amountIn0: _amount,
+            to: msg.sender
+        });
     }
 
     function collectFeesOnly(UniswapLib.ExecuteCollectFeesOnly calldata _input) public returns (uint256){
