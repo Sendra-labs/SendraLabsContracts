@@ -63,6 +63,7 @@ contract SendraStorage {
     error InvalidGlobalAccumulatorField();
     error InvalidSpecificAccumulatorField();
     error AccumulatorBatchLengthMismatch();
+    error InvalidSpecificMetricIndex();
 
     function createUser(address _user) internal onlyProtocol {
         protocolStats.totalUsers++;
@@ -182,41 +183,41 @@ contract SendraStorage {
             int256 d = _deltas[i];
 
             if (f == 0) {
-                _addUint256(g.totalCapitalIn, d);
+                g.totalCapitalIn = _addUint256(g.totalCapitalIn, d);
             } else if (f == 1) {
-                _addUint256(g.totalCapitalOut, d);
+                g.totalCapitalOut = _addUint256(g.totalCapitalOut, d);
             } else if (f == 2) {
-                _addUint256(g.peakSimultaneousExposure, d);
+                g.peakSimultaneousExposure = _addUint256(g.peakSimultaneousExposure, d);
             } else if (f == 3) {
                 g.cumulativeRealizedPnl += d;
             } else if (f == 4) {
-                _addUint256(g.grossProfit, d);
+                g.grossProfit = _addUint256(g.grossProfit, d);
             } else if (f == 5) {
-                _addUint256(g.grossLoss, d);
+                g.grossLoss = _addUint256(g.grossLoss, d);
             } else if (f == 6) {
                 g.highWaterMark += d;
             } else if (f == 7) {
-                _addUint256(g.maxDrawdown, d);
+                g.maxDrawdown = _addUint256(g.maxDrawdown, d);
             } else if (f == 8) {
-                _addUint256(g.totalPositionsOpened, d);
+                g.totalPositionsOpened = _addUint256(g.totalPositionsOpened, d);
             } else if (f == 9) {
-                _addUint256(g.totalPositionsClosed, d);
+                g.totalPositionsClosed = _addUint256(g.totalPositionsClosed, d);
             } else if (f == 10) {
-                _addUint256(g.winCount, d);
+                g.winCount = _addUint256(g.winCount, d);
             } else if (f == 11) {
-                _addUint256(g.lossCount, d);
+                g.lossCount = _addUint256(g.lossCount, d);
             } else if (f == 12) {
-                _addUint256(g.totalDurationSeconds, d);
+                g.totalDurationSeconds = _addUint256(g.totalDurationSeconds, d);
             } else if (f == 13) {
-                _addUint256(g.firstActivityTimestamp, d);
+                g.firstActivityTimestamp = _addUint256(g.firstActivityTimestamp, d);
             } else if (f == 14) {
-                _addUint256(g.lastActivityTimestamp, d);
+                g.lastActivityTimestamp = _addUint256(g.lastActivityTimestamp, d);
             } else if (f == 15) {
-                _addUint256(g.totalLiquidationEvents, d);
+                g.totalLiquidationEvents = _addUint256(g.totalLiquidationEvents, d);
             } else if (f == 16) {
-                _addUint256(g.consecutiveLosses, d);
+                g.consecutiveLosses = _addUint256(g.consecutiveLosses, d);
             } else {
-                _addUint256(g.maxConsecutiveLosses, d);
+                g.maxConsecutiveLosses = _addUint256(g.maxConsecutiveLosses, d);
             }
         }
     }
@@ -241,13 +242,13 @@ contract SendraStorage {
             if (f == 0) {
                 s.realizedPnl += d;
             } else if (f == 1) {
-                _addUint256(s.capitalDeployed, d);
+                s.capitalDeployed = _addUint256(s.capitalDeployed, d);
             } else if (f == 2) {
-                _addUint256(s.winCount, d);
+                s.winCount = _addUint256(s.winCount, d);
             } else if (f == 3) {
-                _addUint256(s.lossCount, d);
+                s.lossCount = _addUint256(s.lossCount, d);
             } else {
-                _addUint256(s.totalPositions, d);
+                s.totalPositions = _addUint256(s.totalPositions, d);
             }
         }
     }
@@ -268,20 +269,67 @@ contract SendraStorage {
         }
     }
 
-    function _addUint256(uint256 storage _slot, int256 _delta) private {
+    function _addUint256(uint256 _current, int256 _delta) private pure returns (uint256) {
         if (_delta >= 0) {
-            _slot += uint256(_delta);
+            return _current + uint256(_delta);
         } else {
             uint256 sub = uint256(-_delta);
-            if (_slot >= sub) {
-                _slot -= sub;
-            } else {
-                _slot = 0;
-            }
+            return _current >= sub ? (_current - sub) : 0;
         }
     }
 
     //____________
+
+    /**
+     * @notice Returns the user's global pulse accumulators.
+     * @dev This is a convenience getter for `users[_user].pulse.globalPulse`.
+     *      If the user has not been created yet, all fields will be zeroed.
+     * @param _user The user address.
+     */
+    function getUserGlobalAccumulators(address _user) public view returns (SendraLib.GlobalAccumulators memory) {
+        return users[_user].pulse.globalPulse;
+    }
+
+    /**
+     * @notice Returns the user's specific pulse accumulators for a given key.
+     * @dev Convenience getter for `users[_user].pulse.specificPulse[_specificKey]`.
+     *      If the user/key has never been used, all fields will be zeroed and metrics length will be 0.
+     * @param _user The user address.
+     * @param _specificKey The specific accumulator key (e.g. position type or strategy id).
+     */
+    function getUserSpecificAccumulators(address _user, uint64 _specificKey)
+        public
+        view
+        returns (SendraLib.SpecificAccumulators memory)
+    {
+        return users[_user].pulse.specificPulse[_specificKey];
+    }
+
+    /**
+     * @notice Returns a single specific metric blob for a given user and key.
+     * @dev Reverts if `_metricIndex` is out of bounds for `specificMetrics`.
+     * @param _user The user address.
+     * @param _specificKey The specific accumulator key.
+     * @param _metricIndex The index within `specificMetrics`.
+     */
+    function getUserSpecificMetric(address _user, uint64 _specificKey, uint256 _metricIndex)
+        public
+        view
+        returns (bytes memory)
+    {
+        SendraLib.SpecificAccumulators storage s = users[_user].pulse.specificPulse[_specificKey];
+        if (_metricIndex >= s.specificMetrics.length) revert InvalidSpecificMetricIndex();
+        return s.specificMetrics[_metricIndex];
+    }
+
+    /**
+     * @notice Returns the number of metric blobs stored for a given user and key.
+     * @param _user The user address.
+     * @param _specificKey The specific accumulator key.
+     */
+    function getUserSpecificMetricsLength(address _user, uint64 _specificKey) public view returns (uint256) {
+        return users[_user].pulse.specificPulse[_specificKey].specificMetrics.length;
+    }
 
     function getUserPositionById(address _user, uint256 _positionId) public view returns (SendraLib.Position memory position) {
         position = users[_user].globalPosition.positions[_positionId];
