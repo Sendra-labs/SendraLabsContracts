@@ -342,7 +342,7 @@ contract PairTrading is ReentrancyGuard {
      * 
      * @custom:emit PositionOpened Emitted when the order is successfully created
      */
-    function openPositionWithEther(PairTradingLib.EtherOneSideTradeInput memory _input) public payable {
+    function openPositionWithEther(PairTradingLib.EtherOneSideTradeInput memory _input) internal {
 
         uint256 ethAmount = _input.ethAmount;            
         uint256 sizeDeltaUsd = _input.sizeDeltaUsd;         
@@ -424,7 +424,7 @@ contract PairTrading is ReentrancyGuard {
      * 
      * @custom:emit PositionOpened Emitted when the order is successfully created
      */
-    function openPositionWithUSDC(PairTradingLib.UsdcOneSideTradeInput memory _input) public payable {
+    function openPositionWithUSDC(PairTradingLib.UsdcOneSideTradeInput memory _input) internal {
 
         uint256 usdcAmount = _input.usdcAmount;
         uint256 sizeDeltaUsd = _input.sizeDeltaUsd;

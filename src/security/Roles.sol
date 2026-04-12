@@ -86,11 +86,12 @@ contract Roles {
 
         if(checkApprovals(isProtocol[_contract].approvedBy)) revert InvalidApproval();
 
-        if(isProtocol[_contract].approvals >= 0){ // Require more approvals for Production
-            isProtocol[_contract] = RolesLib.Contract(true,_name, isProtocol[_contract].approvals, isProtocol[_contract].approvedBy);
-        } else {
-            isProtocol[_contract].approvals++;
-            isProtocol[_contract].approvedBy.push(msg.sender);
+        isProtocol[_contract].approvals++;
+        isProtocol[_contract].approvedBy.push(msg.sender);
+
+        if(isProtocol[_contract].approvals >= 2) {
+            isProtocol[_contract].isProtocol = true;
+            isProtocol[_contract].name = _name;
         }
     }
     

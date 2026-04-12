@@ -121,14 +121,14 @@ contract Equity is ReentrancyGuard {
         USDC.transfer(_to, _amountUsd);
     }
 
-    function sellEquity(address _from, address _to, uint256 _equity, uint256 _priceUsd) public nonReentrant {
+    function sellEquity(address _from, address _to, uint256 _equity, uint256 _priceUsd) public nonReentrant onlyProtocol {
         if(_equity < 1 || _equity > partners[_from].equity) revert InvalidEquity();
         if(_priceUsd == 0) revert InvalidPrice();
         if(_from == _to || _from == address(0) || _to == address(0)) revert InvalidPartner();
+        partners[_from].equity -= _equity;
         if(partners[_from].equity == 0) partnersCount--;
-        //partners[_from].equity -= _equity;
         partners[_to].equity += _equity;
-        partnersCount++;
+        if(partners[_to].equity == _equity) partnersCount++;
         partners[_from].equitySold += _equity;
         totalEquitySold += _equity;
     }

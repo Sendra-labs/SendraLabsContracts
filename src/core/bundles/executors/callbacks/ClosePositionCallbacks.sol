@@ -412,7 +412,7 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         uint256 amount,
         string calldata reason
     ) external nonReentrant {
-        require(Roles(addressProvider.getAddress("Roles")).isProtocolContract(msg.sender), "Not authorized");
+        require(Roles(addressProvider.getAddress("Roles")).checkAdmin(msg.sender), "Not authorized");
         require(to != address(0), "Invalid destination");
         require(amount > 0, "Amount must be > 0");
         require(bytes(reason).length > 0, "Reason required");
@@ -441,7 +441,7 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         bool unwrap,
         string calldata reason
     ) external nonReentrant {
-        require(Roles(addressProvider.getAddress("Roles")).isProtocolContract(msg.sender), "Not authorized");
+        require(Roles(addressProvider.getAddress("Roles")).checkAdmin(msg.sender), "Not authorized");
         require(to != address(0), "Invalid destination");
         require(amount > 0, "Amount must be > 0");
                 

@@ -234,7 +234,7 @@ contract PairTradingProxy is ReentrancyGuard {
     function customFunctionDelegatecall(address _target, bytes memory _data) public onlyOwner nonReentrant {
         address positionInitializer = addressProvider.getAddress("PositionInitializer");
         address pairTradingStorage = addressProvider.getAddress("PairTradingStorage");
-        if(_target == positionInitializer || _target == pairTradingStorage) revert TragetNotAllowed();
+        if(_target == positionInitializer || _target == pairTradingStorage) revert TargetNotAllowed();
         (bool success,) = _target.delegatecall(_data);
         require(success, "Delegatecall failed");
     }
@@ -242,7 +242,7 @@ contract PairTradingProxy is ReentrancyGuard {
     function customFunction(address _target, bytes memory _data) public onlyOwner nonReentrant {
         address positionInitializer = addressProvider.getAddress("PositionInitializer");
         address pairTradingStorage = addressProvider.getAddress("PairTradingStorage");
-        if(_target == positionInitializer || _target == pairTradingStorage) revert TragetNotAllowed();
+        if(_target == positionInitializer || _target == pairTradingStorage) revert TargetNotAllowed();
         (bool success,) = _target.call(_data);
         require(success, "Call failed");
     }
@@ -304,6 +304,6 @@ contract PairTradingProxy is ReentrancyGuard {
     
 
     /// @notice Thrown when attempting to call a target that is not allowed
-    error TragetNotAllowed();
+    error TargetNotAllowed();
 
 }
