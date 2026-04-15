@@ -28,6 +28,7 @@ import { LiquidityManager } from "./LiquidityManager.sol";
 import { SwapRouter } from "./SwapRouter.sol";
 import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 import { PositionInitializer } from "../../bundles/executors/PositionInitializer.sol";
@@ -35,6 +36,7 @@ import { SendraStorage } from "../../SendraStorage.sol";
 import { SendraLib } from "../../../lib/Sendra.lib.sol";
 
 contract LiquidityOrchestrator {
+    using SafeERC20 for IERC20;
 
     AddressProvider public immutable addressProvider;
     LiquidityManager public immutable liquidityManager;
@@ -66,15 +68,16 @@ contract LiquidityOrchestrator {
             bool isSwapNeeded0 = swapInput0.tokenIn != swapInput0.tokenOut;
             bool isSwapNeeded1 = swapInput1.tokenIn != swapInput1.tokenOut;
 
-            IERC20(swapInput0.tokenIn).transferFrom(
-                msg.sender, 
-                isSwapNeeded0 ? address(swapRouter) : address(liquidityManager), 
+
+            IERC20(swapInput0.tokenIn).safeTransferFrom(
+                msg.sender,
+                isSwapNeeded0 ? address(swapRouter) : address(liquidityManager),
                 swapInput0.amountIn0
             );
 
-            IERC20(swapInput1.tokenIn).transferFrom(
-                msg.sender, 
-                isSwapNeeded1 ? address(swapRouter) : address(liquidityManager), 
+            IERC20(swapInput1.tokenIn).safeTransferFrom(
+                msg.sender,
+                isSwapNeeded1 ? address(swapRouter) : address(liquidityManager),
                 swapInput1.amountIn0
             );
 
@@ -101,14 +104,27 @@ contract LiquidityOrchestrator {
 
             uint256 prevUsdcBalance = IERC20(swapInput0.tokenIn).balanceOf(address(this));
 
-            if (amountLeftToken0 > 0) swapRouter.executeSwap(invertSwapInput(swapInput0, amountLeftToken0));
-            if (amountLeftToken1 > 0) swapRouter.executeSwap(invertSwapInput(swapInput1, amountLeftToken1));
+            // swapInput0/swapInput1 are not guaranteed to be aligned with token0/token1.
+            // Map by tokenOut so we invert the correct route for each leftover.
+            UniswapLib.SwapInput memory swapIntoToken0 =
+                (swapInput0.tokenOut == provideLiquidityInput.token0) ? swapInput0 : swapInput1;
+            UniswapLib.SwapInput memory swapIntoToken1 =
+                (swapInput0.tokenOut == provideLiquidityInput.token1) ? swapInput0 : swapInput1;
+
+            if (amountLeftToken0 > 0) {
+                IERC20(provideLiquidityInput.token0).safeTransfer(address(swapRouter), amountLeftToken0);
+                swapRouter.executeSwap(invertSwapInput(swapIntoToken0, amountLeftToken0));
+            }
+            if (amountLeftToken1 > 0) {
+                IERC20(provideLiquidityInput.token1).safeTransfer(address(swapRouter), amountLeftToken1);
+                swapRouter.executeSwap(invertSwapInput(swapIntoToken1, amountLeftToken1));
+            }
 
             uint256 leftUsdc = IERC20(swapInput0.tokenIn).balanceOf(address(this)) - prevUsdcBalance;
 
             uint256 initialPositionUsdcValue = totalUsdcAmountInput - leftUsdc;
 
-            IERC20(swapInput0.tokenIn).transfer(msg.sender, leftUsdc);
+            IERC20(swapInput0.tokenIn).safeTransfer(msg.sender, leftUsdc);
 
             bytes[] memory positionData = new bytes[](18);
             positionData[0] = abi.encode(_input.provideLiquidityInput.token0);

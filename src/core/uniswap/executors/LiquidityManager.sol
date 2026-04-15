@@ -8,12 +8,14 @@ import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
 import { SendraStorage } from "../../../core/SendraStorage.sol";
 import { SendraLib } from "../../../lib/Sendra.lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 import { Roles } from "../../../security/Roles.sol";
 
 contract LiquidityManager {
+    using SafeERC20 for IERC20;
 
     AddressProvider public immutable addressProvider;
     INonfungiblePositionManager public immutable positionManager;
@@ -43,8 +45,8 @@ contract LiquidityManager {
 
     function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public returns (uint256, uint256, uint256, uint160, address, uint256, uint256) {
         
-        IERC20(_input.token0).approve(address(positionManager), _input.amount0);
-        IERC20(_input.token1).approve(address(positionManager), _input.amount1);
+        IERC20(_input.token0).forceApprove(address(positionManager), _input.amount0);
+        IERC20(_input.token1).forceApprove(address(positionManager), _input.amount1);
 
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams(
                 {
@@ -66,8 +68,9 @@ contract LiquidityManager {
 
         uint256 amountLeftToken0 = IERC20(_input.token0).balanceOf(address(this));
         uint256 amountLeftToken1 = IERC20(_input.token1).balanceOf(address(this));
-        if(amountLeftToken0 > 0) IERC20(_input.token0).transfer(addressProvider.getAddress("swapRouter"), amountLeftToken0);
-        if(amountLeftToken1 > 0) IERC20(_input.token1).transfer(addressProvider.getAddress("swapRouter"), amountLeftToken1);
+
+        if(amountLeftToken0 > 0) IERC20(_input.token0).safeTransfer(msg.sender, amountLeftToken0);
+        if(amountLeftToken1 > 0) IERC20(_input.token1).safeTransfer(msg.sender, amountLeftToken1);
 
         address pool = factory.getPool(_input.token0, _input.token1, _input.fee);
         (uint160 sqrtCurrentPrice,,,,,, ) = IUniswapV3Pool(pool).slot0();
