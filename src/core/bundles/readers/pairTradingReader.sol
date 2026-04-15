@@ -25,8 +25,8 @@ ________________________________________________________________
 pragma solidity 0.8.28;
 
 import { AddressProvider } from "../../config/AddressProvider.sol";
-import { ProtocolStorage } from "../../ProtocolStorage.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { SendraStorage } from "../../SendraStorage.sol";
+import { SendraLib } from "../../../lib/Sendra.lib.sol";
 import { PairTradingLib } from "../../../lib/PairTrading/PairTradingLib.sol";
 import { IReader } from "../../../interfaces/GMX/IReader.sol";
 import { GMXPrices } from "../../../periphery/utilsGMX/GMXPrices.sol";
@@ -131,9 +131,9 @@ contract PairTradingReader {
     function getPairTradingPosition(
         address user,
         uint256 positionId
-    ) public view returns (ProtocolLib.Position memory position) {
-        ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        return protocolStorage.getUserPositionById(user, positionId);
+    ) public view returns (SendraLib.Position memory position) {
+        SendraStorage sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
+        return sendraStorage.getUserPositionById(user, positionId);
     }
     
     /**
@@ -147,7 +147,7 @@ contract PairTradingReader {
         address user,
         uint256 positionId
     ) public view returns (bytes32 longKey, bytes32 shortKey) {
-        ProtocolLib.Position memory position = getPairTradingPosition(user, positionId);
+        SendraLib.Position memory position = getPairTradingPosition(user, positionId);
         
         longKey = abi.decode(position.positionData[15], (bytes32));
         shortKey = abi.decode(position.positionData[16], (bytes32));
@@ -166,7 +166,7 @@ contract PairTradingReader {
         address user,
         uint256 positionId
     ) public view returns (address marketLong, address marketShort) {
-        ProtocolLib.Position memory position = getPairTradingPosition(user, positionId);
+        SendraLib.Position memory position = getPairTradingPosition(user, positionId);
         
         marketLong = abi.decode(position.positionData[2], (address));
         marketShort = abi.decode(position.positionData[3], (address));

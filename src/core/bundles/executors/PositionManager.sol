@@ -24,8 +24,7 @@ ________________________________________________________________
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { SendraStorage } from "../../../core/SendraStorage.sol";
 import { Roles } from "../../../security/Roles.sol";
 import { AddressProvider } from "../../config/AddressProvider.sol";
 import { ProxyAccessControl } from "../security/proxyAccessControl.sol";
@@ -81,8 +80,8 @@ contract PositionManager {
      * @param _user Address of the user whose position is being updated
      */
     function managePosition(uint256 _positionId, uint256 _positionField, bytes memory _value, address _user) external onlyProtocol { 
-        ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        protocolStorage.updateUserPositionData(_user, _positionId, _positionField, _value);
+        SendraStorage sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
+        sendraStorage.updateUserPositionData(_user, _positionId, _positionField, _value);
     }
 
     /// @notice Thrown when a function is called by an unauthorized address (not a protocol contract or proxy)

@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ProtocolLib } from "./Protocol.lib.sol";
+import { SendraLib } from "./Sendra.lib.sol";
 
 library DecoderLib {
 
@@ -39,13 +39,13 @@ library DecoderLib {
         return(params);
     }*/
 
-    function decoder(bytes[] calldata _data) external pure returns(ProtocolLib.DeFiParam[] memory){
+    function decoder(bytes[] calldata _data) external pure returns(SendraLib.DeFiParam[] memory){
         uint256[] memory paramsTypes = abi.decode(_data[0], (uint256[]));
         bytes[] memory paramsDecoded = abi.decode(_data[1], (bytes[]));
         if(paramsTypes.length > 20 || paramsTypes.length < 1) revert ParamsOutOfRange(paramsTypes.length);
-        ProtocolLib.DeFiParam[] memory params = new ProtocolLib.DeFiParam[](paramsTypes.length);
+        SendraLib.DeFiParam[] memory params = new SendraLib.DeFiParam[](paramsTypes.length);
         for(uint256 i = 0; i < paramsTypes.length; i++){
-            ProtocolLib.DeFiParam memory param;
+            SendraLib.DeFiParam memory param;
             if(paramsTypes[i] == 0){
                 param._type = 0;
                 param.w = abi.decode(paramsDecoded[i], (address));

@@ -30,12 +30,12 @@ import { AddressProvider } from "../../../../core/config/AddressProvider.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { EventUtils } from "gmx-synthetics/event/EventUtils.sol";
-import { ProtocolStorage } from "../../../../core/ProtocolStorage.sol";
+import { SendraStorage } from "../../../../core/SendraStorage.sol";
 import { PairTradingStorage } from "../../storage/PairTradingStorage.sol";
 import { PairTradingLib } from "../../../../lib/PairTrading/PairTradingLib.sol";
 import { IWETH } from "../../../../interfaces/IWETH.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { ProtocolLib } from "../../../../lib/Protocol.lib.sol";
+import { SendraLib } from "../../../../lib/Sendra.lib.sol";
 import { Roles } from "../../../../security/Roles.sol";
 import { ProxyManager } from "../../storage/ProxyManager.sol";
 import { PairTradingProxy } from "../proxy.sol";
@@ -261,8 +261,8 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         uint256 positionId,
         address orderMarket
     ) external view returns (bool) {
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(receiver, positionId);
+        SendraStorage _sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
+        SendraLib.Position memory position = _sendraStorage.getUserPositionById(receiver, positionId);
         address marketLong = abi.decode(position.positionData[2], (address));
         return (orderMarket == marketLong);
     }
@@ -279,8 +279,8 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         PairTradingLib.RawExecutionData memory data = PairTradingStorage(_pairTradingStorage).getRawExecutionData(key);
         if(data.processed) revert AlreadyProcessed();
         
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(data.receiver, data.positionId);
+        SendraStorage _sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
+        SendraLib.Position memory position = _sendraStorage.getUserPositionById(data.receiver, data.positionId);
 
         uint256 tokenDecimals = data.outputToken == usdc ? 6 : 18;
         uint256 outputUsdValue = (data.outputAmount * data.collateralTokenPrice) / (10 ** tokenDecimals);
@@ -309,10 +309,10 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         if (bothSidesClosed) {
             position.positionData[10] = abi.encode(block.timestamp);
             position.isActive = false;
-            _protocolStorage.decreaseGlobalPositionActivePositions(data.receiver);
+            _sendraStorage.decreaseGlobalPositionActivePositions(data.receiver);
         }
         
-        _protocolStorage.updateUserFullPosition(data.receiver, data.positionId, position); // aqui probablemente se pueda optimizar
+        _sendraStorage.updateUserFullPosition(data.receiver, data.positionId, position); // aqui probablemente se pueda optimizar
         
         PairTradingStorage(_pairTradingStorage).updatePendingOrder(
             key, 

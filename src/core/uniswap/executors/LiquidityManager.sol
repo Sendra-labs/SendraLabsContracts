@@ -5,31 +5,48 @@ import "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.s
 import "@uniswap/v3-core/contracts/libraries/TickMath.sol";
 import "@uniswap/v3-periphery/contracts/libraries/LiquidityAmounts.sol";
 import { UniswapLib } from "../../../lib/uniswap/Uniswap.lib.sol";
-import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { SendraStorage } from "../../../core/SendraStorage.sol";
+import { SendraLib } from "../../../lib/Sendra.lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
+import { Roles } from "../../../security/Roles.sol";
 
 contract LiquidityManager {
+    using SafeERC20 for IERC20;
 
     AddressProvider public immutable addressProvider;
     INonfungiblePositionManager public immutable positionManager;
-    ProtocolStorage public immutable protocolStorage;
+    SendraStorage public immutable sendraStorage;
     IUniswapV3Factory public immutable factory;
+
+    uint256 public slippageBps = 85;
+
+    Roles public immutable roles;
 
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
         positionManager = INonfungiblePositionManager(addressProvider.getAddress("UniswapNFTPositionManager"));
-        protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
         factory = IUniswapV3Factory(addressProvider.getAddress("UniswapV3Factory"));
+        roles = Roles(addressProvider.getAddress("Roles"));
+    }
+
+    modifier accessControl() { 
+        if(!roles.checkAdmin(msg.sender)) revert SenderNotAllowed();
+        _;
+    }
+
+    function setSlippageBps(uint256 _slippageBps) public accessControl {
+        slippageBps = _slippageBps;
     }
 
     function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public returns (uint256, uint256, uint256, uint160, address, uint256, uint256) {
         
-        IERC20(_input.token0).approve(address(positionManager), _input.amount0);
-        IERC20(_input.token1).approve(address(positionManager), _input.amount1);
+        IERC20(_input.token0).forceApprove(address(positionManager), _input.amount0);
+        IERC20(_input.token1).forceApprove(address(positionManager), _input.amount1);
 
         INonfungiblePositionManager.MintParams memory params = INonfungiblePositionManager.MintParams(
                 {
@@ -40,8 +57,8 @@ contract LiquidityManager {
                     tickUpper: _input.tickUpper,
                     amount0Desired: _input.amount0,
                     amount1Desired: _input.amount1,
-                    amount0Min: (_input.amount0 * 85) / 100, // 15% slippage
-                    amount1Min: (_input.amount1 * 85) / 100,
+                    amount0Min: (_input.amount0 * slippageBps) / 100, // 15% slippageBps
+                    amount1Min: (_input.amount1 * slippageBps) / 100,
                     recipient: _input.recipient,
                     deadline: block.timestamp + 60
                 }
@@ -51,8 +68,9 @@ contract LiquidityManager {
 
         uint256 amountLeftToken0 = IERC20(_input.token0).balanceOf(address(this));
         uint256 amountLeftToken1 = IERC20(_input.token1).balanceOf(address(this));
-        if(amountLeftToken0 > 0) IERC20(_input.token0).transfer(addressProvider.getAddress("swapRouter"), amountLeftToken0);
-        if(amountLeftToken1 > 0) IERC20(_input.token1).transfer(addressProvider.getAddress("swapRouter"), amountLeftToken1);
+
+        if(amountLeftToken0 > 0) IERC20(_input.token0).safeTransfer(msg.sender, amountLeftToken0);
+        if(amountLeftToken1 > 0) IERC20(_input.token1).safeTransfer(msg.sender, amountLeftToken1);
 
         address pool = factory.getPool(_input.token0, _input.token1, _input.fee);
         (uint160 sqrtCurrentPrice,,,,,, ) = IUniswapV3Pool(pool).slot0();
@@ -60,15 +78,15 @@ contract LiquidityManager {
         return (tokenId, amountDeposited0, amountDeposited1, sqrtCurrentPrice, pool, amountLeftToken0, amountLeftToken1);
     }
 
-    function withdrawLiquidityV3(UniswapLib.WithdrawLiquidityInput calldata _input) public returns (ProtocolLib.Position memory, uint160){
+    function withdrawLiquidityV3(UniswapLib.WithdrawLiquidityInput calldata _input) public returns (SendraLib.Position memory, uint160){
         
         positionManager.transferFrom(msg.sender, address(this), _input.uniId);
 
-        ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_input.user, _input.positionId);
+        SendraLib.Position memory position = sendraStorage.getUserPositionById(_input.user, _input.positionId);
         
         address pool = factory.getPool(abi.decode(position.positionData[0], (address)), abi.decode(position.positionData[1], (address)), abi.decode(position.positionData[3], (uint24)));
         (uint160 sqrtCurrentPrice,,,,,, ) = IUniswapV3Pool(pool).slot0();
-        (,, , , , , , uint128 liquidity, , , uint256 feesCollectedToken0, uint256 feesCollectedToken1) = positionManager.positions(_input.uniId);
+        (,, , , , , , uint128 liquidity, , , , ) = positionManager.positions(_input.uniId);
         
         (uint256 _amount0, uint256 _amount1) = LiquidityAmounts.getAmountsForLiquidity(
             sqrtCurrentPrice,
@@ -81,13 +99,13 @@ contract LiquidityManager {
             {
                 tokenId : _input.uniId,
                 liquidity: liquidity,
-                amount0Min : (_amount0*99)/100, //1% Slippage
+                amount0Min : (_amount0*99)/100, //1% SlippageBps
                 amount1Min : (_amount1*99)/100,
                 deadline : block.timestamp + 60
             }
         );
         
-        (uint256 amount0, uint256 amount1) = positionManager.decreaseLiquidity{ value : 0 }(params);
+        positionManager.decreaseLiquidity{ value : 0 }(params);
 
         positionManager.transferFrom(address(this), msg.sender, _input.uniId);
 
@@ -112,5 +130,6 @@ contract LiquidityManager {
         return(amount0, amount1);
     }
 
+    error SenderNotAllowed();
     
 }

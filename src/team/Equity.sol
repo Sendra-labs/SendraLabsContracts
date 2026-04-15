@@ -1,7 +1,7 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ProtocolLib } from "../lib/Protocol.lib.sol";
+import { SendraLib } from "../lib/Sendra.lib.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { Address } from "@openzeppelin/contracts/utils/Address.sol";
@@ -10,7 +10,7 @@ import { PartnerManager } from "./PartnerManager.sol";
 
 contract Equity is ReentrancyGuard {
 
-    constructor(ProtocolLib.Partner[] memory _partners, address _usdcAddress, address _rolesAddress) {
+    constructor(SendraLib.Partner[] memory _partners, address _usdcAddress, address _rolesAddress) {
         totalEquity = 10000;
         availableEquity = totalEquity;
         initializePartnersEquity(_partners);
@@ -42,16 +42,16 @@ contract Equity is ReentrancyGuard {
     uint256 public partnersCount;
     uint256 public totalEquitySold;
 
-    mapping(address => ProtocolLib.Partner) public partners;
+    mapping(address => SendraLib.Partner) public partners;
     address[] public partnersContracts;
 
-    function factory(ProtocolLib.Partner memory _partner) internal returns (address) {
+    function factory(SendraLib.Partner memory _partner) internal returns (address) {
         PartnerManager _newPartnerManager = new PartnerManager(_partner, address(roles));
         partnersContracts.push(address(_newPartnerManager));
         return address(_newPartnerManager);
     }
 
-    function initializePartnersEquity(ProtocolLib.Partner[] memory _partners) internal {
+    function initializePartnersEquity(SendraLib.Partner[] memory _partners) internal {
         if(_partners.length == 0) revert InvalidPartner();
         if(availableEquity == 0) revert InvalidEquity();
 
