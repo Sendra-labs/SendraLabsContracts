@@ -102,7 +102,9 @@ contract LiquidityOrchestrator {
                 uint256 amountLeftToken1
             ) = liquidityManager.addLiquidityV3(provideLiquidityInput);
 
-            uint256 prevUsdcBalance = IERC20(swapInput0.tokenIn).balanceOf(address(this));
+            address baseToken = swapInput0.tokenIn;
+            uint256 prevBaseBalance = IERC20(baseToken).balanceOf(address(this));
+            uint256 leftUsdcDirect = 0;
 
             // swapInput0/swapInput1 are not guaranteed to be aligned with token0/token1.
             // Map by tokenOut so we invert the correct route for each leftover.
@@ -112,19 +114,29 @@ contract LiquidityOrchestrator {
                 (swapInput0.tokenOut == provideLiquidityInput.token1) ? swapInput0 : swapInput1;
 
             if (amountLeftToken0 > 0) {
-                IERC20(provideLiquidityInput.token0).safeTransfer(address(swapRouter), amountLeftToken0);
-                swapRouter.executeSwap(invertSwapInput(swapIntoToken0, amountLeftToken0));
+                // If leftover is already in base token (e.g. USDC), don't "swap" it back.
+                if (provideLiquidityInput.token0 == baseToken) {
+                    leftUsdcDirect += amountLeftToken0;
+                } else {
+                    IERC20(provideLiquidityInput.token0).safeTransfer(address(swapRouter), amountLeftToken0);
+                    swapRouter.executeSwap(invertSwapInput(swapIntoToken0, amountLeftToken0));
+                }
             }
             if (amountLeftToken1 > 0) {
-                IERC20(provideLiquidityInput.token1).safeTransfer(address(swapRouter), amountLeftToken1);
-                swapRouter.executeSwap(invertSwapInput(swapIntoToken1, amountLeftToken1));
+                if (provideLiquidityInput.token1 == baseToken) {
+                    leftUsdcDirect += amountLeftToken1;
+                } else {
+                    IERC20(provideLiquidityInput.token1).safeTransfer(address(swapRouter), amountLeftToken1);
+                    swapRouter.executeSwap(invertSwapInput(swapIntoToken1, amountLeftToken1));
+                }
             }
 
-            uint256 leftUsdc = IERC20(swapInput0.tokenIn).balanceOf(address(this)) - prevUsdcBalance;
+            uint256 baseAfter = IERC20(baseToken).balanceOf(address(this));
+            uint256 leftUsdc = leftUsdcDirect + (baseAfter - prevBaseBalance);
 
             uint256 initialPositionUsdcValue = totalUsdcAmountInput - leftUsdc;
 
-            IERC20(swapInput0.tokenIn).safeTransfer(msg.sender, leftUsdc);
+            IERC20(baseToken).safeTransfer(msg.sender, leftUsdc);
 
             bytes[] memory positionData = new bytes[](18);
             positionData[0] = abi.encode(_input.provideLiquidityInput.token0);
@@ -253,16 +265,16 @@ contract LiquidityOrchestrator {
         bool isSwapNeeded0 = _input.swapInput0.tokenIn != _input.swapInput0.tokenOut;
         bool isSwapNeeded1 = _input.swapInput1.tokenIn != _input.swapInput1.tokenOut;
 
-        if(isSwapNeeded0) {
-            IERC20(_input.swapInput0.tokenIn).transfer(address(swapRouter), amount0);
+        if(isSwapNeeded0 && amount0 > 0) {
+            IERC20(_input.swapInput0.tokenIn).safeTransfer(address(swapRouter), amount0);
             UniswapLib.SwapInput memory swap0 = _input.swapInput0;
             swap0.to = address(this);
             swap0.amountIn0 = amount0;
             if(swap0.swapInstructions.length > 0) swap0.swapInstructions[0].amountIn = amount0;
             swapRouter.executeSwap(swap0);
         }
-        if(isSwapNeeded1) {
-            IERC20(_input.swapInput1.tokenIn).transfer(address(swapRouter), amount1);
+        if(isSwapNeeded1 && amount1 > 0) {
+            IERC20(_input.swapInput1.tokenIn).safeTransfer(address(swapRouter), amount1);
             UniswapLib.SwapInput memory swap1 = _input.swapInput1;
             swap1.to = address(this);
             swap1.amountIn0 = amount1;
@@ -321,16 +333,16 @@ contract LiquidityOrchestrator {
         bool isSwapNeeded0 = _input.swapInput0.tokenIn != _input.swapInput0.tokenOut;
         bool isSwapNeeded1 = _input.swapInput1.tokenIn != _input.swapInput1.tokenOut;
 
-        if(isSwapNeeded0) {
-            IERC20(_input.swapInput0.tokenIn).transfer(address(swapRouter), amount0);
+        if(isSwapNeeded0 && amount0 > 0) {
+            IERC20(_input.swapInput0.tokenIn).safeTransfer(address(swapRouter), amount0);
             UniswapLib.SwapInput memory swap0 = _input.swapInput0;
             swap0.to = address(this);
             swap0.amountIn0 = amount0;
             if(swap0.swapInstructions.length > 0) swap0.swapInstructions[0].amountIn = amount0;
             swapRouter.executeSwap(swap0);
         }
-        if(isSwapNeeded1) {
-            IERC20(_input.swapInput1.tokenIn).transfer(address(swapRouter), amount1);
+        if(isSwapNeeded1 && amount1 > 0) {
+            IERC20(_input.swapInput1.tokenIn).safeTransfer(address(swapRouter), amount1);
             UniswapLib.SwapInput memory swap1 = _input.swapInput1;
             swap1.to = address(this);
             swap1.amountIn0 = amount1;
@@ -446,16 +458,16 @@ contract LiquidityOrchestrator {
         bool isSwapNeeded0 = _input.swapInput0.tokenIn != _input.swapInput0.tokenOut;
         bool isSwapNeeded1 = _input.swapInput1.tokenIn != _input.swapInput1.tokenOut;
 
-        if(isSwapNeeded0) {
-            IERC20(_input.swapInput0.tokenIn).transfer(address(swapRouter), amount0);
+        if(isSwapNeeded0 && amount0 > 0) {
+            IERC20(_input.swapInput0.tokenIn).safeTransfer(address(swapRouter), amount0);
             UniswapLib.SwapInput memory swap0 = _input.swapInput0;
             swap0.to = address(this);
             swap0.amountIn0 = amount0;
             if(swap0.swapInstructions.length > 0) swap0.swapInstructions[0].amountIn = amount0;
             swapRouter.executeSwap(swap0);
         }
-        if(isSwapNeeded1) {
-            IERC20(_input.swapInput1.tokenIn).transfer(address(swapRouter), amount1);
+        if(isSwapNeeded1 && amount1 > 0) {
+            IERC20(_input.swapInput1.tokenIn).safeTransfer(address(swapRouter), amount1);
             UniswapLib.SwapInput memory swap1 = _input.swapInput1;
             swap1.to = address(this);
             swap1.amountIn0 = amount1;
