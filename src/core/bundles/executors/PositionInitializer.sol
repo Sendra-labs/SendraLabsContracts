@@ -24,8 +24,8 @@ ________________________________________________________________
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { SendraStorage } from "../../../core/SendraStorage.sol";
+import { SendraLib } from "../../../lib/Sendra.lib.sol";
 import { Roles } from "../../../security/Roles.sol";
 import { AddressProvider } from "../../config/AddressProvider.sol";
 import { ProxyAccessControl } from "../security/proxyAccessControl.sol";
@@ -92,10 +92,10 @@ contract PositionInitializer {
      *      - Position data: `_newPositionData`
      */
     function initializePosition(bytes[] memory _newPositionData, uint128 _positionType, address _user) external onlyProtocol {
-        ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        protocolStorage.updateUserTransactionCount(_user, 1);        
-        uint256 positionId = protocolStorage.getUser(_user).totalPositions + 1;
-        protocolStorage.addPositionToUser(_user, ProtocolLib.Position(_positionType, positionId, 0, true, _newPositionData));
+        SendraStorage sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
+        sendraStorage.updateUserTransactionCount(_user, 1);        
+        uint256 positionId = sendraStorage.getUser(_user).totalPositions + 1;
+        sendraStorage.addPositionToUser(_user, SendraLib.Position(_positionType, positionId, 0, true, _newPositionData));
     }
 
     /// @notice Thrown when a function is called by an unauthorized address (not a protocol contract or proxy)

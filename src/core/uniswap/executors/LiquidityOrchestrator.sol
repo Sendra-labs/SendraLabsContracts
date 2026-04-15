@@ -1,3 +1,26 @@
+/*
+________________________________________________________________
+
+  █████████                          █████                    
+ ███▒▒▒▒▒███                        ▒▒███                     
+▒███    ▒▒▒   ██████  ████████    ███████  ████████   ██████  
+▒▒█████████  ███▒▒███▒▒███▒▒███  ███▒▒███ ▒▒███▒▒███ ▒▒▒▒▒███ 
+ ▒▒▒▒▒▒▒▒███▒███████  ▒███ ▒███ ▒███ ▒███  ▒███ ▒▒▒   ███████ 
+ ███    ▒███▒███▒▒▒   ▒███ ▒███ ▒███ ▒███  ▒███      ███▒▒███ 
+▒▒█████████ ▒▒██████  ████ █████▒▒████████ █████    ▒▒████████
+ ▒▒▒▒▒▒▒▒▒   ▒▒▒▒▒▒  ▒▒▒▒ ▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒      ▒▒▒▒▒▒▒▒                                        
+                                                              
+ █████                 █████                                  
+▒▒███                 ▒▒███                                   
+ ▒███         ██████   ▒███████   █████                       
+ ▒███        ▒▒▒▒▒███  ▒███▒▒███ ███▒▒                        
+ ▒███         ███████  ▒███ ▒███▒▒█████                       
+ ▒███      █ ███▒▒███  ▒███ ▒███ ▒▒▒▒███                      
+ ███████████▒▒████████ ████████  ██████                       
+▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒    Liquidity Orchestrator                                                                                                                                   
+________________________________________________________________
+*/
+
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
@@ -8,7 +31,6 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 import { PositionInitializer } from "../../bundles/executors/PositionInitializer.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { SendraStorage } from "../../SendraStorage.sol";
 import { SendraLib } from "../../../lib/Sendra.lib.sol";
 
@@ -163,7 +185,7 @@ contract LiquidityOrchestrator {
         updateAccumulators(gFieldIds, gDeltas, 2, sFieldIds, sDeltas);
     }
 
-    function updateAccumulators(uint8[] calldata _gFieldIds, int256[] calldata _gDeltas, uint64 _specificKey, uint8[] calldata _sFieldIds, int256[] calldata _sDeltas) internal {
+    function updateAccumulators(uint8[] memory _gFieldIds, int256[] memory _gDeltas, uint64 _specificKey, uint8[] memory _sFieldIds, int256[] memory _sDeltas) internal {
         sendraStorage.applyGlobalPulseDeltas(msg.sender, _gFieldIds, _gDeltas);
         sendraStorage.applySpecificPulseDeltas(msg.sender, _specificKey, _sFieldIds, _sDeltas);
     }
@@ -268,7 +290,7 @@ contract LiquidityOrchestrator {
         uint256 feesCollectedUsdc = collectFees(executeCollectFeesOnly);
 
         positionManager.approve(address(liquidityManager), _input.withdrawLiquidityInput.uniId);
-        (ProtocolLib.Position memory position, uint160 sqrtCurrentPrice) = liquidityManager.withdrawLiquidityV3(_input.withdrawLiquidityInput);
+        (SendraLib.Position memory position, uint160 sqrtCurrentPrice) = liquidityManager.withdrawLiquidityV3(_input.withdrawLiquidityInput);
         
         UniswapLib.CollectParams memory collectParams = UniswapLib.CollectParams(
             _input.withdrawLiquidityInput.uniId,
@@ -398,7 +420,7 @@ contract LiquidityOrchestrator {
         return amountUsdcReceived;
     }
 
-    function collectFees(UniswapLib.ExecuteCollectFeesOnly calldata _input) internal returns (uint256){
+    function collectFees(UniswapLib.ExecuteCollectFeesOnly memory _input) internal returns (uint256){
         require(_input.swapInput0.tokenOut == _input.swapInput1.tokenOut, "Tokens out are not the same");
         uint256 prevBalance = IERC20(_input.swapInput0.tokenOut).balanceOf(address(this));
 

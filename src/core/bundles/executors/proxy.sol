@@ -28,9 +28,7 @@ import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { PairTradingLib } from "../../../lib/PairTrading/PairTradingLib.sol";
 import { GMXMarketsRegistry } from "../../config/gmxMarkets.sol";
-import { ProtocolStorage } from "../../ProtocolStorage.sol";
 import { ProxyManager } from "../storage/ProxyManager.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { PairTrading } from "./PairTrading.sol";
 
 /**
@@ -234,7 +232,8 @@ contract PairTradingProxy is ReentrancyGuard {
     function customFunctionDelegatecall(address _target, bytes memory _data) public onlyOwner nonReentrant {
         address positionInitializer = addressProvider.getAddress("PositionInitializer");
         address pairTradingStorage = addressProvider.getAddress("PairTradingStorage");
-        if(_target == positionInitializer || _target == pairTradingStorage) revert TragetNotAllowed();
+        address positionManager = addressProvider.getAddress("PositionManager");
+        if(_target == positionInitializer || _target == pairTradingStorage || _target == positionManager) revert TragetNotAllowed();
         (bool success,) = _target.delegatecall(_data);
         require(success, "Delegatecall failed");
     }
@@ -242,7 +241,8 @@ contract PairTradingProxy is ReentrancyGuard {
     function customFunction(address _target, bytes memory _data) public onlyOwner nonReentrant {
         address positionInitializer = addressProvider.getAddress("PositionInitializer");
         address pairTradingStorage = addressProvider.getAddress("PairTradingStorage");
-        if(_target == positionInitializer || _target == pairTradingStorage) revert TragetNotAllowed();
+        address positionManager = addressProvider.getAddress("PositionManager");
+        if(_target == positionInitializer || _target == pairTradingStorage || _target == positionManager) revert TragetNotAllowed();
         (bool success,) = _target.call(_data);
         require(success, "Call failed");
     }

@@ -375,43 +375,43 @@ contract SendraStorage {
     function getUniqueGlobalAccumulator(uint8 _fieldId, address _user) public view returns (int256) {
         int256 value = 0;
         if (_fieldId == 0) {
-            value = users[_user].pulse.globalPulse.totalCapitalIn;
+            value = int256(users[_user].pulse.globalPulse.totalCapitalIn);
         } else if (_fieldId == 1) {
-            value = users[_user].pulse.globalPulse.totalCapitalOut;
+            value = int256(users[_user].pulse.globalPulse.totalCapitalOut);
         } else if (_fieldId == 2) {
-            value = users[_user].pulse.globalPulse.peakSimultaneousExposure;
+            value = int256(users[_user].pulse.globalPulse.peakSimultaneousExposure);
         } else if (_fieldId == 3) {
-            value = users[_user].pulse.globalPulse.currentExposure;
+            value = int256(users[_user].pulse.globalPulse.currentExposure);
         } else if (_fieldId == 4) {
             value = users[_user].pulse.globalPulse.cumulativeRealizedPnl;
         } else if (_fieldId == 5) {
-            value = users[_user].pulse.globalPulse.grossProfit;
+            value = int256(users[_user].pulse.globalPulse.grossProfit);
         } else if (_fieldId == 6) {
-            value = users[_user].pulse.globalPulse.grossLoss;
+            value = int256(users[_user].pulse.globalPulse.grossLoss);
         } else if (_fieldId == 7) {
             value = users[_user].pulse.globalPulse.highWaterMark;
         } else if (_fieldId == 8) {
-            value = users[_user].pulse.globalPulse.maxDrawdown;
+            value = int256(users[_user].pulse.globalPulse.maxDrawdown);
         } else if (_fieldId == 9) {
-            value = users[_user].pulse.globalPulse.totalPositionsOpened;
+            value = int256(users[_user].pulse.globalPulse.totalPositionsOpened);
         } else if (_fieldId == 10) {
-            value = users[_user].pulse.globalPulse.totalPositionsClosed;
+            value = int256(users[_user].pulse.globalPulse.totalPositionsClosed);
         } else if (_fieldId == 11) {
-            value = users[_user].pulse.globalPulse.winCount;
+            value = int256(users[_user].pulse.globalPulse.winCount);
         } else if (_fieldId == 12) {
-            value = users[_user].pulse.globalPulse.lossCount;
+            value = int256(users[_user].pulse.globalPulse.lossCount);
         } else if (_fieldId == 13) {
-            value = users[_user].pulse.globalPulse.totalDurationSeconds;
+            value = int256(users[_user].pulse.globalPulse.totalDurationSeconds);
         } else if (_fieldId == 14) {
-            value = users[_user].pulse.globalPulse.firstActivityTimestamp;
+            value = int256(users[_user].pulse.globalPulse.firstActivityTimestamp);
         } else if (_fieldId == 15) {
-            value = users[_user].pulse.globalPulse.lastActivityTimestamp;
+            value = int256(users[_user].pulse.globalPulse.lastActivityTimestamp);
         } else if (_fieldId == 16) {
-            value = users[_user].pulse.globalPulse.totalLiquidationEvents;
+            value = int256(users[_user].pulse.globalPulse.totalLiquidationEvents);
         } else if (_fieldId == 17) {
-            value = users[_user].pulse.globalPulse.consecutiveLosses;
+            value = int256(users[_user].pulse.globalPulse.consecutiveLosses);
         } else if (_fieldId == 18) {
-            value = users[_user].pulse.globalPulse.maxConsecutiveLosses;
+            value = int256(users[_user].pulse.globalPulse.maxConsecutiveLosses);
         }
         return value;
     }

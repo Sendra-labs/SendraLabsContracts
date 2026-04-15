@@ -2,12 +2,12 @@
 pragma solidity 0.8.28;
 
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {ProtocolLib} from "../lib/Protocol.lib.sol";
+import { SendraLib } from "../lib/Sendra.lib.sol";
 import { Roles } from "../security/Roles.sol";
 
 contract PartnerManager is ReentrancyGuard {
 
-    constructor(ProtocolLib.Partner memory _partner, address _roles) {
+    constructor(SendraLib.Partner memory _partner, address _roles) {
         roles = Roles(_roles);
         partner = _partner;
     }
@@ -21,7 +21,7 @@ contract PartnerManager is ReentrancyGuard {
         _;
     }
 
-    ProtocolLib.Partner internal partner;
+    SendraLib.Partner internal partner;
     Roles public immutable roles;
 
     error SenderNotAllowed();

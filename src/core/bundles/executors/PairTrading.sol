@@ -28,13 +28,13 @@ import { Roles } from "../../../security/Roles.sol";
 import { DecoderLib } from "../../../lib/Decoder.lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { SendraLib } from "../../../lib/Sendra.lib.sol";
 import { IExchangeRouter } from "../../../interfaces/GMX/IExchangeRouter.sol";
 import { IOrderVault } from "../../../interfaces/GMX/IOrderVault.sol";
 import { IBaseOrderUtils } from "gmx-synthetics/order/IBaseOrderUtils.sol";
 import { Order } from "gmx-synthetics/order/Order.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
+import { SendraStorage } from "../../../core/SendraStorage.sol";
 import { IOrderCallbackReceiver } from "../../../interfaces/GMX/IOrderCallbackReceiver.sol";
 import { EventUtils } from "../../../lib/GMX lib/EventUtils.sol";
 import { GMXPrices } from "../../../periphery/utilsGMX/GMXPrices.sol"; 
@@ -574,13 +574,13 @@ contract PairTrading is ReentrancyGuard {
 
     function closeSidePairTrading( PairTradingLib.CloseSidePairTradingInput memory _input ) public payable {
 
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        SendraStorage _sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
         address weth = addressProvider.getAddress("WETH");
         address usdc = addressProvider.getAddress("USDC");
         address orderVault = addressProvider.getAddress("OrderVaultGMX");
         address exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
         
-        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(msg.sender,_input.positionId);
+        SendraLib.Position memory position = _sendraStorage.getUserPositionById(msg.sender,_input.positionId);
         if(!position.isActive) {
             revert PositionNotActive();
         }
@@ -682,13 +682,13 @@ contract PairTrading is ReentrancyGuard {
      * @custom:require msg.value >= executionFee
      */
     function closeSidePairTradingWithStopLoss( PairTradingLib.CloseSidePairTradingInputWithStopLoss memory _input) public payable {
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        SendraStorage _sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
         address weth = addressProvider.getAddress("WETH");
         address usdc = addressProvider.getAddress("USDC");
         address orderVault = addressProvider.getAddress("OrderVaultGMX");
         address exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
         
-        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(msg.sender,_input.positionId);
+        SendraLib.Position memory position = _sendraStorage.getUserPositionById(msg.sender,_input.positionId);
         if(!position.isActive) {
             revert PositionNotActive();
         }
@@ -832,7 +832,7 @@ contract PairTrading is ReentrancyGuard {
      * @return minOutputAmount Minimum acceptable output amount in USDC (6 decimals)
      *         Returns 0 for short positions if currentPrice >= initialPrice * 2
      */
-    function getMinOutputAmount(address market, ProtocolLib.Position memory position, GMXPrices gmxPrices, uint256 _slippageBps, bool isLong) public view returns (uint256) {
+    function getMinOutputAmount(address market, SendraLib.Position memory position, GMXPrices gmxPrices, uint256 _slippageBps, bool isLong) public view returns (uint256) {
         
         uint256 slippageBps = _slippageBps == 10000 ? 200 : _slippageBps;
         uint256 initialUsdcAmount = abi.decode(position.positionData[8], (uint256));
@@ -875,7 +875,7 @@ contract PairTrading is ReentrancyGuard {
      * @return minOutputAmount Minimum acceptable output in USDC (6 decimals)
      */
     function getMinAmountForStopLoss(
-        ProtocolLib.Position memory position,
+        SendraLib.Position memory position,
         uint256 triggerPrice,
         uint256 _slippageBps,
         bool isLong

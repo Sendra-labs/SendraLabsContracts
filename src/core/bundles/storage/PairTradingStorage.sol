@@ -25,7 +25,6 @@ ________________________________________________________________
 pragma solidity 0.8.28;
 
 import { PairTradingLib } from "../../../lib/PairTrading/PairTradingLib.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
 import { Roles } from "../../../security/Roles.sol";
 import { AddressProvider } from "../../config/AddressProvider.sol";
 import { ProxyAccessControl } from "../security/proxyAccessControl.sol";

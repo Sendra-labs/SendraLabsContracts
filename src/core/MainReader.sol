@@ -24,8 +24,8 @@ ________________________________________________________________
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ProtocolStorage } from "./ProtocolStorage.sol";
-import { ProtocolLib } from "../lib/Protocol.lib.sol";
+import { SendraStorage } from "./SendraStorage.sol";
+import { SendraLib } from "../lib/Sendra.lib.sol";
 import { AddressProvider } from "./config/AddressProvider.sol";
 import { GMXMarketsRegistry } from "./config/gmxMarkets.sol";
 import { GMXPrices } from "../periphery/utilsGMX/GMXPrices.sol";
@@ -36,7 +36,7 @@ import { ProxyManager } from "./bundles/storage/ProxyManager.sol";
 
 contract MainReader {
 
-    ProtocolStorage public immutable protocolStorage;
+    SendraStorage public immutable sendraStorage;
     AddressProvider public immutable addressProvider;
     PairTradingReader public immutable pairTradingReader;
     GMXPrices public immutable gmxPrices;
@@ -44,7 +44,7 @@ contract MainReader {
 
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
-        protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
         pairTradingReader = PairTradingReader(addressProvider.getAddress("PairTradingReader"));
         gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
         gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
@@ -61,13 +61,13 @@ contract MainReader {
     }
 
     function getGlobalUserData(address _user) public view returns (GlobalUserData memory) {
-        ProtocolLib.UserInfoRead memory user = protocolStorage.getUser(_user);
+        SendraLib.UserInfoRead memory user = sendraStorage.getUser(_user);
         
         uint256 totalVolume = 0;
         uint256 totalValueLocked = 0;
         
         for(uint256 i = 1; i <= user.totalPositions; i++) {
-            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
             if(position.positionType == 0) { // PairTrading = 0
                 bytes[] memory positionData = position.positionData;
                 uint256 initialUsdValue = abi.decode(positionData[8], (uint256));
@@ -137,12 +137,12 @@ contract MainReader {
     
 */
     function getPairTradingPositionsData(address _user) public view returns (PairTradingPosition[] memory) {
-        ProtocolLib.UserInfoRead memory user = protocolStorage.getUser(_user);
+        SendraLib.UserInfoRead memory user = sendraStorage.getUser(_user);
         
         // First pass: count PairTrading positions
         uint256 pairTradingCount = 0;
         for(uint256 i = 1; i <= user.totalPositions; i++) {
-            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
             if(position.positionType == 0) { // PairTrading = 0
                 pairTradingCount++;
             }
@@ -154,7 +154,7 @@ contract MainReader {
         
         // Second pass: populate array
         for(uint256 i = 1; i <= user.totalPositions; i++) {
-            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
             if(position.positionType == 0) { // PairTrading = 0
                 bytes[] memory positionData = position.positionData;
                 uint256 closeDate = abi.decode(positionData[10], (uint256));
@@ -204,7 +204,7 @@ contract MainReader {
     }
 
     function getPairTradingPositionDataById(address _user, uint256 _positionId) public view returns (PairTradingPosition memory) {
-        ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, _positionId);
+        SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, _positionId);
         (int256 longPnl, int256 shortPnl, int256 totalPnl) = pairTradingReader.getPairTradingRealTimePnL(_user, _positionId);
         uint256 closeDate = abi.decode(position.positionData[10], (uint256));
         bool isActive = closeDate == 0;
@@ -229,16 +229,16 @@ contract MainReader {
         );
     }
 
-    function getPositions(address _user, uint256 _from, uint256 _to) public view returns (ProtocolLib.Position[] memory) {
-        ProtocolLib.Position[] memory positions = new ProtocolLib.Position[](_to - _from + 1);
+    function getPositions(address _user, uint256 _from, uint256 _to) public view returns (SendraLib.Position[] memory) {
+        SendraLib.Position[] memory positions = new SendraLib.Position[](_to - _from + 1);
         for(uint256 i = _from; i <= _to; i++) {
-            positions[i - _from] = protocolStorage.getUserPositionById(_user, i);
+            positions[i - _from] = sendraStorage.getUserPositionById(_user, i);
         }
         return positions;
     }
 
-    function getProtocolStats() public view returns (ProtocolLib.ProtocolStats memory) {
-        return protocolStorage.getProtocolStats();
+    function getProtocolStats() public view returns (SendraLib.ProtocolStats memory) {
+        return sendraStorage.getProtocolStats();
     }
 
     function getPrices(string memory _marketLong, string memory _marketShort) public view returns (uint256, uint256) {
@@ -254,11 +254,11 @@ contract MainReader {
     }
 
     function getPairTradingPositionsDataSimple(address _user) public view returns (PairTradingPosition[] memory) {
-        ProtocolLib.UserInfoRead memory user = protocolStorage.getUser(_user);
+        SendraLib.UserInfoRead memory user = sendraStorage.getUser(_user);
         
         uint256 pairTradingCount = 0;
         for(uint256 i = 1; i <= user.totalPositions; i++) {
-            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
             if(position.positionType == 0) { // PairTrading = 0
                 pairTradingCount++;
             }
@@ -268,7 +268,7 @@ contract MainReader {
         uint256 index = 0;
         
         for(uint256 i = 1; i <= user.totalPositions; i++) {
-            ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_user, i);
+            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
             if(position.positionType == 0) { // PairTrading = 0
                 bytes[] memory positionData = position.positionData;
                 uint256 closeDate = abi.decode(positionData[10], (uint256));

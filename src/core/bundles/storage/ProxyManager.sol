@@ -32,8 +32,8 @@ import { PairTradingProxy } from "../executors/proxy.sol";
 import { ProxyAccessControl } from "../security/proxyAccessControl.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import { GMXMarketsRegistry } from "../../../core/config/gmxMarkets.sol";
-import { ProtocolStorage } from "../../ProtocolStorage.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { SendraStorage } from "../../SendraStorage.sol";
+import { SendraLib } from "../../../lib/Sendra.lib.sol";
 
 /**
  * @title ProxyManager
@@ -309,8 +309,8 @@ contract ProxyManager is ReentrancyGuard {
      * @param _owner Position owner (receiver) to load position from ProtocolStorage
      */
     function deleteMarket(bool _isLong, uint256 _positionId, uint256 _proxyId, address _owner) external onlyProtocol {
-        ProtocolStorage protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        ProtocolLib.Position memory position = protocolStorage.getUserPositionById(_owner, _positionId);
+        SendraStorage sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
+        SendraLib.Position memory position = sendraStorage.getUserPositionById(_owner, _positionId);
         address market = _isLong ? abi.decode(position.positionData[2], (address)) : abi.decode(position.positionData[3], (address));
         for(uint256 i = proxyMarkets[_proxyId].length; i > 0; i--) {
             uint256 index = i - 1;
