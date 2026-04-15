@@ -55,15 +55,18 @@ contract SendraStorage {
     mapping(uint256 => address) public usersById;
 
     /// @dev Indices match the declaration order of fields in SendraLib.GlobalAccumulators (Sendra.lib.sol).
-    uint8 internal constant GLOBAL_ACC_FIELD_COUNT = 18;
+    ///      Current highest index is 18 (maxConsecutiveLosses), so count = 19.
+    uint8 internal constant GLOBAL_ACC_FIELD_COUNT = 19;
 
     /// @dev Numeric fields of SendraLib.SpecificAccumulators only; bytes metrics use updateSpecificPulseMetric.
-    uint8 internal constant SPECIFIC_ACC_FIELD_COUNT = 5;
+    ///      Current highest index is 5 (totalPositions), so count = 6.
+    uint8 internal constant SPECIFIC_ACC_FIELD_COUNT = 6;
 
     error InvalidGlobalAccumulatorField();
     error InvalidSpecificAccumulatorField();
     error AccumulatorBatchLengthMismatch();
     error InvalidSpecificMetricIndex();
+    error InvalidSpecificMetricEncoding();
 
     function createUser(address _user) internal onlyProtocol {
         protocolStats.totalUsers++;
@@ -163,10 +166,10 @@ contract SendraStorage {
 
     /**
      * @notice Applies int256 deltas to each GlobalAccumulators field selected by index.
-     * @dev Field indices: 0 totalCapitalIn, 1 totalCapitalOut, 2 peakSimultaneousExposure, 3 cumulativeRealizedPnl,
-     *      4 grossProfit, 5 grossLoss, 6 highWaterMark, 7 maxDrawdown, 8 totalPositionsOpened, 9 totalPositionsClosed,
-     *      10 winCount, 11 lossCount, 12 totalDurationSeconds, 13 firstActivityTimestamp, 14 lastActivityTimestamp,
-     *      15 totalLiquidationEvents, 16 consecutiveLosses, 17 maxConsecutiveLosses.
+     * @dev Field indices: 0 totalCapitalIn, 1 totalCapitalOut, 2 peakSimultaneousExposure, 3 currentExposure,
+     *      4 cumulativeRealizedPnl, 5 grossProfit, 6 grossLoss, 7 highWaterMark, 8 maxDrawdown, 9 totalPositionsOpened,
+     *      10 totalPositionsClosed, 11 winCount, 12 lossCount, 13 totalDurationSeconds, 14 firstActivityTimestamp,
+     *      15 lastActivityTimestamp, 16 totalLiquidationEvents, 17 consecutiveLosses, 18 maxConsecutiveLosses.
      *      For uint256 fields the delta is added; subtraction saturates at 0 if the result would be negative.
      */
     function applyGlobalPulseDeltas(address _user, uint8[] calldata _fieldIds, int256[] calldata _deltas)
@@ -176,6 +179,10 @@ contract SendraStorage {
         if (_fieldIds.length != _deltas.length) revert AccumulatorBatchLengthMismatch();
         if (!isUser(_user)) createUser(_user);
         SendraLib.GlobalAccumulators storage g = users[_user].pulse.globalPulse;
+
+        if(g.firstActivityTimestamp == 0) {
+            g.firstActivityTimestamp = block.timestamp;
+        }
 
         for (uint256 i = 0; i < _fieldIds.length; i++) {
             uint8 f = _fieldIds[i];
@@ -189,32 +196,34 @@ contract SendraStorage {
             } else if (f == 2) {
                 g.peakSimultaneousExposure = _addUint256(g.peakSimultaneousExposure, d);
             } else if (f == 3) {
-                g.cumulativeRealizedPnl += d;
+                g.currentExposure = _addUint256(g.currentExposure, d);
             } else if (f == 4) {
-                g.grossProfit = _addUint256(g.grossProfit, d);
+                g.cumulativeRealizedPnl += d;
             } else if (f == 5) {
-                g.grossLoss = _addUint256(g.grossLoss, d);
+                g.grossProfit = _addUint256(g.grossProfit, d);
             } else if (f == 6) {
-                g.highWaterMark += d;
+                g.grossLoss = _addUint256(g.grossLoss, d);
             } else if (f == 7) {
-                g.maxDrawdown = _addUint256(g.maxDrawdown, d);
+                g.highWaterMark += d;
             } else if (f == 8) {
-                g.totalPositionsOpened = _addUint256(g.totalPositionsOpened, d);
+                g.maxDrawdown = _addUint256(g.maxDrawdown, d);
             } else if (f == 9) {
-                g.totalPositionsClosed = _addUint256(g.totalPositionsClosed, d);
+                g.totalPositionsOpened = _addUint256(g.totalPositionsOpened, d);
             } else if (f == 10) {
-                g.winCount = _addUint256(g.winCount, d);
+                g.totalPositionsClosed = _addUint256(g.totalPositionsClosed, d);
             } else if (f == 11) {
-                g.lossCount = _addUint256(g.lossCount, d);
+                g.winCount = _addUint256(g.winCount, d);
             } else if (f == 12) {
-                g.totalDurationSeconds = _addUint256(g.totalDurationSeconds, d);
+                g.lossCount = _addUint256(g.lossCount, d);
             } else if (f == 13) {
-                g.firstActivityTimestamp = _addUint256(g.firstActivityTimestamp, d);
+                g.totalDurationSeconds = _addUint256(g.totalDurationSeconds, d);
             } else if (f == 14) {
-                g.lastActivityTimestamp = _addUint256(g.lastActivityTimestamp, d);
+                g.firstActivityTimestamp = _addUint256(g.firstActivityTimestamp, d);
             } else if (f == 15) {
-                g.totalLiquidationEvents = _addUint256(g.totalLiquidationEvents, d);
+                g.lastActivityTimestamp = _addUint256(g.lastActivityTimestamp, d);
             } else if (f == 16) {
+                g.totalLiquidationEvents = _addUint256(g.totalLiquidationEvents, d);
+            } else if (f == 17) {
                 g.consecutiveLosses = _addUint256(g.consecutiveLosses, d);
             } else {
                 g.maxConsecutiveLosses = _addUint256(g.maxConsecutiveLosses, d);
@@ -224,7 +233,7 @@ contract SendraStorage {
 
     /**
      * @notice Same batch pattern as applyGlobalPulseDeltas for SendraLib.SpecificAccumulators under a uint64 key (e.g. position type).
-     * @dev Field indices: 0 realizedPnl, 1 capitalDeployed, 2 winCount, 3 lossCount, 4 totalPositions.
+     * @dev Field indices: 0 realizedPnl, 1 totalCapitalIn, 2 totalCapitalOut, 3 winCount, 4 lossCount, 5 totalPositions.
      */
     function applySpecificPulseDeltas(address _user, uint64 _specificKey, uint8[] calldata _fieldIds, int256[] calldata _deltas)
         public
@@ -242,10 +251,12 @@ contract SendraStorage {
             if (f == 0) {
                 s.realizedPnl += d;
             } else if (f == 1) {
-                s.capitalDeployed = _addUint256(s.capitalDeployed, d);
+                s.totalCapitalIn = _addUint256(s.totalCapitalIn, d);
             } else if (f == 2) {
-                s.winCount = _addUint256(s.winCount, d);
+                s.totalCapitalOut = _addUint256(s.totalCapitalOut, d);
             } else if (f == 3) {
+                s.winCount = _addUint256(s.winCount, d);
+            } else if (f == 4) {
                 s.lossCount = _addUint256(s.lossCount, d);
             } else {
                 s.totalPositions = _addUint256(s.totalPositions, d);
@@ -269,6 +280,71 @@ contract SendraStorage {
         }
     }
 
+    /**
+     * @notice Applies an int256 delta to a `uint256` metric stored in `specificMetrics[_metricIndex]`.
+     * @dev Metric is expected to be `abi.encode(uint256)` when present. Empty bytes are treated as zero.
+     *      Subtractions saturate at 0.
+     */
+    function applyMetricDelta(address _user, uint64 _specificKey, uint256 _metricIndex, int256 _delta)
+        public
+        onlyProtocol
+    {
+        if (!isUser(_user)) createUser(_user);
+        SendraLib.SpecificAccumulators storage s = users[_user].pulse.specificPulse[_specificKey];
+
+        uint256 current = 0;
+        if (_metricIndex < s.specificMetrics.length) {
+            bytes memory v = s.specificMetrics[_metricIndex];
+            if (v.length == 0) {
+                current = 0;
+            } else if (v.length == 32) {
+                current = abi.decode(v, (uint256));
+            } else {
+                revert InvalidSpecificMetricEncoding();
+            }
+        }
+
+        uint256 next = _addUint256(current, _delta);
+
+        if (_metricIndex >= s.specificMetrics.length) {
+            s.specificMetrics.push(abi.encode(next));
+        } else {
+            s.specificMetrics[_metricIndex] = abi.encode(next);
+        }
+    }
+
+    /**
+     * @notice Applies an int256 delta to an `int256` metric stored in `specificMetrics[_metricIndex]`.
+     * @dev Metric is expected to be `abi.encode(int256)` when present. Empty bytes are treated as zero.
+     */
+    function applyMetricDeltaSigned(address _user, uint64 _specificKey, uint256 _metricIndex, int256 _delta)
+        public
+        onlyProtocol
+    {
+        if (!isUser(_user)) createUser(_user);
+        SendraLib.SpecificAccumulators storage s = users[_user].pulse.specificPulse[_specificKey];
+
+        int256 current = 0;
+        if (_metricIndex < s.specificMetrics.length) {
+            bytes memory v = s.specificMetrics[_metricIndex];
+            if (v.length == 0) {
+                current = 0;
+            } else if (v.length == 32) {
+                current = abi.decode(v, (int256));
+            } else {
+                revert InvalidSpecificMetricEncoding();
+            }
+        }
+
+        int256 next = current + _delta;
+
+        if (_metricIndex >= s.specificMetrics.length) {
+            s.specificMetrics.push(abi.encode(next));
+        } else {
+            s.specificMetrics[_metricIndex] = abi.encode(next);
+        }
+    }
+
     function _addUint256(uint256 _current, int256 _delta) private pure returns (uint256) {
         if (_delta >= 0) {
             return _current + uint256(_delta);
@@ -288,6 +364,56 @@ contract SendraStorage {
      */
     function getUserGlobalAccumulators(address _user) public view returns (SendraLib.GlobalAccumulators memory) {
         return users[_user].pulse.globalPulse;
+    }
+
+    /**
+     * @notice Returns a single global accumulator for a given user and field id.
+     * @dev Reverts if `_fieldId` is out of bounds for `globalPulse`.
+     * @param _user The user address.
+     * @param _fieldId The field id.
+     */
+    function getUniqueGlobalAccumulator(uint8 _fieldId, address _user) public view returns (int256) {
+        int256 value = 0;
+        if (_fieldId == 0) {
+            value = users[_user].pulse.globalPulse.totalCapitalIn;
+        } else if (_fieldId == 1) {
+            value = users[_user].pulse.globalPulse.totalCapitalOut;
+        } else if (_fieldId == 2) {
+            value = users[_user].pulse.globalPulse.peakSimultaneousExposure;
+        } else if (_fieldId == 3) {
+            value = users[_user].pulse.globalPulse.currentExposure;
+        } else if (_fieldId == 4) {
+            value = users[_user].pulse.globalPulse.cumulativeRealizedPnl;
+        } else if (_fieldId == 5) {
+            value = users[_user].pulse.globalPulse.grossProfit;
+        } else if (_fieldId == 6) {
+            value = users[_user].pulse.globalPulse.grossLoss;
+        } else if (_fieldId == 7) {
+            value = users[_user].pulse.globalPulse.highWaterMark;
+        } else if (_fieldId == 8) {
+            value = users[_user].pulse.globalPulse.maxDrawdown;
+        } else if (_fieldId == 9) {
+            value = users[_user].pulse.globalPulse.totalPositionsOpened;
+        } else if (_fieldId == 10) {
+            value = users[_user].pulse.globalPulse.totalPositionsClosed;
+        } else if (_fieldId == 11) {
+            value = users[_user].pulse.globalPulse.winCount;
+        } else if (_fieldId == 12) {
+            value = users[_user].pulse.globalPulse.lossCount;
+        } else if (_fieldId == 13) {
+            value = users[_user].pulse.globalPulse.totalDurationSeconds;
+        } else if (_fieldId == 14) {
+            value = users[_user].pulse.globalPulse.firstActivityTimestamp;
+        } else if (_fieldId == 15) {
+            value = users[_user].pulse.globalPulse.lastActivityTimestamp;
+        } else if (_fieldId == 16) {
+            value = users[_user].pulse.globalPulse.totalLiquidationEvents;
+        } else if (_fieldId == 17) {
+            value = users[_user].pulse.globalPulse.consecutiveLosses;
+        } else if (_fieldId == 18) {
+            value = users[_user].pulse.globalPulse.maxConsecutiveLosses;
+        }
+        return value;
     }
 
     /**

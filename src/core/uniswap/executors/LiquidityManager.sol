@@ -11,6 +11,7 @@ import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { IUniswapV3Factory } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Factory.sol";
 import { IUniswapV3Pool } from "@uniswap/v3-core/contracts/interfaces/IUniswapV3Pool.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
+import { Roles } from "../../../security/Roles.sol";
 
 contract LiquidityManager {
 
@@ -19,11 +20,25 @@ contract LiquidityManager {
     ProtocolStorage public immutable protocolStorage;
     IUniswapV3Factory public immutable factory;
 
+    uint256 public slippageBps = 85;
+
+    Roles public immutable roles;
+
     constructor(address _addressProvider) {
         addressProvider = AddressProvider(_addressProvider);
         positionManager = INonfungiblePositionManager(addressProvider.getAddress("UniswapNFTPositionManager"));
         protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
         factory = IUniswapV3Factory(addressProvider.getAddress("UniswapV3Factory"));
+        roles = Roles(addressProvider.getAddress("Roles"));
+    }
+
+    modifier accessControl() { 
+        if(!roles.checkAdmin(msg.sender)) revert SenderNotAllowed();
+        _;
+    }
+
+    function setSlippageBps(uint256 _slippageBps) public accessControl {
+        slippageBps = _slippageBps;
     }
 
     function addLiquidityV3(UniswapLib.ProvideLiquidityInput calldata _input) public returns (uint256, uint256, uint256, uint160, address, uint256, uint256) {
@@ -40,8 +55,8 @@ contract LiquidityManager {
                     tickUpper: _input.tickUpper,
                     amount0Desired: _input.amount0,
                     amount1Desired: _input.amount1,
-                    amount0Min: (_input.amount0 * 85) / 100, // 15% slippage
-                    amount1Min: (_input.amount1 * 85) / 100,
+                    amount0Min: (_input.amount0 * slippageBps) / 100, // 15% slippageBps
+                    amount1Min: (_input.amount1 * slippageBps) / 100,
                     recipient: _input.recipient,
                     deadline: block.timestamp + 60
                 }
@@ -81,7 +96,7 @@ contract LiquidityManager {
             {
                 tokenId : _input.uniId,
                 liquidity: liquidity,
-                amount0Min : (_amount0*99)/100, //1% Slippage
+                amount0Min : (_amount0*99)/100, //1% SlippageBps
                 amount1Min : (_amount1*99)/100,
                 deadline : block.timestamp + 60
             }
