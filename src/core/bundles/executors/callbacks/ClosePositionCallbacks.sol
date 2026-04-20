@@ -30,12 +30,12 @@ import { AddressProvider } from "../../../../core/config/AddressProvider.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { EventUtils } from "gmx-synthetics/event/EventUtils.sol";
-import { ProtocolStorage } from "../../../../core/ProtocolStorage.sol";
+import { SendraStorage } from "../../../../core/SendraStorage.sol";
 import { PairTradingStorage } from "../../storage/PairTradingStorage.sol";
 import { PairTradingLib } from "../../../../lib/PairTrading/PairTradingLib.sol";
 import { IWETH } from "../../../../interfaces/IWETH.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { ProtocolLib } from "../../../../lib/Protocol.lib.sol";
+import { SendraLib } from "../../../../lib/Sendra.lib.sol";
 import { Roles } from "../../../../security/Roles.sol";
 import { ProxyManager } from "../../storage/ProxyManager.sol";
 import { PairTradingProxy } from "../proxy.sol";
@@ -164,6 +164,9 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         bool rescued
     );
 
+    event MarketDeleted(bool isLong, uint256 positionId);
+    event MarketDeletionFailed(bool isLong, uint256 positionId);
+
     /**
      * @notice Callback function called by GMX OrderHandler after order execution
      * @dev Processes the executed order, updates position state, and transfers funds to the user
@@ -214,8 +217,13 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         try this.calculateIsLongSide(pendingOrder.receiver, pendingOrder.positionId, orderMarket) returns (bool isLong) {
             PairTradingLib.RawExecutionData memory data = pairTradingStorage.getRawExecutionData(key);
             data.isLongSide = isLong;
-            pairTradingStorage.storeRawExecutionData(key, data);
+            pairTradingStorage.storeRawExecutionData(key, data); // we can store just the isLongSide... no need to store the whole data, create a new function for that.
             isLongSideCalculated = true;
+            try ProxyManager(addressProvider.getAddress("ProxyManager")).deleteMarket(isLong, pendingOrder.positionId, proxyId, pendingOrder.receiver) {
+                emit MarketDeleted(isLong, pendingOrder.positionId);
+            } catch {
+                emit MarketDeletionFailed(isLong, pendingOrder.positionId);
+            }
         } catch {
             emit IsLongSideCalculationFailed(key, pendingOrder.positionId);
         }
@@ -253,8 +261,8 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         uint256 positionId,
         address orderMarket
     ) external view returns (bool) {
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(receiver, positionId);
+        SendraStorage _sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
+        SendraLib.Position memory position = _sendraStorage.getUserPositionById(receiver, positionId);
         address marketLong = abi.decode(position.positionData[2], (address));
         return (orderMarket == marketLong);
     }
@@ -267,13 +275,12 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
      * @param _pairTradingStorage Address of PairTradingStorage contract
      */
     function processAndTransfer(bytes32 key, address _pairTradingStorage) external {
-        require(msg.sender == address(this), "Internal only");
+        if(msg.sender != address(this)) revert InvalidSender();
         PairTradingLib.RawExecutionData memory data = PairTradingStorage(_pairTradingStorage).getRawExecutionData(key);
-        require(data.positionId != 0, "No data for this key");
-        require(!data.processed, "Already processed");
+        if(data.processed) revert AlreadyProcessed();
         
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
-        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(data.receiver, data.positionId);
+        SendraStorage _sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
+        SendraLib.Position memory position = _sendraStorage.getUserPositionById(data.receiver, data.positionId);
 
         uint256 tokenDecimals = data.outputToken == usdc ? 6 : 18;
         uint256 outputUsdValue = (data.outputAmount * data.collateralTokenPrice) / (10 ** tokenDecimals);
@@ -302,10 +309,10 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
         if (bothSidesClosed) {
             position.positionData[10] = abi.encode(block.timestamp);
             position.isActive = false;
-            _protocolStorage.decreaseGlobalPositionActivePositions(data.receiver);
+            _sendraStorage.decreaseGlobalPositionActivePositions(data.receiver);
         }
         
-        _protocolStorage.updateUserFullPosition(data.receiver, data.positionId, position); // aqui probablemente se pueda optimizar
+        _sendraStorage.updateUserFullPosition(data.receiver, data.positionId, position); // aqui probablemente se pueda optimizar
         
         PairTradingStorage(_pairTradingStorage).updatePendingOrder(
             key, 
@@ -450,5 +457,8 @@ contract ClosePositionCallbacks is IOrderCallbackReceiver, IGasFeeCallbackReceiv
             emit EmergencyWithdraw(msg.sender, weth, to, amount, reason, block.timestamp);
         }
     }
+
+    error InvalidSender();
+    error AlreadyProcessed();
 
 }

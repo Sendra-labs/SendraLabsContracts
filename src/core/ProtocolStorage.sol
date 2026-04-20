@@ -66,6 +66,9 @@ contract ProtocolStorage {
     /// @notice Mapping of user addresses to their User data
     mapping(address => ProtocolLib.User) internal users;
 
+    /// @notice Mapping of user ID to user address
+    mapping(uint256 => address) public usersById;
+
     /**
      * @notice Creates a new user in the protocol
      * @dev Only callable by authorized protocol contracts
@@ -80,6 +83,7 @@ contract ProtocolStorage {
         newUser.globalPosition.totalPositions = 0;
         newUser.globalPosition.activePositions = 0;
         newUser.transactionCount = 0;
+        usersById[protocolStats.totalUsers] = _user;
     }
     
     /**
@@ -172,7 +176,6 @@ contract ProtocolStorage {
 
     //____________
 
-
     function getUserPositionById(address _user, uint256 _positionId) public view returns (ProtocolLib.Position memory position) {
         position = users[_user].globalPosition.positions[_positionId];
         return position;
@@ -196,6 +199,27 @@ contract ProtocolStorage {
      */
     function getProtocolStats() public view returns(ProtocolLib.ProtocolStats memory) {
         return protocolStats;
+    }
+
+    /// @notice Returns the user address by ID
+    /// @param _id The ID of the user
+    /// @return The address of the user
+    function getUserAddressById(uint256 _id) public view returns(address) {
+        return usersById[_id];
+    }
+
+    /// @notice Returns the user ID by address
+    /// @param _user The address of the user
+    /// @return The ID of the user
+    function getUserIdByAddress(address _user) public view returns(uint256) {
+        return users[_user].id;
+    }
+
+    /// @notice Returns the user data by ID
+    /// @param _id The ID of the user
+    /// @return The user data and the user address
+    function getUserDataById(uint256 _id) public view returns(ProtocolLib.UserInfoRead memory, address) {
+        return (getUser(usersById[_id]), usersById[_id]);
     }
 
     /**

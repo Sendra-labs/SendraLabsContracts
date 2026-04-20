@@ -28,13 +28,13 @@ import { Roles } from "../../../security/Roles.sol";
 import { DecoderLib } from "../../../lib/Decoder.lib.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import { SafeERC20 } from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import { ProtocolLib } from "../../../lib/Protocol.lib.sol";
+import { SendraLib } from "../../../lib/Sendra.lib.sol";
 import { IExchangeRouter } from "../../../interfaces/GMX/IExchangeRouter.sol";
 import { IOrderVault } from "../../../interfaces/GMX/IOrderVault.sol";
 import { IBaseOrderUtils } from "gmx-synthetics/order/IBaseOrderUtils.sol";
 import { Order } from "gmx-synthetics/order/Order.sol";
 import { ReentrancyGuard } from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import { ProtocolStorage } from "../../../core/ProtocolStorage.sol";
+import { SendraStorage } from "../../../core/SendraStorage.sol";
 import { IOrderCallbackReceiver } from "../../../interfaces/GMX/IOrderCallbackReceiver.sol";
 import { EventUtils } from "../../../lib/GMX lib/EventUtils.sol";
 import { GMXPrices } from "../../../periphery/utilsGMX/GMXPrices.sol"; 
@@ -45,6 +45,8 @@ import { PairTradingStorage } from "../storage/PairTradingStorage.sol";
 import { IWETH } from "../../../interfaces/IWETH.sol";
 import { AddressProvider } from "../../../core/config/AddressProvider.sol";
 import { PositionInitializer } from "./PositionInitializer.sol";
+import { PositionManager } from "./PositionManager.sol";
+import { ProxyManager } from "../storage/ProxyManager.sol";
 
 /**
  * @title PairTrading
@@ -230,7 +232,7 @@ contract PairTrading is ReentrancyGuard {
         (uint256 aceptablePriceLong, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketLong), true, true, _input.slippageBps);
         (uint256 aceptablePriceShort, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(gmxMarkets.getMarket(_input.marketShort), false, true, _input.slippageBps);
         
-        bytes[] memory newPositionData = new bytes[](18);
+        bytes[] memory newPositionData = new bytes[](20);
         newPositionData[0] = abi.encode(_input.totalUsdcAmount);
         newPositionData[1] = abi.encode(false); // isNativeToken = false if is USDC
         newPositionData[2] = abi.encode(gmxMarkets.getMarket(_input.marketLong));
@@ -245,7 +247,7 @@ contract PairTrading is ReentrancyGuard {
         newPositionData[11] = abi.encode(uint256(0));  // finalUsdValue
         newPositionData[12] = abi.encode(uint256(0));  // finalPriceTokenLong
         newPositionData[13] = abi.encode(uint256(0));  // finalPriceTokenShort
-        newPositionData[14] = abi.encode(int256(0));  // PNL  we can Delete This One
+        newPositionData[14] = abi.encode(int256(0));  // PNL we can Delete This One
 
         address usdc = addressProvider.getAddress("USDC");
         bytes32 longKey = calculatePositionKey(address(this), gmxMarkets.getMarket(_input.marketLong), usdc, true);
@@ -254,7 +256,9 @@ contract PairTrading is ReentrancyGuard {
         newPositionData[15] = abi.encode(longKey);   // longKey
         newPositionData[16] = abi.encode(shortKey);  // shortKey
         newPositionData[17] = abi.encode(address(this));  // proxy address
-    
+        newPositionData[18] = abi.encode(uint256(0));  // stopLossLong
+        newPositionData[19] = abi.encode(uint256(0));  // stopLossShort
+
         /*__  pair trading positionParams  __*/
         //0  {0, totalUsdcAmount}
         //1  {2, isNativeToken = false}
@@ -547,7 +551,7 @@ contract PairTrading is ReentrancyGuard {
      * 
      * @custom:emit PositionClosed Emitted twice, once for each closed position (long and short)
      */
-    function closePairTrading(PairTradingLib.ClosePairTradingInput calldata _input) public payable {
+    function closePairTrading(PairTradingLib.ClosePairTradingInput memory _input) public payable {
         uint256 _value = msg.value / 2;
         PairTradingLib.CloseSidePairTradingInput memory longSideInput = PairTradingLib.CloseSidePairTradingInput({
             positionId: _input.positionId,
@@ -570,17 +574,21 @@ contract PairTrading is ReentrancyGuard {
 
     function closeSidePairTrading( PairTradingLib.CloseSidePairTradingInput memory _input ) public payable {
 
-        ProtocolStorage _protocolStorage = ProtocolStorage(addressProvider.getAddress("ProtocolStorage"));
+        SendraStorage _sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
         address weth = addressProvider.getAddress("WETH");
         address usdc = addressProvider.getAddress("USDC");
         address orderVault = addressProvider.getAddress("OrderVaultGMX");
         address exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
         
-        ProtocolLib.Position memory position = _protocolStorage.getUserPositionById(msg.sender,_input.positionId);
+        SendraLib.Position memory position = _sendraStorage.getUserPositionById(msg.sender,_input.positionId);
         if(!position.isActive) {
             revert PositionNotActive();
         }
         bytes[] memory positionData = position.positionData;
+
+        if (isPendingOrder(positionData, _input.isLongSide)) {
+            revert OrderAlreadyExists();
+        }
 
         address market = abi.decode(_input.isLongSide ? positionData[2] : positionData[3], (address));
         GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
@@ -606,9 +614,14 @@ contract PairTrading is ReentrancyGuard {
         uint256 minOutputAmount = getMinOutputAmount(market, position, gmxPrices, _input.slippageBps, isLong);
 
         uint256 callbackGasLimit = 1250000; // 1.25M gas
-        GMXMarketsRegistry gmxMarkets = GMXMarketsRegistry(addressProvider.getAddress("GMXMarkets"));
-        address[] memory swapPath = getSwapPath(market, collateralToken, gmxMarkets, false);
         address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
+
+    
+        address[] memory decreaseSwapPath;
+        if (isLong) {
+            decreaseSwapPath = new address[](1);
+            decreaseSwapPath[0] = market;
+        }
 
         IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
             addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
@@ -617,8 +630,8 @@ contract PairTrading is ReentrancyGuard {
                 callbackContract: callbackContract,
                 uiFeeReceiver: address(0),
                 market: market,
-                initialCollateralToken: swapPath.length > 0 ? swapPath[0] : collateralToken, 
-                swapPath: swapPath
+                initialCollateralToken: collateralToken,
+                swapPath: decreaseSwapPath
             }),
             numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
                 sizeDeltaUsd: sizeDeltaUsd,
@@ -651,6 +664,156 @@ contract PairTrading is ReentrancyGuard {
 
         emit PositionClosed(receiver, market, sizeDeltaUsd, isLong); 
     }
+
+    function isPendingOrder(bytes[] memory positionData, bool isLong) public pure returns (bool) {
+        if (abi.decode(positionData[18], (uint256)) != 0 && isLong) {
+            return true;
+        } else if (abi.decode(positionData[19], (uint256)) != 0 && !isLong) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @notice Submits a stop-loss decrease order for one side (long or short) of a pair position.
+     * @dev Order executes when oracle price crosses triggerPrice: long when price <= triggerPrice, short when price >= triggerPrice.
+     * @param _input positionId, executionFee, slippageBps, value, triggerPrice (GMX format, 30 decimals), isLongSide
+     * @custom:require msg.value >= executionFee
+     */
+    function closeSidePairTradingWithStopLoss( PairTradingLib.CloseSidePairTradingInputWithStopLoss memory _input) public payable {
+        SendraStorage _sendraStorage = SendraStorage(addressProvider.getAddress("SendraStorage"));
+        address weth = addressProvider.getAddress("WETH");
+        address usdc = addressProvider.getAddress("USDC");
+        address orderVault = addressProvider.getAddress("OrderVaultGMX");
+        address exchangeRouter = addressProvider.getAddress("ExchangeRouterGMX");
+        
+        SendraLib.Position memory position = _sendraStorage.getUserPositionById(msg.sender,_input.positionId);
+        if(!position.isActive) {
+            revert PositionNotActive();
+        }
+        bytes[] memory positionData = position.positionData;
+
+        if (isPendingOrder(positionData, _input.isLongSide)) {
+            revert OrderAlreadyExists();
+        }
+
+        address market = abi.decode(_input.isLongSide ? positionData[2] : positionData[3], (address));
+        GMXPrices gmxPrices = GMXPrices(addressProvider.getAddress("GMXPrices"));
+        (uint256 _acceptablePrice, /*closePositionPrice*/) = gmxPrices.getAcceptablePrice(
+            market,
+            _input.isLongSide, 
+            false, 
+            10000 // hardcoded for testing
+        ); // AQUI FALLA SI VA CON OTRO SLIPPAGE BPS que no sea 10000... habiendo metido el update del minimumOutputAmount
+            // Creo que solo Falla el LONG
+        uint256 sizeDeltaUsd = abi.decode(_input.isLongSide ? positionData[4] : positionData[5], (uint256));
+        uint256 acceptablePrice = _acceptablePrice;      
+        uint256 executionFee = _input.executionFee;  
+        address receiver = msg.sender;
+        bool isLong = _input.isLongSide;
+        uint256 positionId = _input.positionId;
+        
+        // isNativeToken from positionData[1]
+        // if true → WETH, if false → USDC
+        bool isNativeToken = abi.decode(position.positionData[1], (bool));
+        address collateralToken = isNativeToken ? weth : usdc;
+
+        uint256 minOutputAmount = getMinAmountForStopLoss(position, _input.triggerPrice, _input.slippageBps, isLong);
+
+        uint256 callbackGasLimit = 1250000; // 1.25M gas
+        address callbackContract = addressProvider.getAddress("ClosePositionCallbacks");
+
+    
+        address[] memory decreaseSwapPath;
+        if (isLong) {
+            decreaseSwapPath = new address[](1);
+            decreaseSwapPath[0] = market;
+        }
+
+        IBaseOrderUtils.CreateOrderParams memory orderParams = IBaseOrderUtils.CreateOrderParams({
+            addresses: IBaseOrderUtils.CreateOrderParamsAddresses({
+                receiver:  callbackContract,
+                cancellationReceiver: receiver,
+                callbackContract: callbackContract,
+                uiFeeReceiver: address(0),
+                market: market,
+                initialCollateralToken: collateralToken,
+                swapPath: decreaseSwapPath
+            }),
+            numbers: IBaseOrderUtils.CreateOrderParamsNumbers({
+                sizeDeltaUsd: sizeDeltaUsd,
+                initialCollateralDeltaAmount: 0,
+                triggerPrice: _input.triggerPrice,
+                acceptablePrice: acceptablePrice,
+                executionFee: executionFee,
+                callbackGasLimit: callbackGasLimit, 
+                minOutputAmount: minOutputAmount,
+                validFromTime: 0
+            }),
+            orderType: Order.OrderType.StopLossDecrease,
+            decreasePositionSwapType: Order.DecreasePositionSwapType.NoSwap,
+            isLong: isLong,
+            shouldUnwrapNativeToken: false,
+            autoCancel: false,
+            referralCode: bytes32(0),
+            dataList: new bytes32[](0)
+        });
+
+        IExchangeRouter exchangeRouterInstance = IExchangeRouter(exchangeRouter);
+
+        exchangeRouterInstance.sendWnt{value: executionFee}(orderVault, executionFee);
+        
+        bytes32 key = exchangeRouterInstance.createOrder(orderParams);
+
+        // stop Loss
+        if(isLong) {
+            updatePositionData(positionId, 18, abi.encode(_input.triggerPrice));
+        } else {
+            updatePositionData(positionId, 19, abi.encode(_input.triggerPrice));
+        }
+
+        PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).updatePendingOrder(key, PairTradingLib.PendingOrder(receiver, address(this), positionId, true));
+        
+        PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).addUserPendingOrderKey(receiver, key);
+
+        emit PositionClosed(receiver, market, sizeDeltaUsd, isLong); 
+    }
+
+    function updatePositionData(uint256 _positionId, uint256 _positionField, bytes memory _value) internal {
+        PositionManager(addressProvider.getAddress("PositionManager")).managePosition(_positionId, _positionField, _value, msg.sender);
+    }
+
+    function manualClosePairTradingPositionWithStopLoss(PairTradingLib.ManualCloseStopLossPairTradingInput calldata _input, uint256 _proxyId) public payable {
+        
+        if (_input.keyLongStopLoss != bytes32(0)) {
+            cancelOrder(_input.keyLongStopLoss, _proxyId);
+        }
+        if (_input.keyShortStopLoss != bytes32(0)) {
+            cancelOrder(_input.keyShortStopLoss, _proxyId);
+        }
+
+        closePairTrading(PairTradingLib.ClosePairTradingInput({
+            positionId: _input.positionId,
+            executionFee: _input.executionFee,
+            slippageBps: _input.slippageBps
+        }));
+
+    }
+
+    
+    function cancelOrder(bytes32 _key, uint256 _proxyId) public {
+        PairTradingLib.PendingOrder memory pendingOrder = PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).getPendingOrder(_key);
+        address proxy = pendingOrder.proxy;
+        address owner = ProxyManager(addressProvider.getAddress("ProxyManager")).getOwner(_proxyId);
+        if (msg.sender != owner) revert NotOwner();
+        if (proxy != address(this)) revert NotOwner();
+        IExchangeRouter exchangeRouterInstance = IExchangeRouter(addressProvider.getAddress("ExchangeRouterGMX"));
+        exchangeRouterInstance.cancelOrder(_key);
+        PairTradingStorage(addressProvider.getAddress("PairTradingStorage")).removeUserPendingOrderKey(pendingOrder.receiver, _key);
+        emit OrderCancelled(pendingOrder.receiver, _key);
+    }
+
     
     // read Functions
 
@@ -669,7 +832,7 @@ contract PairTrading is ReentrancyGuard {
      * @return minOutputAmount Minimum acceptable output amount in USDC (6 decimals)
      *         Returns 0 for short positions if currentPrice >= initialPrice * 2
      */
-    function getMinOutputAmount(address market, ProtocolLib.Position memory position, GMXPrices gmxPrices, uint256 _slippageBps, bool isLong) public view returns (uint256) {
+    function getMinOutputAmount(address market, SendraLib.Position memory position, GMXPrices gmxPrices, uint256 _slippageBps, bool isLong) public view returns (uint256) {
         
         uint256 slippageBps = _slippageBps == 10000 ? 200 : _slippageBps;
         uint256 initialUsdcAmount = abi.decode(position.positionData[8], (uint256));
@@ -698,7 +861,44 @@ contract PairTrading is ReentrancyGuard {
         uint256 minOutputAmount = minUsdcAmount;
         
         return minOutputAmount;
-    }   
+    }
+
+    /**
+     * @notice Minimum output amount when closing at a given trigger price (e.g. stop loss).
+     * @dev Same logic as getMinOutputAmount but uses triggerPrice instead of current market price.
+     *      triggerPrice must be in GMX format (30 decimals); it is normalized to 8 decimals to match initialPrice.
+     *
+     * @param position The position data (initialPrice and initial USDC value)
+     * @param triggerPrice Execution price in GMX format (30 decimals)
+     * @param _slippageBps Slippage in basis points (10000 = use default 200 bps)
+     * @param isLong Whether this is for a long (true) or short (false) position
+     * @return minOutputAmount Minimum acceptable output in USDC (6 decimals)
+     */
+    function getMinAmountForStopLoss(
+        SendraLib.Position memory position,
+        uint256 triggerPrice,
+        uint256 _slippageBps,
+        bool isLong
+    ) public pure returns (uint256) {
+        uint256 slippageBps = _slippageBps == 10000 ? 200 : _slippageBps;
+        uint256 initialUsdcAmount = abi.decode(position.positionData[8], (uint256));
+        uint256 initialPrice = isLong
+            ? abi.decode(position.positionData[6], (uint256))
+            : abi.decode(position.positionData[7], (uint256));
+        // GMX trigger price is 30 decimals; initialPrice is 8 decimals (Chainlink)
+        uint256 executionPrice8 = triggerPrice / 1e22;
+        if (!isLong && executionPrice8 >= initialPrice * 2) {
+            return 0;
+        }
+        uint256 usdcAtTrigger;
+        if (isLong) {
+            usdcAtTrigger = (initialUsdcAmount * executionPrice8) / initialPrice;
+        } else {
+            usdcAtTrigger = (initialUsdcAmount * initialPrice) / executionPrice8;
+        }
+        uint256 minUsdcAmount = (usdcAtTrigger * (10000 - slippageBps)) / 10000;
+        return minUsdcAmount;
+    }
 
     /**
      * @notice Calculates the position key using keccak256(abi.encode(account, market, collateralToken, isLong))
@@ -791,6 +991,12 @@ contract PairTrading is ReentrancyGuard {
         bool isLong
     );
 
+    /**
+     * @notice Emitted when an order is cancelled
+     * @param receiver Address that will receive the returned funds
+     * @param key The key of the cancelled order
+     */
+    event OrderCancelled(address indexed receiver, bytes32 indexed key);
 
     /// @notice Thrown when the caller is not authorized (not a protocol contract)
     error SenderNotAllowed();
@@ -806,4 +1012,10 @@ contract PairTrading is ReentrancyGuard {
     
     /// @notice Thrown when attempting to operate on an inactive position
     error PositionNotActive();
+
+    /// @notice Thrown when a stop loss order already exists for this position side
+    error OrderAlreadyExists();
+
+    /// @notice Thrown when the caller is not the owner of the proxy
+    error NotOwner();
 }

@@ -24,7 +24,7 @@ ________________________________________________________________
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import { ProtocolLib } from "../lib/Protocol.lib.sol";
+import { SendraLib } from "../lib/Sendra.lib.sol";
 import { Roles } from "../security/Roles.sol";
 
 /**
@@ -47,9 +47,9 @@ contract UpgradeableLib {
      */
     constructor(address _roles) {
         roles = Roles(_roles);
-        ProtocolLib.PositionParam[] memory _params = new ProtocolLib.PositionParam[](2);
-        _params[0] = ProtocolLib.PositionParam(0, "amount");
-        _params[1] = ProtocolLib.PositionParam(1, "tokenAddress");
+        SendraLib.PositionParam[] memory _params = new SendraLib.PositionParam[](2);
+        _params[0] = SendraLib.PositionParam(0, "amount");
+        _params[1] = SendraLib.PositionParam(1, "tokenAddress");
 
         /*addPositionType(
             ProtocolLib.PositionType(
@@ -79,10 +79,10 @@ contract UpgradeableLib {
     uint256 public userDataFieldsCount;
     
     /// @notice Mapping of position type ID to PositionType struct
-    mapping(uint256 => ProtocolLib.PositionType) public positionsTypes;
+    mapping(uint256 => SendraLib.PositionType) public positionsTypes;
     
     /// @notice Mapping of user data field ID to UserDataField struct
-    mapping(uint256 => ProtocolLib.UserDataField) public userDataFields;
+    mapping(uint256 => SendraLib.UserDataField) public userDataFields;
  
     /**
      * @notice Adds a new position type to the protocol
@@ -90,7 +90,7 @@ contract UpgradeableLib {
      * @param _positionType The PositionType struct containing name, origin, and parameters
      * @custom:security Only admin addresses can add new position types
      */
-    function addPositionType(ProtocolLib.PositionType memory _positionType) public onlyAdmin {
+    function addPositionType(SendraLib.PositionType memory _positionType) public onlyAdmin {
         positionsTypes[positionsTypesCount] = _positionType;
         positionsTypesCount++;
     }
@@ -108,7 +108,7 @@ contract UpgradeableLib {
      * @param _id The ID of the position type to retrieve
      * @return PositionType struct containing name, origin, and parameters
     */
-    function getPositionType(uint256 _id) public view returns(ProtocolLib.PositionType memory) {
+    function getPositionType(uint256 _id) public view returns(SendraLib.PositionType memory) {
         return positionsTypes[_id];
     }
 
@@ -116,8 +116,8 @@ contract UpgradeableLib {
      * @notice Returns all registered position types
      * @return Array of all PositionType structs currently registered
      */
-    function getPositionsTypes() public view returns(ProtocolLib.PositionType[] memory) {
-        ProtocolLib.PositionType[] memory _positionsTypes = new ProtocolLib.PositionType[](positionsTypesCount);
+    function getPositionsTypes() public view returns(SendraLib.PositionType[] memory) {
+        SendraLib.PositionType[] memory _positionsTypes = new SendraLib.PositionType[](positionsTypesCount);
         for(uint256 i = 0; i < positionsTypesCount; i++) {
             _positionsTypes[i] = positionsTypes[i];
         }
@@ -130,7 +130,7 @@ contract UpgradeableLib {
      * @param _userDataField The UserDataField struct containing field name and type
      * @custom:security Only admin addresses can add new user data fields
      */
-    function addUserDataField(ProtocolLib.UserDataField memory _userDataField) public onlyAdmin {
+    function addUserDataField(SendraLib.UserDataField memory _userDataField) public onlyAdmin {
         userDataFields[userDataFieldsCount] = _userDataField;
         userDataFieldsCount++;
     }
@@ -148,7 +148,7 @@ contract UpgradeableLib {
      * @param _id The ID of the user data field to retrieve
      * @return UserDataField struct containing field name and type
      */
-    function getUserDataField(uint256 _id) public view returns(ProtocolLib.UserDataField memory) {
+    function getUserDataField(uint256 _id) public view returns(SendraLib.UserDataField memory) {
         return userDataFields[_id];
     }
 
@@ -156,8 +156,8 @@ contract UpgradeableLib {
      * @notice Returns all registered user data fields
      * @return Array of all UserDataField structs currently registered
      */
-    function getUserDataFields() public view returns(ProtocolLib.UserDataField[] memory) {
-        ProtocolLib.UserDataField[] memory _userDataFields = new ProtocolLib.UserDataField[](userDataFieldsCount);
+    function getUserDataFields() public view returns(SendraLib.UserDataField[] memory) {
+        SendraLib.UserDataField[] memory _userDataFields = new SendraLib.UserDataField[](userDataFieldsCount);
         for(uint256 i = 0; i < userDataFieldsCount; i++) {
             _userDataFields[i] = userDataFields[i];
         }
