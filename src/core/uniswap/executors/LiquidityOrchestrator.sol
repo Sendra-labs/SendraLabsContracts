@@ -437,7 +437,7 @@ contract LiquidityOrchestrator {
             sDeltas[2] = int256(1);
         } else if(position.pnl < 0) {
             sFieldIds[2] = 4;
-            sDeltas[2] = int256(-1);
+            sDeltas[2] = int256(1); 
         }
 
         sendraStorage.applyMetricDelta(msg.sender, 2, 0, int256(feesCollectedUsdc)); // feesCollectedUSD (base unit)
