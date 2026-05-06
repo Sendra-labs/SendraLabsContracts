@@ -68,7 +68,7 @@ contract ProvideLiquidityWBTCUSDTScript is Script {
         vm.stopBroadcast();
     }
 
-    function _buildInput() internal view returns (UniswapLib.ExecuteProvideLiquidityInput memory) {
+    function _buildInput() internal pure returns (UniswapLib.ExecuteProvideLiquidityInput memory) {
         UniswapLib.SwapInstruction[] memory inst0 = new UniswapLib.SwapInstruction[](1);
         inst0[0] = UniswapLib.SwapInstruction({
             protocol: UniswapLib.Protocol.UniswapV3,

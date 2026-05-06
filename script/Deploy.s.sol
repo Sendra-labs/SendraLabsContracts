@@ -5,7 +5,7 @@ import {Script, console} from "forge-std/Script.sol";
 import { AddressProvider } from "../src/core/config/AddressProvider.sol";
 import { Roles } from "../src/security/Roles.sol";
 import { PairTrading } from "../src/core/bundles/executors/PairTrading.sol";
-import { ProtocolStorage } from "../src/core/ProtocolStorage.sol";
+import { SendraStorage } from "../src/core/SendraStorage.sol";
 import { GMXMarketsRegistry } from "../src/core/config/gmxMarkets.sol";
 import { GMXPrices } from "../src/periphery/utilsGMX/GMXPrices.sol";
 import { ProxyFactory } from "../src/core/bundles/executors/ProxyFactory.sol";
@@ -24,7 +24,7 @@ contract Deploy is Script {
     AddressProvider public addressProvider;
     Roles public roles;
     PairTrading public pairTrading;
-    ProtocolStorage public protocolStorage;
+    SendraStorage public sendraStorage;
     GMXMarketsRegistry public gmxMarketsRegistry;
     GMXPrices public gmxPrices;
     ProxyFactory public proxyFactory;
@@ -65,7 +65,7 @@ contract Deploy is Script {
         scriptSetAddresses(0xe6fab3F0c7199b0d34d7FbE83394fc0e0D06e99d, "ReferralStorageGMX");
         scriptSetAddresses(0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789, "ReaderGMX");
 
-        protocolStorage = new ProtocolStorage(address(roles));
+        sendraStorage = new SendraStorage(address(roles));
         gmxMarketsRegistry = new GMXMarketsRegistry(address(roles));
         scriptSetAddresses(address(gmxMarketsRegistry), "GMXMarkets");
         pairTrading = new PairTrading(address(addressProvider));
@@ -78,7 +78,7 @@ contract Deploy is Script {
         proxyAccessControl = new ProxyAccessControl(address(roles));
         positionInitializer = new PositionInitializer(address(addressProvider));
         
-        scriptSetAddresses(address(protocolStorage), "ProtocolStorage");
+        scriptSetAddresses(address(sendraStorage), "SendraStorage");
         scriptSetAddresses(address(gmxPrices), "GMXPrices");
         scriptSetAddresses(address(pairTradingReader), "PairTradingReader");
         scriptSetAddresses(address(proxyAccessControl), "ProxyAccessControl");
@@ -90,7 +90,7 @@ contract Deploy is Script {
         console.log("Roles -------------> ", address(roles));
         console.log("AddressProvider ---> ", address(addressProvider));
         console.log("PairTrading -------> ", address(pairTrading));
-        console.log("ProtocolStorage ---> ", address(protocolStorage));
+        console.log("SendraStorage -----> ", address(sendraStorage));
         console.log("GMXMarketsRegistry -> ", address(gmxMarketsRegistry));
         console.log("GMXPrices --------> ", address(gmxPrices));
         console.log("ProxyFactory -----> ", address(proxyFactory));
@@ -106,7 +106,7 @@ contract Deploy is Script {
         Contracts[] memory contracts = new Contracts[](14);
         contracts[0] = Contracts("Roles", address(roles), false);
         contracts[1] = Contracts("PairTrading", address(pairTrading), true);
-        contracts[2] = Contracts("ProtocolStorage", address(protocolStorage), false);
+        contracts[2] = Contracts("SendraStorage", address(sendraStorage), false);
         contracts[3] = Contracts("AddressProvider", address(addressProvider), false);
         contracts[4] = Contracts("GMXMarkets", address(gmxMarketsRegistry), false);
         contracts[5] = Contracts("GMXPrices", address(gmxPrices), false);

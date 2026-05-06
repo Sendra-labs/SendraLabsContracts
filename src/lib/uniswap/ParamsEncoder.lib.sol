@@ -25,6 +25,7 @@ library UniswapParamsEncoderLib {
             address recipient = params.swapInstructions[i].tokenOut == params.tokenOut
                 ? params.to
                 : intermediateRecipient;
+            bool payerIsUser = (i == 0);
 
             if(params.swapInstructions[i].protocol == UniswapLib.Protocol.UniswapV2){
                 inputs[i] = abi.encode(
@@ -32,7 +33,7 @@ library UniswapParamsEncoderLib {
                     params.swapInstructions[i].amountIn,
                     params.swapInstructions[i].amountOut,
                     [params.swapInstructions[i].tokenIn, params.swapInstructions[i].tokenOut],
-                    true
+                    payerIsUser
                 );
             } else if(params.swapInstructions[i].protocol == UniswapLib.Protocol.UniswapV3){
                 inputs[i] = abi.encode(
@@ -40,7 +41,7 @@ library UniswapParamsEncoderLib {
                     params.swapInstructions[i].amountIn,
                     params.swapInstructions[i].amountOut,
                     abi.encodePacked(params.swapInstructions[i].tokenIn, params.swapInstructions[i].fee, params.swapInstructions[i].tokenOut),
-                    true
+                    payerIsUser
                 );
             } else if(params.swapInstructions[i].protocol == UniswapLib.Protocol.UniswapV4){
                 // V4: SWAP_EXACT_IN_SINGLE (0x06), SETTLE_ALL (0x0c), TAKE_ALL (0x0f)

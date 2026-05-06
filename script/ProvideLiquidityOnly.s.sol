@@ -8,8 +8,8 @@ import { PoolKey } from "@uniswap/v4-core/types/PoolKey.sol";
 import { Currency } from "@uniswap/v4-core/types/Currency.sol";
 import { IHooks } from "@uniswap/v4-core/interfaces/IHooks.sol";
 import { IERC20 } from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import { ProtocolStorage } from "../src/core/ProtocolStorage.sol";
-import { ProtocolLib } from "../src/lib/Protocol.lib.sol";
+import { SendraStorage } from "../src/core/SendraStorage.sol";
+import { SendraLib } from "../src/lib/Sendra.lib.sol";
 import { AddressProvider } from "../src/core/config/AddressProvider.sol";
 import { INonfungiblePositionManager } from "@uniswap/v3-periphery/contracts/interfaces/INonfungiblePositionManager.sol";
 
@@ -100,10 +100,10 @@ contract ProvideLiquidityOnlyScript is Script {
     /// @param pk Private key del broadcaster (owner del NFT tras provide)
     function _provideAndWithdraw(uint256 pk) internal {
         address broadcaster = vm.addr(pk);
-        ProtocolStorage protocolStorage = ProtocolStorage(AddressProvider(ADDRESS_PROVIDER).getAddress("ProtocolStorage"));
+        SendraStorage sendraStorage = SendraStorage(AddressProvider(ADDRESS_PROVIDER).getAddress("SendraStorage"));
         INonfungiblePositionManager nftManager = INonfungiblePositionManager(AddressProvider(ADDRESS_PROVIDER).getAddress("UniswapNFTPositionManager"));
 
-        uint256 totalPositionsBefore = protocolStorage.getUser(broadcaster).totalPositions;
+        uint256 totalPositionsBefore = sendraStorage.getUser(broadcaster).totalPositions;
 
         // 1. Provide liquidity (Orchestrator envia NFT a msg.sender = broadcaster)
         uint256 totalUsdc = AMOUNT_USDC_SWAP0 + AMOUNT_USDC_SWAP1;
@@ -112,10 +112,10 @@ contract ProvideLiquidityOnlyScript is Script {
         UniswapLib.ExecuteProvideLiquidityInput memory provideInput = _buildInput();
         LiquidityOrchestrator(LIQUIDITY_ORCHESTRATOR).provideLiquidity(provideInput);
 
-        uint256 positionId = protocolStorage.getUser(broadcaster).totalPositions;
+        uint256 positionId = sendraStorage.getUser(broadcaster).totalPositions;
         require(positionId > totalPositionsBefore, "No new position created");
 
-        ProtocolLib.Position memory position = protocolStorage.getUserPositionById(broadcaster, positionId);
+        SendraLib.Position memory position = sendraStorage.getUserPositionById(broadcaster, positionId);
         require(position.positionData.length > 9, "Position data missing tokenId");
 
         uint256 tokenId = abi.decode(position.positionData[9], (uint256));
@@ -152,7 +152,7 @@ contract ProvideLiquidityOnlyScript is Script {
     }
 
     /// @dev Params frontend: WBTC->USDC (fee 3000), WETH->USDC (fee 100)
-    function _buildWithdrawInputFromFrontend(uint128 uniId, uint256 positionId, address user) internal view returns (UniswapLib.ExecuteWithdrawLiquidityAndCollectFees memory) {
+    function _buildWithdrawInputFromFrontend(uint128 uniId, uint256 positionId, address user) internal pure returns (UniswapLib.ExecuteWithdrawLiquidityAndCollectFees memory) {
         UniswapLib.SwapInstruction[] memory inst0 = new UniswapLib.SwapInstruction[](1);
         inst0[0] = UniswapLib.SwapInstruction({
             protocol: UniswapLib.Protocol.UniswapV3,
@@ -267,7 +267,7 @@ contract ProvideLiquidityOnlyScript is Script {
     }
 
     /// @dev Para provide+withdraw: posicion WBTC/WETH -> swaps WBTC->USDC, WETH->USDC (params frontend)
-    function _buildWithdrawInput(uint128 uniId, uint256 positionId, address user) internal view returns (UniswapLib.ExecuteWithdrawLiquidityAndCollectFees memory) {
+    function _buildWithdrawInput(uint128 uniId, uint256 positionId, address user) internal pure returns (UniswapLib.ExecuteWithdrawLiquidityAndCollectFees memory) {
         return _buildWithdrawInputFromFrontend(uniId, positionId, user);
     }
 

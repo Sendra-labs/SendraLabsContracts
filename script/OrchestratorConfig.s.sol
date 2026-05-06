@@ -105,7 +105,7 @@ contract OrchestratorConfigScript is Script {
     }
 
     /// @dev Path 0: USDC directo (no swap) - token1 del pool
-    function _getProvideSwap0Instructions() internal view returns (UniswapLib.SwapInstruction[] memory) {
+    function _getProvideSwap0Instructions() internal pure returns (UniswapLib.SwapInstruction[] memory) {
         return new UniswapLib.SwapInstruction[](0);
     }
 
@@ -170,7 +170,7 @@ contract OrchestratorConfigScript is Script {
         uint256 amountOut,
         uint24 fee,
         address poolOrPair
-    ) internal view returns (UniswapLib.SwapInstruction memory) {
+    ) internal pure returns (UniswapLib.SwapInstruction memory) {
         return UniswapLib.SwapInstruction({
             protocol: p,
             tokenIn: tokenIn,
@@ -247,14 +247,14 @@ contract OrchestratorConfigScript is Script {
     }
 
     /// @dev Define aquí las instrucciones de swap para withdraw path 0 (token0 del pool -> token final, ej. USDC)
-    function _getWithdrawSwap0Instructions() internal view returns (UniswapLib.SwapInstruction[] memory) {
+    function _getWithdrawSwap0Instructions() internal pure returns (UniswapLib.SwapInstruction[] memory) {
         UniswapLib.SwapInstruction[] memory inst = new UniswapLib.SwapInstruction[](1);
         inst[0] = _swapInst(UniswapLib.Protocol.UniswapV3, WBTC, USDC, 0, 0, 500, 0x599bB1269B71625dA7761ba79A228230c8354C55);
         return inst;
     }
 
     /// @dev Define aquí las instrucciones de swap para withdraw path 1 (token1 del pool -> token final)
-    function _getWithdrawSwap1Instructions() internal view returns (UniswapLib.SwapInstruction[] memory) {
+    function _getWithdrawSwap1Instructions() internal pure returns (UniswapLib.SwapInstruction[] memory) {
         UniswapLib.SwapInstruction[] memory inst = new UniswapLib.SwapInstruction[](1);
         inst[0] = _swapInst(UniswapLib.Protocol.UniswapV3, USDT, USDC, 0, 0, 500, address(0));
         // Ejemplo multi-hop USDT->WETH->USDC:
