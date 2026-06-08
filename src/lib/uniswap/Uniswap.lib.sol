@@ -14,10 +14,14 @@ library UniswapLib {
 
     struct SwapInstruction {
         Protocol protocol;
-        address tokenIn; // initial token in the swap
-        address tokenOut; // final token in the swap
-        uint256 amountIn; // amount for the initial token
-        uint256 amountOut; // amount for the final token (amountOutMin)
+        address tokenIn; // token in for this hop
+        address tokenOut; // token out for this hop
+        /// @dev For the first hop of each route/chain: amount in (base token units).
+        ///      Intermediate hops in a V3 chain may be 0; ParamsEncoder packs chains
+        ///      and uses the first hop amountIn only.
+        uint256 amountIn;
+        /// @dev amountOutMin for this hop. Put slippage on the last hop of each chain.
+        uint256 amountOut;
         address poolOrPair; // v2 or v3
         uint24 fee; // v3
         PoolKey poolKey; // v4

@@ -137,6 +137,8 @@ contract SendraLib {
         /// @dev Historical worst-case behavioral signal. Complements maxDrawdown
         ///      by capturing streaks rather than magnitude.
         uint256 maxConsecutiveLosses; // 18
+        /// @notice Total capital deposited across all losing positions.
+        uint256 totalLosingCapitalIn; // 19
     }
 
     struct SpecificAccumulators {

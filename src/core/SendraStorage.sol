@@ -55,8 +55,8 @@ contract SendraStorage {
     mapping(uint256 => address) public usersById;
 
     /// @dev Indices match the declaration order of fields in SendraLib.GlobalAccumulators (Sendra.lib.sol).
-    ///      Current highest index is 18 (maxConsecutiveLosses), so count = 19.
-    uint8 internal constant GLOBAL_ACC_FIELD_COUNT = 19;
+    ///      Current highest index is 19 (totalLosingCapitalIn), so count = 20.
+    uint8 internal constant GLOBAL_ACC_FIELD_COUNT = 20;
 
     /// @dev Numeric fields of SendraLib.SpecificAccumulators only; bytes metrics use updateSpecificPulseMetric.
     ///      Current highest index is 5 (totalPositions), so count = 6.
@@ -67,6 +67,7 @@ contract SendraStorage {
     error AccumulatorBatchLengthMismatch();
     error InvalidSpecificMetricIndex();
     error InvalidSpecificMetricEncoding();
+    error InvalidPositionRange();
 
     function createUser(address _user) internal onlyProtocol {
         protocolStats.totalUsers++;
@@ -169,7 +170,8 @@ contract SendraStorage {
      * @dev Field indices: 0 totalCapitalIn, 1 totalCapitalOut, 2 peakSimultaneousExposure, 3 currentExposure,
      *      4 cumulativeRealizedPnl, 5 grossProfit, 6 grossLoss, 7 highWaterMark, 8 maxDrawdown, 9 totalPositionsOpened,
      *      10 totalPositionsClosed, 11 winCount, 12 lossCount, 13 totalDurationSeconds, 14 firstActivityTimestamp,
-     *      15 lastActivityTimestamp, 16 totalLiquidationEvents, 17 consecutiveLosses, 18 maxConsecutiveLosses.
+     *      15 lastActivityTimestamp, 16 totalLiquidationEvents, 17 consecutiveLosses, 18 maxConsecutiveLosses,
+     *      19 totalLosingCapitalIn.
      *      For uint256 fields the delta is added; subtraction saturates at 0 if the result would be negative.
      */
     function applyGlobalPulseDeltas(address _user, uint8[] calldata _fieldIds, int256[] calldata _deltas)
@@ -225,8 +227,10 @@ contract SendraStorage {
                 g.totalLiquidationEvents = _addUint256(g.totalLiquidationEvents, d);
             } else if (f == 17) {
                 g.consecutiveLosses = _addUint256(g.consecutiveLosses, d);
-            } else {
+            } else if (f == 18) {
                 g.maxConsecutiveLosses = _addUint256(g.maxConsecutiveLosses, d);
+            } else if (f == 19) {
+                g.totalLosingCapitalIn = _addUint256(g.totalLosingCapitalIn, d);
             }
         }
     }
@@ -412,6 +416,8 @@ contract SendraStorage {
             value = int256(users[_user].pulse.globalPulse.consecutiveLosses);
         } else if (_fieldId == 18) {
             value = int256(users[_user].pulse.globalPulse.maxConsecutiveLosses);
+        } else if (_fieldId == 19) {
+            value = int256(users[_user].pulse.globalPulse.totalLosingCapitalIn);
         }
         return value;
     }
@@ -460,6 +466,39 @@ contract SendraStorage {
     function getUserPositionById(address _user, uint256 _positionId) public view returns (SendraLib.Position memory position) {
         position = users[_user].globalPosition.positions[_positionId];
         return position;
+    }
+
+    /**
+     * @notice Returns positions for a user in the inclusive ID range [_fromId, _toId].
+     * @dev Position IDs are 1-indexed up to `globalPosition.totalPositions`.
+     */
+    function getUserPositionsByRange(address _user, uint256 _fromId, uint256 _toId)
+        public
+        view
+        returns (SendraLib.Position[] memory positions)
+    {
+        if (_fromId == 0 || _fromId > _toId || _toId > users[_user].globalPosition.totalPositions) {
+            revert InvalidPositionRange();
+        }
+
+        positions = new SendraLib.Position[](_toId - _fromId + 1);
+        for (uint256 i = _fromId; i <= _toId; i++) {
+            positions[i - _fromId] = users[_user].globalPosition.positions[i];
+        }
+    }
+
+    /**
+     * @notice Returns positions for a user matching each ID in `_positionIds` (same order).
+     */
+    function getUserPositionsByIds(address _user, uint256[] calldata _positionIds)
+        public
+        view
+        returns (SendraLib.Position[] memory positions)
+    {
+        positions = new SendraLib.Position[](_positionIds.length);
+        for (uint256 i = 0; i < _positionIds.length; i++) {
+            positions[i] = users[_user].globalPosition.positions[_positionIds[i]];
+        }
     }
 
     function isUser(address _user) public view returns (bool) {

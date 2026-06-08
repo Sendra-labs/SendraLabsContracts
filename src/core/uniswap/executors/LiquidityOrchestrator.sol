@@ -367,8 +367,8 @@ contract LiquidityOrchestrator {
 
         sendraStorage.updateUserFullPosition(msg.sender, _input.withdrawLiquidityInput.positionId, position);
 
-        uint8[] memory gFieldIds = new uint8[](13);
-        int256[] memory gDeltas = new int256[](13);
+        uint8[] memory gFieldIds = new uint8[](14);
+        int256[] memory gDeltas = new int256[](14);
 
         uint8[] memory sFieldIds = new uint8[](3);
         int256[] memory sDeltas = new int256[](3);
@@ -418,13 +418,16 @@ contract LiquidityOrchestrator {
 
         gFieldIds[11] = 17;
         gFieldIds[12] = 18;
+        gFieldIds[13] = 19;
         if(position.pnl < 0) {
             int256 newStreak = consecutiveLosses + 1;
             gDeltas[11] = int256(1); // consecutiveLosses += 1
             gDeltas[12] = newStreak > maxConsecutiveLosses ? int256(newStreak - maxConsecutiveLosses) : int256(0);
+            gDeltas[13] = int256(abi.decode(position.positionData[15], (uint256)));
         } else if(position.pnl > 0) {
             gDeltas[11] = consecutiveLosses > 0 ? -consecutiveLosses : int256(0); // reset to 0 on win
             gDeltas[12] = int256(0);
+            gDeltas[13] = int256(0);
         }
 
         sFieldIds[0] = 0;
@@ -437,7 +440,7 @@ contract LiquidityOrchestrator {
             sDeltas[2] = int256(1);
         } else if(position.pnl < 0) {
             sFieldIds[2] = 4;
-            sDeltas[2] = int256(-1);
+            sDeltas[2] = int256(1);
         }
 
         sendraStorage.applyMetricDelta(msg.sender, 2, 0, int256(feesCollectedUsdc)); // feesCollectedUSD (base unit)
