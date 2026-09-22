@@ -364,22 +364,8 @@ contract LiquidityOrchestrator {
         bool isSwapNeeded0 = _input.swapInput0.tokenIn != _input.swapInput0.tokenOut;
         bool isSwapNeeded1 = _input.swapInput1.tokenIn != _input.swapInput1.tokenOut;
 
-        if(isSwapNeeded0 && amount0 > 0) {
-            IERC20(_input.swapInput0.tokenIn).safeTransfer(address(swapRouter), amount0);
-            UniswapLib.SwapInput memory swap0 = _input.swapInput0;
-            swap0.to = address(this);
-            swap0.amountIn0 = amount0;
-            if(swap0.swapInstructions.length > 0) swap0.swapInstructions[0].amountIn = amount0;
-            swapRouter.executeSwap(swap0);
-        }
-        if(isSwapNeeded1 && amount1 > 0) {
-            IERC20(_input.swapInput1.tokenIn).safeTransfer(address(swapRouter), amount1);
-            UniswapLib.SwapInput memory swap1 = _input.swapInput1;
-            swap1.to = address(this);
-            swap1.amountIn0 = amount1;
-            if(swap1.swapInstructions.length > 0) swap1.swapInstructions[0].amountIn = amount1;
-            swapRouter.executeSwap(swap1);
-        }
+        if(isSwapNeeded0 && amount0 > 0) _executeScaledSwap(_input.swapInput0, amount0);
+        if(isSwapNeeded1 && amount1 > 0) _executeScaledSwap(_input.swapInput1, amount1);
 
         uint256 newBalance = IERC20(_input.swapInput0.tokenOut).balanceOf(address(this));
         uint256 amount = newBalance - prevBalance;
@@ -432,22 +418,8 @@ contract LiquidityOrchestrator {
         bool isSwapNeeded0 = _input.swapInput0.tokenIn != _input.swapInput0.tokenOut;
         bool isSwapNeeded1 = _input.swapInput1.tokenIn != _input.swapInput1.tokenOut;
 
-        if(isSwapNeeded0 && amount0 > 0) {
-            IERC20(_input.swapInput0.tokenIn).safeTransfer(address(swapRouter), amount0);
-            UniswapLib.SwapInput memory swap0 = _input.swapInput0;
-            swap0.to = address(this);
-            swap0.amountIn0 = amount0;
-            if(swap0.swapInstructions.length > 0) swap0.swapInstructions[0].amountIn = amount0;
-            swapRouter.executeSwap(swap0);
-        }
-        if(isSwapNeeded1 && amount1 > 0) {
-            IERC20(_input.swapInput1.tokenIn).safeTransfer(address(swapRouter), amount1);
-            UniswapLib.SwapInput memory swap1 = _input.swapInput1;
-            swap1.to = address(this);
-            swap1.amountIn0 = amount1;
-            if(swap1.swapInstructions.length > 0) swap1.swapInstructions[0].amountIn = amount1;
-            swapRouter.executeSwap(swap1);
-        }
+        if(isSwapNeeded0 && amount0 > 0) _executeScaledSwap(_input.swapInput0, amount0);
+        if(isSwapNeeded1 && amount1 > 0) _executeScaledSwap(_input.swapInput1, amount1);
 
         uint256 newBalance = IERC20(_input.swapInput0.tokenOut).balanceOf(address(this));
         uint256 amountUsdcReceived = newBalance - prevBalance;
@@ -560,27 +532,19 @@ contract LiquidityOrchestrator {
         bool isSwapNeeded0 = _input.swapInput0.tokenIn != _input.swapInput0.tokenOut;
         bool isSwapNeeded1 = _input.swapInput1.tokenIn != _input.swapInput1.tokenOut;
 
-        if(isSwapNeeded0 && amount0 > 0) {
-            IERC20(_input.swapInput0.tokenIn).safeTransfer(address(swapRouter), amount0);
-            UniswapLib.SwapInput memory swap0 = _input.swapInput0;
-            swap0.to = address(this);
-            swap0.amountIn0 = amount0;
-            if(swap0.swapInstructions.length > 0) swap0.swapInstructions[0].amountIn = amount0;
-            swapRouter.executeSwap(swap0);
-        }
-        if(isSwapNeeded1 && amount1 > 0) {
-            IERC20(_input.swapInput1.tokenIn).safeTransfer(address(swapRouter), amount1);
-            UniswapLib.SwapInput memory swap1 = _input.swapInput1;
-            swap1.to = address(this);
-            swap1.amountIn0 = amount1;
-            if(swap1.swapInstructions.length > 0) swap1.swapInstructions[0].amountIn = amount1;
-            swapRouter.executeSwap(swap1);
-        }
+        if(isSwapNeeded0 && amount0 > 0) _executeScaledSwap(_input.swapInput0, amount0);
+        if(isSwapNeeded1 && amount1 > 0) _executeScaledSwap(_input.swapInput1, amount1);
 
         uint256 newBalance = IERC20(_input.swapInput0.tokenOut).balanceOf(address(this));
         uint256 amount = newBalance - prevBalance;
 
         return amount;
+    }
+
+    /// @dev Sell `amount` of swap.tokenIn along every leg. Root amountIns are weights and are rescaled to `amount`.
+    function _executeScaledSwap(UniswapLib.SwapInput memory swap, uint256 amount) internal {
+        IERC20(swap.tokenIn).safeTransfer(address(swapRouter), amount);
+        swapRouter.executeSwap(_scaledInvertedSwap(swap, swap.tokenIn, swap.tokenOut, amount));
     }
 
 }
