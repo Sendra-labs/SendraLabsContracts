@@ -50,8 +50,13 @@ library UniswapLib {
     }
 
     struct ExecuteProvideLiquidityInput {
-        SwapInput swapInput0; 
+        SwapInput swapInput0;
         SwapInput swapInput1;
+        /// @dev Route to sell token0 back to the base token. amountIn values are weights;
+        ///      the orchestrator rescales them to the leftover. Ignored when token0 is the base token.
+        SwapInput invertedSwapInput0;
+        /// @dev Route to sell token1 back to the base token. Same weight convention as invertedSwapInput0.
+        SwapInput invertedSwapInput1;
         ProvideLiquidityInput provideLiquidityInput;
         bool isSendraRecipient;
     }

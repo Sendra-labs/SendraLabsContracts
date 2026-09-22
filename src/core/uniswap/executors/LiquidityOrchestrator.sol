@@ -106,20 +106,19 @@ contract LiquidityOrchestrator {
             uint256 prevBaseBalance = IERC20(baseToken).balanceOf(address(this));
             uint256 leftUsdcDirect = 0;
 
-            // swapInput0/swapInput1 are not guaranteed to be aligned with token0/token1.
-            // Map by tokenOut so we invert the correct route for each leftover.
-            UniswapLib.SwapInput memory swapIntoToken0 =
-                (swapInput0.tokenOut == provideLiquidityInput.token0) ? swapInput0 : swapInput1;
-            UniswapLib.SwapInput memory swapIntoToken1 =
-                (swapInput0.tokenOut == provideLiquidityInput.token1) ? swapInput0 : swapInput1;
-
+            // Leftover routes come from the caller. invertSwapInput cannot rebuild a split:
+            // it only writes amountIn on the first reversed hop, so a parallel leg swaps 0 and reverts.
             if (amountLeftToken0 > 0) {
-                // If leftover is already in base token (e.g. USDC), don't "swap" it back.
                 if (provideLiquidityInput.token0 == baseToken) {
                     leftUsdcDirect += amountLeftToken0;
                 } else {
                     IERC20(provideLiquidityInput.token0).safeTransfer(address(swapRouter), amountLeftToken0);
-                    swapRouter.executeSwap(invertSwapInput(swapIntoToken0, amountLeftToken0));
+                    swapRouter.executeSwap(_scaledInvertedSwap(
+                        _input.invertedSwapInput0,
+                        provideLiquidityInput.token0,
+                        baseToken,
+                        amountLeftToken0
+                    ));
                 }
             }
             if (amountLeftToken1 > 0) {
@@ -127,7 +126,12 @@ contract LiquidityOrchestrator {
                     leftUsdcDirect += amountLeftToken1;
                 } else {
                     IERC20(provideLiquidityInput.token1).safeTransfer(address(swapRouter), amountLeftToken1);
-                    swapRouter.executeSwap(invertSwapInput(swapIntoToken1, amountLeftToken1));
+                    swapRouter.executeSwap(_scaledInvertedSwap(
+                        _input.invertedSwapInput1,
+                        provideLiquidityInput.token1,
+                        baseToken,
+                        amountLeftToken1
+                    ));
                 }
             }
 
@@ -216,6 +220,101 @@ contract LiquidityOrchestrator {
     function updateAccumulators(uint8[] memory _gFieldIds, int256[] memory _gDeltas, uint64 _specificKey, uint8[] memory _sFieldIds, int256[] memory _sDeltas) internal {
         sendraStorage.applyGlobalPulseDeltas(msg.sender, _gFieldIds, _gDeltas);
         sendraStorage.applySpecificPulseDeltas(msg.sender, _specificKey, _sFieldIds, _sDeltas);
+    }
+
+    error InvertedSwapMissing(address token);
+
+    /// @dev Rescale a frontend-built sell route so every root hop sums to `amount`.
+    ///      Hops with amountIn 0 are intermediate steps of a chain and stay 0.
+    ///      A root that would scale to 0 is dropped together with its chain.
+    function _scaledInvertedSwap(
+        UniswapLib.SwapInput memory swap,
+        address tokenIn,
+        address tokenOut,
+        uint256 amount
+    ) internal view returns (UniswapLib.SwapInput memory) {
+        if (swap.tokenIn != tokenIn || swap.tokenOut != tokenOut) revert InvertedSwapMissing(tokenIn);
+
+        uint256 n = swap.swapInstructions.length;
+        uint256 weight = 0;
+        uint256 roots = 0;
+        for (uint256 i = 0; i < n; i++) {
+            if (swap.swapInstructions[i].amountIn > 0) {
+                weight += swap.swapInstructions[i].amountIn;
+                roots++;
+            }
+        }
+        if (weight == 0 || roots == 0) revert InvertedSwapMissing(tokenIn);
+
+        uint256[] memory scaled = new uint256[](n);
+        uint256 assigned = 0;
+        uint256 seen = 0;
+        for (uint256 i = 0; i < n; i++) {
+            uint256 hopIn = swap.swapInstructions[i].amountIn;
+            if (hopIn == 0) continue;
+            seen++;
+            uint256 part = seen == roots ? amount - assigned : (amount * hopIn) / weight;
+            scaled[i] = part;
+            assigned += part;
+        }
+
+        uint256 outLen = 0;
+        for (uint256 i = 0; i < n;) {
+            if (swap.swapInstructions[i].amountIn == 0) {
+                i++;
+                continue;
+            }
+            if (scaled[i] == 0) {
+                i++;
+                while (i < n && swap.swapInstructions[i].amountIn == 0) i++;
+                continue;
+            }
+            outLen++;
+            i++;
+            while (i < n && swap.swapInstructions[i].amountIn == 0) {
+                outLen++;
+                i++;
+            }
+        }
+        if (outLen == 0) revert InvertedSwapMissing(tokenIn);
+
+        UniswapLib.SwapInstruction[] memory nextInstructions = new UniswapLib.SwapInstruction[](outLen);
+        uint256 w = 0;
+        for (uint256 i = 0; i < n;) {
+            if (swap.swapInstructions[i].amountIn == 0) {
+                i++;
+                continue;
+            }
+            if (scaled[i] == 0) {
+                i++;
+                while (i < n && swap.swapInstructions[i].amountIn == 0) i++;
+                continue;
+            }
+            uint256 origRoot = swap.swapInstructions[i].amountIn;
+            uint256 part = scaled[i];
+            nextInstructions[w] = swap.swapInstructions[i];
+            nextInstructions[w].amountIn = part;
+            nextInstructions[w].amountOut = _scaleAmountOut(nextInstructions[w].amountOut, part, origRoot);
+            w++;
+            i++;
+            while (i < n && swap.swapInstructions[i].amountIn == 0) {
+                nextInstructions[w] = swap.swapInstructions[i];
+                nextInstructions[w].amountIn = 0;
+                nextInstructions[w].amountOut = _scaleAmountOut(nextInstructions[w].amountOut, part, origRoot);
+                w++;
+                i++;
+            }
+        }
+
+        swap.swapInstructions = nextInstructions;
+        swap.amountIn0 = amount;
+        swap.to = address(this);
+        return swap;
+    }
+
+    function _scaleAmountOut(uint256 amountOut, uint256 part, uint256 origRoot) private pure returns (uint256) {
+        if (amountOut == 0 || origRoot == 0) return 0;
+        return (amountOut * part) / origRoot;
     }
 
     function invertSwapInput(UniswapLib.SwapInput memory _input, uint256 _amount)

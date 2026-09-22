@@ -115,6 +115,20 @@ contract ProvideLiquidityWBTCUSDTScript is Script {
         return UniswapLib.ExecuteProvideLiquidityInput({
             swapInput0: swapInput0,
             swapInput1: swapInput1,
+            invertedSwapInput0: UniswapLib.SwapInput({
+                tokenIn: liqInput.token0,
+                tokenOut: USDC,
+                swapInstructions: new UniswapLib.SwapInstruction[](0),
+                amountIn0: 0,
+                to: address(0)
+            }),
+            invertedSwapInput1: UniswapLib.SwapInput({
+                tokenIn: liqInput.token1,
+                tokenOut: USDC,
+                swapInstructions: new UniswapLib.SwapInstruction[](0),
+                amountIn0: 0,
+                to: address(0)
+            }),
             provideLiquidityInput: liqInput,
             isSendraRecipient: IS_SENDRA_RECIPIENT
         });
