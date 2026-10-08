@@ -61,36 +61,47 @@ contract MainReader {
     }
 
     function getGlobalUserData(address _user) public view returns (GlobalUserData memory) {
-        SendraLib.UserInfoRead memory user = sendraStorage.getUser(_user);
-        
+        address[] memory wallets = sendraStorage.getAccountingWallets(_user);
+        int256 totalPnl = 0;
+        uint256 totalTransactions = 0;
+        uint256 totalPositions = 0;
+        uint256 totalActivePositions = 0;
         uint256 totalVolume = 0;
         uint256 totalValueLocked = 0;
-        
-        for(uint256 i = 1; i <= user.totalPositions; i++) {
-            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
-            if(position.positionType == 0) { // PairTrading = 0
-                bytes[] memory positionData = position.positionData;
-                uint256 initialUsdValue = abi.decode(positionData[8], (uint256));
-                totalVolume += initialUsdValue;
-                
-                uint256 closeDate = abi.decode(positionData[10], (uint256));
-                if(closeDate == 0) {
-                    totalValueLocked += initialUsdValue;
+
+        for (uint256 w = 0; w < wallets.length; w++) {
+            address wallet = wallets[w];
+            SendraLib.UserInfoRead memory user = sendraStorage.getUser(wallet);
+            totalPnl += user.globalPnl;
+            totalTransactions += user.transactionCount;
+            totalPositions += user.totalPositions;
+            totalActivePositions += user.activePositions;
+
+            for (uint256 i = 1; i <= user.totalPositions; i++) {
+                SendraLib.Position memory position = sendraStorage.getUserPositionById(wallet, i);
+                if (position.positionType == 0) {
+                    bytes[] memory positionData = position.positionData;
+                    uint256 initialUsdValue = abi.decode(positionData[8], (uint256));
+                    totalVolume += initialUsdValue;
+                    uint256 closeDate = abi.decode(positionData[10], (uint256));
+                    if (closeDate == 0) {
+                        totalValueLocked += initialUsdValue;
+                    }
                 }
             }
         }
-        
+
         uint256 averagePositionSize = 0;
-        if(user.totalPositions > 0) {
-            averagePositionSize = totalVolume / user.totalPositions;
+        if (totalPositions > 0) {
+            averagePositionSize = totalVolume / totalPositions;
         }
-        
+
         return GlobalUserData(
-            user.globalPnl,
+            totalPnl,
             totalVolume,
-            user.transactionCount,
-            user.totalPositions,
-            user.activePositions,
+            totalTransactions,
+            totalPositions,
+            totalActivePositions,
             totalValueLocked,
             averagePositionSize
         );
@@ -137,14 +148,16 @@ contract MainReader {
     
 */
     function getPairTradingPositionsData(address _user) public view returns (PairTradingPosition[] memory) {
-        SendraLib.UserInfoRead memory user = sendraStorage.getUser(_user);
-        
-        // First pass: count PairTrading positions
+        address[] memory wallets = sendraStorage.getAccountingWallets(_user);
+
         uint256 pairTradingCount = 0;
-        for(uint256 i = 1; i <= user.totalPositions; i++) {
-            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
-            if(position.positionType == 0) { // PairTrading = 0
-                pairTradingCount++;
+        for (uint256 w = 0; w < wallets.length; w++) {
+            SendraLib.UserInfoRead memory user = sendraStorage.getUser(wallets[w]);
+            for (uint256 i = 1; i <= user.totalPositions; i++) {
+                SendraLib.Position memory position = sendraStorage.getUserPositionById(wallets[w], i);
+                if (position.positionType == 0) {
+                    pairTradingCount++;
+                }
             }
         }
         
@@ -152,9 +165,11 @@ contract MainReader {
         PairTradingPosition[] memory pairTradingPositions = new PairTradingPosition[](pairTradingCount);
         uint256 index = 0;
         
-        // Second pass: populate array
-        for(uint256 i = 1; i <= user.totalPositions; i++) {
-            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
+        for (uint256 w = 0; w < wallets.length; w++) {
+            address wallet = wallets[w];
+            SendraLib.UserInfoRead memory user = sendraStorage.getUser(wallet);
+            for (uint256 i = 1; i <= user.totalPositions; i++) {
+            SendraLib.Position memory position = sendraStorage.getUserPositionById(wallet, i);
             if(position.positionType == 0) { // PairTrading = 0
                 bytes[] memory positionData = position.positionData;
                 uint256 closeDate = abi.decode(positionData[10], (uint256));
@@ -168,8 +183,8 @@ contract MainReader {
                 // For active positions, calculate real-time PNL
                 // For closed positions, use stored PNL and size = 0
                 if (isActive) {
-                    (longPnl, shortPnl, totalPnl) = pairTradingReader.getPairTradingRealTimePnL(_user, position.id);
-                    sizeRealTime = pairTradingReader.getPairTradingTotalSize(_user, position.id);
+                    (longPnl, shortPnl, totalPnl) = pairTradingReader.getPairTradingRealTimePnL(wallet, position.id);
+                    sizeRealTime = pairTradingReader.getPairTradingTotalSize(wallet, position.id);
                 } else {
                     // For closed positions, use stored PNL and size = 0
                     totalPnl = position.pnl;
@@ -199,19 +214,33 @@ contract MainReader {
                 );
                 index++;
             }
+            }
         }
         return pairTradingPositions;
     }
 
     function getPairTradingPositionDataById(address _user, uint256 _positionId) public view returns (PairTradingPosition memory) {
+        address owner = _user;
         SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, _positionId);
-        (int256 longPnl, int256 shortPnl, int256 totalPnl) = pairTradingReader.getPairTradingRealTimePnL(_user, _positionId);
+        if (position.id != _positionId) {
+            uint256 n = sendraStorage.getAccountingPositionCount(_user);
+            for (uint256 i = 0; i < n; i++) {
+                (address wallet, uint256 id, SendraLib.Position memory candidate) =
+                    sendraStorage.getAccountingPosition(_user, i);
+                if (id == _positionId && candidate.id == _positionId) {
+                    owner = wallet;
+                    position = candidate;
+                    break;
+                }
+            }
+        }
+        (int256 longPnl, int256 shortPnl, int256 totalPnl) = pairTradingReader.getPairTradingRealTimePnL(owner, _positionId);
         uint256 closeDate = abi.decode(position.positionData[10], (uint256));
         bool isActive = closeDate == 0;
         return PairTradingPosition(
             position.id,
             totalPnl,
-            pairTradingReader.getPairTradingTotalSize(_user, _positionId),
+            pairTradingReader.getPairTradingTotalSize(owner, _positionId),
             abi.decode(position.positionData[0], (uint256)),
             abi.decode(position.positionData[1], (uint256)),
             abi.decode(position.positionData[8], (uint256)),
@@ -254,21 +283,27 @@ contract MainReader {
     }
 
     function getPairTradingPositionsDataSimple(address _user) public view returns (PairTradingPosition[] memory) {
-        SendraLib.UserInfoRead memory user = sendraStorage.getUser(_user);
-        
+        address[] memory wallets = sendraStorage.getAccountingWallets(_user);
+
         uint256 pairTradingCount = 0;
-        for(uint256 i = 1; i <= user.totalPositions; i++) {
-            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
-            if(position.positionType == 0) { // PairTrading = 0
-                pairTradingCount++;
+        for (uint256 w = 0; w < wallets.length; w++) {
+            SendraLib.UserInfoRead memory user = sendraStorage.getUser(wallets[w]);
+            for (uint256 i = 1; i <= user.totalPositions; i++) {
+                SendraLib.Position memory position = sendraStorage.getUserPositionById(wallets[w], i);
+                if (position.positionType == 0) {
+                    pairTradingCount++;
+                }
             }
         }
-        
+
         PairTradingPosition[] memory pairTradingPositions = new PairTradingPosition[](pairTradingCount);
         uint256 index = 0;
-        
-        for(uint256 i = 1; i <= user.totalPositions; i++) {
-            SendraLib.Position memory position = sendraStorage.getUserPositionById(_user, i);
+
+        for (uint256 w = 0; w < wallets.length; w++) {
+            address wallet = wallets[w];
+            SendraLib.UserInfoRead memory user = sendraStorage.getUser(wallet);
+            for (uint256 i = 1; i <= user.totalPositions; i++) {
+            SendraLib.Position memory position = sendraStorage.getUserPositionById(wallet, i);
             if(position.positionType == 0) { // PairTrading = 0
                 bytes[] memory positionData = position.positionData;
                 uint256 closeDate = abi.decode(positionData[10], (uint256));
@@ -312,6 +347,7 @@ contract MainReader {
                     isActive
                 );
                 index++;
+            }
             }
         }
         return pairTradingPositions;

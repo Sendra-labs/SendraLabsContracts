@@ -34,6 +34,12 @@ contract SendraLib {
         bytes[] positionData;
     }
 
+    /// @notice Pointer from the shared accounting user to a position that still lives on the wallet that opened it.
+    struct PositionRef {
+        address wallet;
+        uint256 positionId;
+    }
+
     struct GlobalPosition {
         uint256 totalPositions; // closed and active // used to get the positionId
         uint256 activePositions; 
@@ -55,9 +61,30 @@ contract SendraLib {
         SendraPulse pulse;
     }
 
+    /// @notice Consolidated reputation plus the local deltas that are still waiting for a sync.
+    /// @dev `syncVersion` is the global pulse update counter. A chain that misses a round keeps the
+    ///      previous version, so the next sync can take the global from a chain that already advanced.
+    ///      `temporalPulse` is activity since the last seal. `sealedPulse` is the slice frozen for the
+    ///      in-flight round and is cleared only when that round commits on this chain.
     struct SendraPulse {
         GlobalAccumulators globalPulse;
+        GlobalAccumulators temporalPulse;
+        GlobalAccumulators sealedPulse;
+        uint64 syncVersion;
+        uint64 sealedBaseVersion;
+        bool hasSeal;
         mapping(uint64 => SpecificAccumulators) specificPulse;
+    }
+
+    struct PulseSnapshot {
+        address root;
+        uint64 syncVersion;
+        bool hasSeal;
+        uint64 sealedBaseVersion;
+        bytes32 sealHash;
+        GlobalAccumulators globalPulse;
+        GlobalAccumulators temporalPulse;
+        GlobalAccumulators sealedPulse;
     }
 
     struct GlobalAccumulators {
@@ -158,6 +185,16 @@ contract SendraLib {
         uint256 activePositions;
         uint256 transactionCount;
         bytes[] userData;
+    }
+
+    struct AccountingOverview {
+        uint256 userId;
+        address root;
+        int256 globalPnl;
+        uint256 totalPositions;
+        uint256 activePositions;
+        uint256 transactionCount;
+        uint256 walletCount;
     }
 
     struct ProtocolStats {
