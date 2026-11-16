@@ -1,143 +1,86 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+// SPDX-License-Identifier: MIT
+pragma solidity 0.8.28;
 
-import {Script, console} from "forge-std/Script.sol";
+import { Script, console } from "forge-std/Script.sol";
 import { AddressProvider } from "../src/core/config/AddressProvider.sol";
 import { Roles } from "../src/security/Roles.sol";
-import { PairTrading } from "../src/core/bundles/executors/PairTrading.sol";
-import { ProtocolStorage } from "../src/core/ProtocolStorage.sol";
-import { GMXMarketsRegistry } from "../src/core/config/gmxMarkets.sol";
-import { GMXPrices } from "../src/periphery/utilsGMX/GMXPrices.sol";
-import { ProxyFactory } from "../src/core/bundles/executors/ProxyFactory.sol";
-import { ProxyManager } from "../src/core/bundles/storage/ProxyManager.sol";
-import { PairTradingStorage } from "../src/core/bundles/storage/PairTradingStorage.sol";
-import { ClosePositionCallbacks } from "../src/core/bundles/executors/callbacks/ClosePositionCallbacks.sol";
-import { PairTradingReader } from "../src/core/bundles/readers/pairTradingReader.sol";
-import { MainReader } from "../src/core/MainReader.sol";
-import { PositionInitializer } from "../src/core/bundles/executors/PositionInitializer.sol";
-import { ProxyAccessControl } from "../src/core/bundles/security/proxyAccessControl.sol";
+import { SendraStorage } from "../src/core/SendraStorage.sol";
+import { PositionInitializer } from "../src/core/PositionInitializer.sol";
 
+/**
+ * @notice Deploys the Sendra core: Roles, AddressProvider, SendraStorage, PositionInitializer.
+ *         COLD_ADMIN1/2/3 are hardware addresses, not keys. HOT_ADMIN1/2/3_PRIVATE_KEY sign
+ *         and are admins from the same constructor. The cold wallets never sign this script.
+ *
+ *         forge script script/Deploy.s.sol --rpc-url arbitrum --broadcast
+ */
 contract Deploy is Script {
+    address constant USDC = 0xaf88d065e77c8cC2239327C5EDb3A432268e5831;
+    address constant WETH = 0x82aF49447D8a07e3bd95BD0d56f35241523fBab1;
 
-    uint256 public ADMIN1_PRIVATE_KEY = vm.envUint("ADMIN1_PRIVATE_KEY");
-
-    AddressProvider public addressProvider;
-    Roles public roles;
-    PairTrading public pairTrading;
-    ProtocolStorage public protocolStorage;
-    GMXMarketsRegistry public gmxMarketsRegistry;
-    GMXPrices public gmxPrices;
-    ProxyFactory public proxyFactory;
-    ProxyManager public proxyManager;
-    PairTradingStorage public pairTradingStorage;
-    ClosePositionCallbacks public closePositionCallbacks;
-    PairTradingReader public pairTradingReader;
-    MainReader public mainReader;
-    PositionInitializer public positionInitializer;
-    ProxyAccessControl public proxyAccessControl;
-
-    address public constant ADMIN1 = 0x7F4C831de10684f85867899708cB49FfbF4983B9;
-    address public constant ADMIN2 = 0xdD8f39262841F9425ed9180D0D989312E41EbEEc;
-    address public constant ADMIN3 = 0xD023851C8AC8ceC385988e7E5af84b1A6D1f9079;
-
-    struct Contracts {
-        string name;
-        address contractAddress;
-        bool isAllowanceRequired;
-    }
-
-    function setUp() public {}
-    
     function run() public {
-        vm.startBroadcast(ADMIN1_PRIVATE_KEY);
+        if (block.chainid != 42161) revert WrongChain();
 
-        roles = new Roles(ADMIN1, ADMIN2, ADMIN3);
-        addressProvider = new AddressProvider(address(roles));
-        
-        scriptSetAddresses(0xFD70de6b91282D8017aA4E741e9Ae325CAb992d8, "GMXDataStore");
-        scriptSetAddresses(address(roles), "Roles");
-        scriptSetAddresses(0x63492B775e30a9E6b4b4761c12605EB9d071d5e9, "OrderHandlerGMX");
-        scriptSetAddresses(0x31eF83a530Fde1B38EE9A18093A333D8Bbbc40D5, "OrderVaultGMX");
-        scriptSetAddresses(0x1C3fa76e6E1088bCE750f23a5BFcffa1efEF6A41, "ExchangeRouterGMX");
-        scriptSetAddresses(0x7452c558d45f8afC8c83dAe62C3f8A5BE19c71f6, "RouterGMX");
-        scriptSetAddresses(0xaf88d065e77c8cC2239327C5EDb3A432268e5831, "USDC");
-        scriptSetAddresses(0x82aF49447D8a07e3bd95BD0d56f35241523fBab1, "WETH");
-        scriptSetAddresses(0xe6fab3F0c7199b0d34d7FbE83394fc0e0D06e99d, "ReferralStorageGMX");
-        scriptSetAddresses(0x470fbC46bcC0f16532691Df360A07d8Bf5ee0789, "ReaderGMX");
+        address cold1 = vm.envAddress("COLD_ADMIN1");
+        address cold2 = vm.envAddress("COLD_ADMIN2");
+        address cold3 = vm.envAddress("COLD_ADMIN3");
+        uint256 k1 = vm.envUint("HOT_ADMIN1_PRIVATE_KEY");
+        uint256 k2 = vm.envUint("HOT_ADMIN2_PRIVATE_KEY");
+        uint256 k3 = vm.envUint("HOT_ADMIN3_PRIVATE_KEY");
+        address hot1 = vm.addr(k1);
+        address hot2 = vm.addr(k2);
+        address hot3 = vm.addr(k3);
 
-        protocolStorage = new ProtocolStorage(address(roles));
-        gmxMarketsRegistry = new GMXMarketsRegistry(address(roles));
-        scriptSetAddresses(address(gmxMarketsRegistry), "GMXMarkets");
-        pairTrading = new PairTrading(address(addressProvider));
-        pairTradingStorage = new PairTradingStorage(address(addressProvider));
-        closePositionCallbacks = new ClosePositionCallbacks(address(addressProvider));
-        pairTradingReader = new PairTradingReader(address(addressProvider));
-        proxyFactory = new ProxyFactory(address(addressProvider));
-        gmxPrices = new GMXPrices(address(addressProvider));
-        proxyManager = new ProxyManager(address(addressProvider));
-        proxyAccessControl = new ProxyAccessControl(address(roles));
-        positionInitializer = new PositionInitializer(address(addressProvider));
-        
-        scriptSetAddresses(address(protocolStorage), "ProtocolStorage");
-        scriptSetAddresses(address(gmxPrices), "GMXPrices");
-        scriptSetAddresses(address(pairTradingReader), "PairTradingReader");
-        scriptSetAddresses(address(proxyAccessControl), "ProxyAccessControl");
-        scriptSetAddresses(address(positionInitializer), "PositionInitializer");
-        
-        mainReader = new MainReader(address(addressProvider));
-
-        console.log("--------------------------------");
-        console.log("Roles -------------> ", address(roles));
-        console.log("AddressProvider ---> ", address(addressProvider));
-        console.log("PairTrading -------> ", address(pairTrading));
-        console.log("ProtocolStorage ---> ", address(protocolStorage));
-        console.log("GMXMarketsRegistry -> ", address(gmxMarketsRegistry));
-        console.log("GMXPrices --------> ", address(gmxPrices));
-        console.log("ProxyFactory -----> ", address(proxyFactory));
-        console.log("ProxyManager -----> ", address(proxyManager));
-        console.log("PairTradingStorage -> ", address(pairTradingStorage));
-        console.log("ClosePositionCallbacks -> ", address(closePositionCallbacks));
-        console.log("PairTradingReader -> ", address(pairTradingReader));
-        console.log("MainReader --------> ", address(mainReader));
-        console.log("PositionInitializer -> ", address(positionInitializer));
-        console.log("ProxyAccessControl -> ", address(proxyAccessControl));
-        console.log("--------------------------------");
-        
-        Contracts[] memory contracts = new Contracts[](14);
-        contracts[0] = Contracts("Roles", address(roles), false);
-        contracts[1] = Contracts("PairTrading", address(pairTrading), true);
-        contracts[2] = Contracts("ProtocolStorage", address(protocolStorage), false);
-        contracts[3] = Contracts("AddressProvider", address(addressProvider), false);
-        contracts[4] = Contracts("GMXMarkets", address(gmxMarketsRegistry), false);
-        contracts[5] = Contracts("GMXPrices", address(gmxPrices), false);
-        contracts[6] = Contracts("ProxyFactory", address(proxyFactory), false);
-        contracts[7] = Contracts("ProxyManager", address(proxyManager), true);
-        contracts[8] = Contracts("PairTradingStorage", address(pairTradingStorage), false);
-        contracts[9] = Contracts("ClosePositionCallbacks", address(closePositionCallbacks), true);
-        contracts[10] = Contracts("PairTradingReader", address(pairTradingReader), false);
-        contracts[11] = Contracts("MainReader", address(mainReader), false);
-        contracts[12] = Contracts("PositionInitializer", address(positionInitializer), true);
-        contracts[13] = Contracts("ProxyAccessControl", address(proxyAccessControl), false);
-            
-        scriptManager(contracts);
-
+        vm.startBroadcast(k1);
+        Roles roles = new Roles(cold1, cold2, cold3, hot1, hot2, hot3);
+        AddressProvider provider = new AddressProvider(address(roles));
         vm.stopBroadcast();
+
+        _vote(provider, k1, k2, k3, "Roles", address(roles), roles, false);
+        _vote(provider, k1, k2, k3, "SendraRoles", address(roles), roles, false);
+        _vote(provider, k1, k2, k3, "USDC", USDC, roles, false);
+        _vote(provider, k1, k2, k3, "WETH", WETH, roles, false);
+
+        vm.startBroadcast(k1);
+        SendraStorage books = new SendraStorage(address(roles));
+        vm.stopBroadcast();
+        _vote(provider, k1, k2, k3, "SendraStorage", address(books), roles, false);
+
+        vm.startBroadcast(k1);
+        PositionInitializer initializer = new PositionInitializer(address(provider));
+        vm.stopBroadcast();
+        _vote(provider, k1, k2, k3, "PositionInitializer", address(initializer), roles, true);
+
+        console.log("Roles", address(roles));
+        console.log("AddressProvider", address(provider));
+        console.log("SendraStorage", address(books));
+        console.log("PositionInitializer", address(initializer));
+        console.log("cold1", cold1);
+        console.log("cold2", cold2);
+        console.log("cold3", cold3);
+        console.log("hot1", hot1);
+        console.log("hot2", hot2);
+        console.log("hot3", hot3);
     }
 
-    function scriptManager(Contracts[] memory _contracts) public {
-        for(uint i = 0; i < _contracts.length; i++) {
-            scriptSetAddresses(_contracts[i].contractAddress, _contracts[i].name);
-            if(_contracts[i].isAllowanceRequired) {
-                scriptAllowContract(_contracts[i].contractAddress, _contracts[i].name);
-            }
+    function _vote(
+        AddressProvider provider,
+        uint256 k1,
+        uint256 k2,
+        uint256 k3,
+        string memory name,
+        address target,
+        Roles roles,
+        bool allow
+    ) internal {
+        uint256[3] memory keys = [k1, k2, k3];
+        for (uint256 i = 0; i < 3; i++) {
+            vm.startBroadcast(keys[i]);
+            provider.proposeAddress(name, target);
+            if (allow) roles.allowContract(target, name);
+            vm.stopBroadcast();
         }
     }
 
-    function scriptAllowContract(address _contract, string memory _name) public {
-        roles.allowContract(_contract, _name);
-    }
-    
-    function scriptSetAddresses(address _address, string memory _name) public {
-        addressProvider.setAddress(_name, _address);
-    }
+    error WrongChain();
 }

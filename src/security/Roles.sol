@@ -13,32 +13,41 @@ import { RolesLib } from "../lib/security/Roles.lib.sol";
  */
 contract Roles {
 
-    /// @notice The main administrator addresses, immutable after deployment
-    address immutable mainAdmin;
-    address immutable admin2;
-    address immutable admin3;
+    /// @notice Cold administrators recorded at deployment. Removable like any other admin.
+    address public immutable mainAdmin;
+    address public immutable admin2;
+    address public immutable admin3;
+
+    uint8 public constant REQUIRED_APPROVALS = 3;
 
     /**
-     * @notice Initializes the Roles contract with main administrators
-     * @param _mainAdmin The address of the main administrator
-     * @param _admin2 The address of the second administrator
-     * @param _admin3 The address of the third administrator
-    */
-    constructor(address _mainAdmin, address _admin2, address _admin3) {
-        if (_mainAdmin == address(0) || _admin2 == address(0) || _admin3 == address(0)) revert InvalidSigner();
-        if (_mainAdmin == _admin2 || _mainAdmin == _admin3 || _admin2 == _admin3) revert InvalidSigner();
-        
+     * @notice Cold wallets plus the hot wallets that sign the deploy.
+     * @dev The cold addresses are not keys. The hot wallets are admins in the same transaction,
+     *      so the deploy can reach quorum without a signature from the hardware wallets.
+     */
+    constructor(
+        address _mainAdmin,
+        address _admin2,
+        address _admin3,
+        address _hot1,
+        address _hot2,
+        address _hot3
+    ) {
         mainAdmin = _mainAdmin;
         admin2 = _admin2;
         admin3 = _admin3;
-        
-        isAdmin[_mainAdmin].isAdmin = true;
-        isAdmin[_admin2].isAdmin = true;
-        isAdmin[_admin3].isAdmin = true;
-        
-        admins.push(_mainAdmin);
-        admins.push(_admin2);
-        admins.push(_admin3);
+        _initAdmin(_mainAdmin);
+        _initAdmin(_admin2);
+        _initAdmin(_admin3);
+        _initAdmin(_hot1);
+        _initAdmin(_hot2);
+        _initAdmin(_hot3);
+    }
+
+    function _initAdmin(address account) private {
+        if (account == address(0) || isAdmin[account].isAdmin) revert InvalidSigner();
+        isAdmin[account].isAdmin = true;
+        admins.push(account);
     }
     
     /// @notice Thrown when an unauthorized address attempts to perform an admin action
@@ -51,6 +60,8 @@ contract Roles {
     error AdminNotFound();
     error AdminAlreadyPenalized();
     error InvalidApproval();
+    error AlreadyProtocol();
+    error NameMismatch();
     /**
      * @notice Modifier that restricts access to admin addresses only
      * @dev Reverts with InvalidSigner if the caller is not an admin
@@ -69,48 +80,56 @@ contract Roles {
     mapping(address => RolesLib.Admin) isAdmin; 
 
     /**
-     * @notice Allows a contract to be recognized as part of the protocol
-     * @dev Implements democratic consensus - requires 2 admin approvals to activate contract
-     * @dev Prevents duplicate approvals from same admin. Contract activates when approvals >= 2
-     * @param _contract The address of the contract to whitelist
-     * @param _name The name/identifier of the contract
-     * @custom:security Only admin addresses can whitelist contracts
-     * @custom:security Requires 2 admin approvals for activation (prevents single admin compromise)
+     * @notice Approves a contract for the protocol whitelist.
+     * @dev The contract stays inactive until REQUIRED_APPROVALS distinct admins have called this.
+     *      The name is fixed by the first approval. A later call with a different name reverts.
      */
-    function allowContract(address _contract, string calldata _name) public onlyAdmin(){
-        if (
-            _contract == address(0) ||
-            !isContractAddress(_contract)
-        ) 
-        revert InvalidContract();
+    function allowContract(address _contract, string calldata _name) public onlyAdmin {
+        if (_contract == address(0) || !isContractAddress(_contract)) revert InvalidContract();
+        if (isProtocol[_contract].isProtocol) revert AlreadyProtocol();
+        if (checkApprovals(isProtocol[_contract].approvedBy)) revert InvalidApproval();
 
-        if(checkApprovals(isProtocol[_contract].approvedBy)) revert InvalidApproval();
+        if (bytes(isProtocol[_contract].name).length == 0) {
+            isProtocol[_contract].name = _name;
+        } else if (keccak256(bytes(isProtocol[_contract].name)) != keccak256(bytes(_name))) {
+            revert NameMismatch();
+        }
 
-        if(isProtocol[_contract].approvals >= 0){ // Require more approvals for Production
-            isProtocol[_contract] = RolesLib.Contract(true,_name, isProtocol[_contract].approvals, isProtocol[_contract].approvedBy);
-        } else {
-            isProtocol[_contract].approvals++;
-            isProtocol[_contract].approvedBy.push(msg.sender);
+        isProtocol[_contract].approvals++;
+        isProtocol[_contract].approvedBy.push(msg.sender);
+
+        if (isProtocol[_contract].approvals >= REQUIRED_APPROVALS) {
+            isProtocol[_contract].isProtocol = true;
         }
     }
-    
+
     /**
-     * @notice Removes a contract from the protocol whitelist
-     * @dev Only callable by admin addresses. Sets the contract's protocol status to false
-     * @param _contract The address of the contract to remove from the protocol
-     * @custom:security Only admin addresses can remove contracts from the protocol
-    */
-    function deleteContract(address _contract) public onlyAdmin() {
+     * @notice Approves removal of a protocol contract.
+     * @dev Removal happens only after REQUIRED_APPROVALS distinct admins. The allow-list is cleared,
+     *      so putting the same contract back also takes REQUIRED_APPROVALS fresh approvals.
+     */
+    function deleteContract(address _contract) public onlyAdmin {
         if (!isProtocol[_contract].isProtocol) revert InvalidContract();
-        isProtocol[_contract].isProtocol = false;
+        if (checkApprovals(isProtocol[_contract].removalApprovedBy)) revert InvalidApproval();
+
+        isProtocol[_contract].removalApprovals++;
+        isProtocol[_contract].removalApprovedBy.push(msg.sender);
+
+        if (isProtocol[_contract].removalApprovals >= REQUIRED_APPROVALS) {
+            isProtocol[_contract].isProtocol = false;
+            isProtocol[_contract].approvals = 0;
+            isProtocol[_contract].removalApprovals = 0;
+            delete isProtocol[_contract].approvedBy;
+            delete isProtocol[_contract].removalApprovedBy;
+        }
     }
 
     /**
      * @notice Proposes a new admin for consensus approval
-     * @dev Uses same approval system as contracts - requires 2 admin approvals
+     * @dev Uses the same approval system as contracts. Activation takes REQUIRED_APPROVALS admins.
      * @param _admin The address of the new admin to propose
      * @custom:security Prevents single compromised admin from adding unlimited admins
-     * @custom:security Requires democratic consensus (2 approvals) to add new admin
+     * @custom:security Requires REQUIRED_APPROVALS distinct admins to add a new admin
      */
     function proposeAdmin(address _admin) public onlyAdmin() {
         if (_admin == address(0)) revert InvalidSigner();
@@ -123,8 +142,7 @@ contract Roles {
         isAdmin[_admin].approvals++;
         isAdmin[_admin].approvedBy.push(msg.sender);
         
-        // If we have enough approvals (2), activate the admin
-        if (isAdmin[_admin].approvals >= 2) {
+        if (isAdmin[_admin].approvals >= REQUIRED_APPROVALS) {
             isAdmin[_admin].isAdmin = true;
             admins.push(_admin);
         }
@@ -139,6 +157,10 @@ contract Roles {
     function removeAdmin(address _admin) internal {
         if (!isAdmin[_admin].isAdmin) revert AdminNotFound();
         isAdmin[_admin].isAdmin = false;
+        isAdmin[_admin].approvals = 0;
+        isAdmin[_admin].penalties = 0;
+        delete isAdmin[_admin].approvedBy;
+        delete isAdmin[_admin].penalizedBy;
         for (uint i = 0; i < admins.length; i++) {
             if (admins[i] == _admin) {
                 admins[i] = admins[admins.length - 1];
@@ -152,20 +174,22 @@ contract Roles {
      * @notice Penalizes an admin for misconduct or compromise
      * @dev Implements democratic consensus - admin is removed when majority agrees
      * @param _admin The address of the admin to penalize
-     * @custom:security Prevents self-penalization and duplicate penalties from same admin
-     * @custom:security Admin is removed when penalties >= 2 (majority consensus)
+     * @custom:security Prevents self-penalization and duplicate penalties from same admin.
+     *                 The constructor admins can be removed too. Removal takes REQUIRED_APPROVALS
+     *                 distinct admins, so a replacement has to be added before one of three can leave.
      */
-    function penalizeAdmin(address _admin) public onlyAdmin() {
+    function penalizeAdmin(address _admin) public onlyAdmin {
         if (_admin == msg.sender) revert InvalidSigner();
-        
+        if (!isAdmin[_admin].isAdmin) revert AdminNotFound();
+
         address[] storage penalizers = isAdmin[_admin].penalizedBy;
         for (uint i = 0; i < penalizers.length; i++) {
             if (penalizers[i] == msg.sender) revert AdminAlreadyPenalized();
         }
-        
+
         isAdmin[_admin].penalizedBy.push(msg.sender);
         isAdmin[_admin].penalties++;
-        if (isAdmin[_admin].penalties >= 2) {
+        if (isAdmin[_admin].penalties >= REQUIRED_APPROVALS) {
             removeAdmin(_admin);
         }
     }
