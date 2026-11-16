@@ -43,20 +43,23 @@ contract AddressProvider {
         roles = Roles(_roles);
     }
 
-    modifier onlyAdmin {
-        require(roles.checkAdmin(msg.sender), "Only admin can call this function");
+    uint8 public constant REQUIRED_APPROVALS = 3;
+
+    modifier onlyAdmin() {
+        if (!roles.checkAdmin(msg.sender)) revert NotAdmin();
         _;
     }
 
-    /// @notice Mapping of protocol names to their addresses
-    /// @dev Format: "GMX" -> 0x..., "Uniswap" -> 0x..., etc.
     mapping(string => address) public addressMap;
-    
-    /**
-     * @notice Gets the address of a protocol by name
-     * @param contractName Protocol name (e.g., "GMX", "Uniswap", "Aave")
-     * @return Address of the protocol contract
-     */
+
+    struct AddressVote {
+        uint8 approvals;
+        address[] approvedBy;
+    }
+
+    /// @dev One ballot per name and address. A different address is a different ballot.
+    mapping(bytes32 => AddressVote) private addressVotes;
+
     function getAddress(string calldata contractName) public view returns (address) {
         address contractAddress = addressMap[contractName];
         if (contractAddress == address(0)) revert AddressNotFound(contractName);
@@ -64,17 +67,31 @@ contract AddressProvider {
     }
 
     /**
-     * @notice Sets the address of a protocol
-     * @param contractName Protocol name
-     * @param _address Address of the protocol contract
+     * @notice Votes to register `contractName` as `_address`.
+     * @dev The registry changes only after REQUIRED_APPROVALS distinct admins vote for the same pair.
+     *      Overwriting an existing entry takes the same quorum.
      */
-    function setAddress(string calldata contractName, address _address) public onlyAdmin {
-        addressMap[contractName] = _address;
-        emit ContractAddressUpdated(contractName, _address);
+    function proposeAddress(string calldata contractName, address _address) public onlyAdmin {
+        if (_address == address(0) || bytes(contractName).length == 0) revert ZeroAddress();
+        bytes32 id = keccak256(abi.encode(contractName, _address));
+        AddressVote storage vote = addressVotes[id];
+        uint256 n = vote.approvedBy.length;
+        for (uint256 i = 0; i < n; i++) {
+            if (vote.approvedBy[i] == msg.sender) revert AlreadyApproved();
+        }
+        vote.approvals++;
+        vote.approvedBy.push(msg.sender);
+        if (vote.approvals >= REQUIRED_APPROVALS) {
+            addressMap[contractName] = _address;
+            delete addressVotes[id];
+            emit ContractAddressUpdated(contractName, _address);
+        }
     }
 
     event ContractAddressUpdated(string indexed contractName, address indexed _address);
 
     error AddressNotFound(string contractName);
-
+    error NotAdmin();
+    error ZeroAddress();
+    error AlreadyApproved();
 }

@@ -25,7 +25,7 @@ contract SendraLib {
     // _________________________________________________
 
     // positionType is the ID of the position type
-    // positionType must be the same as positionsTypes mapping at UpgradeableLib
+    // positionType is chosen by the product that opens the position. 2 is LP, 4 is spot.
     struct Position {
         uint128 positionType;
         uint256 id;

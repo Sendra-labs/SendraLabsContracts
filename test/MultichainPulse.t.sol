@@ -35,8 +35,12 @@ contract MultichainPulseTest is Test {
     uint256 internal constant PK_C = 0xC0C;
 
     function setUp() public {
-        roles = new Roles(admin1, admin2, admin3);
+        roles = new Roles(admin1, admin2, admin3, address(0xB01), address(0xB02), address(0xB03));
         vm.prank(admin1);
+        roles.allowContract(address(this), "MultichainTest");
+        vm.prank(admin2);
+        roles.allowContract(address(this), "MultichainTest");
+        vm.prank(admin3);
         roles.allowContract(address(this), "MultichainTest");
         arbitrum = new SendraStorage(address(roles));
         base = new SendraStorage(address(roles));

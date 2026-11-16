@@ -8,6 +8,8 @@ library RolesLib {
         string name;
         uint8 approvals;
         address[] approvedBy;
+        uint8 removalApprovals;
+        address[] removalApprovedBy;
     }
 
     struct Admin {

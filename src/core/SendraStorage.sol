@@ -34,7 +34,7 @@ import { IERC1271 } from "@openzeppelin/contracts/interfaces/IERC1271.sol";
  * @title SendraStorage
  * @author @Diego-AVZ
  * @notice Centralized storage for SendraPulse and per-user accumulators (SendraLib.User).
- * @dev Same baseline surface as ProtocolStorage; writes only through onlyProtocol.
+ * @dev Writes only through onlyProtocol.
  */
 contract SendraStorage {
 

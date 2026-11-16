@@ -48,4 +48,7 @@ node_modules/
 *.tmp
 *.temp
 
+# Hot admin keys. Never commit.
+script/ops/*.local.json
+
 .cursorignore
